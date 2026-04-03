@@ -231,7 +231,14 @@ router.get('/facturation/list', authenticate, async (req, res) => {
         const rows = await db.all(query, [...params, l, offset]);
         res.json({ data: (rows || []), page: parseInt(page) });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error("FATAL ERROR in Facturation Execution:", err);
+        res.status(500).json({ 
+            error: err.message, 
+            detail: err.detail,
+            code: err.code,
+            stack: err.stack,
+            query_debug: "Postgres Facturation Query Failure" 
+        });
     }
 });
 
