@@ -5,6 +5,6 @@
 const isDev = import.meta.env.MODE === 'development';
 
 // For Vercel, if backend is on same domain, use relative path
-export const API_BASE = isDev ? 'http://localhost:3001/api' : '/api';
+export const API_BASE = isDev ? 'http://localhost:3001' : '';
 
 export default API_BASE;
