@@ -157,6 +157,30 @@ router.get('/facturation/list', authenticate, async (req, res) => {
     }
 });
 
+router.get('/facturation/list', authenticate, async (req, res) => {
+    try {
+        const { ref, de_part, date_debut, date_fin, page = 1, limit = 50 } = req.query;
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+        const l = parseInt(limit);
+
+        let query = `SELECT c.*, o.id as action_id, o.type_operation, o.salaire as action_salaire, o."TVA" as action_tva, o.total as action_total, o.date_o
+                      FROM cnss c 
+                      LEFT JOIN cnss_oeuvre o ON c.id_cn::text = o.id_cn::text 
+                      WHERE c.id_so = ?`;
+        let params = [req.user.id_so];
+
+        if (ref)      { query += ` AND c.num_affaire::text LIKE ?`; params.push(`%${ref}%`); }
+        if (de_part)  { query += ` AND c.nom_ste LIKE ?`;           params.push(`%${de_part}%`); }
+        if (date_debut && date_fin) { query += ` AND o.date_o BETWEEN ? AND ?`; params.push(date_debut, date_fin); }
+
+        query += ` ORDER BY c.id_cn DESC LIMIT ? OFFSET ?`;
+        const rows = await db.all(query, [...params, l, offset]);
+        res.json({ data: (rows || []), page: parseInt(page) });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Delete CNSS Record (with cascading cleanup of actions)
 router.delete('/:id', authenticate, async (req, res) => {
     try {

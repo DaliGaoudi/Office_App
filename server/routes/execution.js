@@ -211,6 +211,32 @@ router.delete('/:id/actions/:actionId', authenticate, async (req, res) => {
 });
 
 // Delete Record
+router.get('/facturation/list', authenticate, async (req, res) => {
+    try {
+        const { ref, de_part, date_debut, date_fin, page = 1, limit = 50 } = req.query;
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+        const l = parseInt(limit);
+
+        let query = `SELECT c.id_r::text as id_r, c.ref, c.de_part, c.nom_cl1, c.nom_cl2, c.date_reg, c.remarque, c.salaire, c."TVA" as tva, c.status,
+                       o.id_o::text as id_o, o.id as action_id, o.type_operation, o.salaire as action_salaire, o."TVA" as action_tva
+                      FROM clients_record c 
+                      INNER JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
+                      WHERE c.id_so = ?`;
+        let params = [req.user.id_so];
+
+        if (ref)      { query += ` AND c.ref::text LIKE ?`;      params.push(`%${ref}%`); }
+        if (de_part)  { query += ` AND c.de_part LIKE ?`;  params.push(`%${de_part}%`); }
+        if (date_debut && date_fin) { query += ` AND o.date_o BETWEEN ? AND ?`; params.push(date_debut, date_fin); }
+
+        query += ` ORDER BY c.id_r DESC LIMIT ? OFFSET ?`;
+        const rows = await db.all(query, [...params, l, offset]);
+        res.json({ data: (rows || []), page: parseInt(page) });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete Record
 router.delete('/:id', authenticate, async (req, res) => {
     try {
         const { id } = req.params;
