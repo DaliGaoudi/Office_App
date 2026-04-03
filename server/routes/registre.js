@@ -243,7 +243,9 @@ router.get('/facturation/list', authenticate, async (req, res) => {
         let query = `SELECT id_r::text as id_r, ref, de_part, nom_cl1, nom_cl2, date_reg, remarque, salaire, "TVA" as tva, status,
                             origine, exemple, version_bureau, orientation, mobilite,
                             imprimer, inscri, delimitation, poste, autre, id_so::text as id_so
-                     FROM clients_record WHERE id_so::text = ?`;
+                     FROM clients_record c 
+                     WHERE id_so::text = ? 
+                     AND NOT EXISTS (SELECT 1 FROM "œuvre_type" o WHERE o.id_o::text = c.id_r::text)`;
         let params = [req.user.id_so];
         console.log(`Facturation params:`, params);
 
