@@ -28,7 +28,8 @@ if (process.env.POSTGRES_URL) {
     };
 } else {
     console.log('Using Local SQLite.');
-    const sqlite3 = require('sqlite3').verbose();
+    const sqliteModuleName = 'sqlite3';
+    const sqlite3 = require(sqliteModuleName).verbose();
     const sqliteDb = new sqlite3.Database(path.join(__dirname, 'database_v3.sqlite'));
     
     db = {
