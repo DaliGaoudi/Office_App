@@ -1,5 +1,4 @@
 const { createPool } = require('@vercel/postgres');
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 let db;
@@ -29,6 +28,7 @@ if (process.env.POSTGRES_URL) {
     };
 } else {
     console.log('Using Local SQLite.');
+    const sqlite3 = require('sqlite3').verbose();
     const sqliteDb = new sqlite3.Database(path.join(__dirname, 'database_v3.sqlite'));
     
     db = {
