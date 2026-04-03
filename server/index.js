@@ -1,0 +1,39 @@
+const express = require('express');
+const cors = require('cors');
+const morgan = require('morgan');
+const authRoutes = require('./routes/auth');
+const registreRoutes = require('./routes/registre');
+const telephoneRoutes = require('./routes/telephone');
+const calendarRoutes = require('./routes/calendar');
+const settingsRoutes = require('./routes/settings');
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(morgan('dev'));
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/registre', registreRoutes);
+app.use('/api/execution', require('./routes/execution'));
+app.use('/api/cnss', require('./routes/cnss'));
+app.use('/api/telephone', telephoneRoutes);
+app.use('/api/calendar', calendarRoutes);
+
+// Settings — after update, flush TVA cache in registre
+app.use('/api/settings', (req, res, next) => {
+    res.on('finish', () => {
+        if (req.method === 'PUT' && res.statusCode < 300) {
+            // Refresh TVA cache whenever any setting is changed
+            registreRoutes.refreshTVA && registreRoutes.refreshTVA();
+        }
+    });
+    next();
+}, settingsRoutes);
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
