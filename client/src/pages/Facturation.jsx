@@ -88,14 +88,10 @@ export default function Facturation({ type = 'general' }) {
   const [expandedFiles, setExpandedFiles]     = useState({});
 
   const fetchData = useCallback(async (pg = 1, lim = limit, flt = activeFilters, dates = activeDates) => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: pg, limit: lim, ...flt });
-    if (dates.dateDebut) params.set('date_debut', dates.dateDebut);
-    if (dates.dateFin)   params.set('date_fin',   dates.dateFin);
-
+    const token = localStorage.getItem('token');
     try {
       const res  = await fetch(`${API_BASE}/${cfg.api}/facturation/list?${params}`, {
-        headers: { Authorization: 'Bearer dummy-token' }
+        headers: { Authorization: `Bearer ${token}` }
       });
       const json = await res.json();
       const rows = json.data || [];

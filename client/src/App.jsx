@@ -168,8 +168,8 @@ import Facturation from './pages/Facturation';
 import Settings from './pages/Settings';
 
 function App() {
-  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user')) || { username: 'Admin', id: 35, id_so: '35' });
-  const [token, setToken] = useState(() => localStorage.getItem('token') || 'dummy-token');
+  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user')) || null);
+  const [token, setToken] = useState(() => localStorage.getItem('token') || null);
 
   const login = (userData, userToken) => {
     setUser(userData);

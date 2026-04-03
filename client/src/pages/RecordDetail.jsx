@@ -41,7 +41,7 @@ export default function RecordDetail() {
             return;
         }
         setLoading(true);
-        const token = localStorage.getItem('token') || 'dummy-token';
+        const token = localStorage.getItem('token');
         try {
             const res = await fetch(`${API_BASE}/${type}/${id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -66,7 +66,7 @@ export default function RecordDetail() {
     const handleSave = async (e) => {
         if (e) e.preventDefault();
         setIsSaving(true);
-        const token = localStorage.getItem('token') || 'dummy-token';
+        const token = localStorage.getItem('token');
         const method = isNew ? 'POST' : 'PUT';
         const url = isNew ? `${API_BASE}/${type}` : `${API_BASE}/${type}/${id}`;
         
@@ -95,7 +95,7 @@ export default function RecordDetail() {
 
     const handleDelete = async () => {
         if (!window.confirm('هل أنت متأكد من حذف هذا الملف نهائياً؟ لا يمكن التراجع عن هذه العملية.')) return;
-        const token = localStorage.getItem('token') || 'dummy-token';
+        const token = localStorage.getItem('token');
         try {
             const res = await fetch(`${API_BASE}/${type}/${id}`, { 
                 method: 'DELETE',
@@ -115,7 +115,7 @@ export default function RecordDetail() {
     };
 
     const updateStatus = async (newStatus) => {
-        const token = localStorage.getItem('token') || 'dummy-token';
+        const token = localStorage.getItem('token');
         try {
             await fetch(`${API_BASE}/registre/${id}/status`, {
                 method: 'PATCH',
@@ -129,7 +129,7 @@ export default function RecordDetail() {
 
     const handleAddAction = async (e) => {
         e.preventDefault();
-        const token = localStorage.getItem('token') || 'dummy-token';
+        const token = localStorage.getItem('token');
         try {
             await fetch(`${API_BASE}/execution/${id}/actions`, {
                 method: 'POST',
@@ -143,7 +143,7 @@ export default function RecordDetail() {
 
     const handleDeleteAction = async (actionId) => {
         if (!confirm('هل أنت متأكد من حذف هذا المحضر؟')) return;
-        const token = localStorage.getItem('token') || 'dummy-token';
+        const token = localStorage.getItem('token');
         try {
             await fetch(`${API_BASE}/execution/${id}/actions/${actionId}`, {
                 method: 'DELETE',

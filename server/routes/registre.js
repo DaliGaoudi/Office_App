@@ -17,30 +17,7 @@ async function refreshTVA() {
 }
 
 // Warm up cache on startup
-async function init() {
-    try {
-        // Postgres: Use standard CREATE TABLE and INSERT
-        if (process.env.POSTGRES_URL) {
-            await db.run(`CREATE TABLE IF NOT EXISTS app_settings (
-                key TEXT PRIMARY KEY, value TEXT NOT NULL, label TEXT,
-                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-            )`);
-            await db.run(`INSERT INTO app_settings (key, value, label)
-                    VALUES ('tva_rate','19','تسعيرة أ.ق.م (%)')
-                    ON CONFLICT (key) DO NOTHING`);
-        } else {
-            // Local SQLite logic
-            await db.run(`CREATE TABLE IF NOT EXISTS app_settings (
-                key TEXT PRIMARY KEY, value TEXT NOT NULL, label TEXT,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )`);
-            await db.run(`INSERT OR IGNORE INTO app_settings (key, value, label)
-                    VALUES ('tva_rate','19','تسعيرة أ.ق.م (%)')`);
-        }
-        await refreshTVA();
-    } catch (err) { console.error('Init error:', err); }
-}
-init();
+refreshTVA();
 
 // Same formula as legacy jQuery calcSum — uses live TVA from settings
 function computeSalaire(row) {

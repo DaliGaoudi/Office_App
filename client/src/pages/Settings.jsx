@@ -4,7 +4,6 @@ import { Settings as SettingsIcon, Save, CheckCircle, AlertCircle, Percent } fro
 import API_BASE from '../config';
 
 const API = `${API_BASE}/settings`;
-const HEADERS = { 'Content-Type': 'application/json', Authorization: 'Bearer dummy-token' };
 
 export default function Settings() {
   const [tva, setTva]           = useState('');
@@ -14,7 +13,8 @@ export default function Settings() {
 
   // Load current settings
   useEffect(() => {
-    fetch(API, { headers: HEADERS })
+    const token = localStorage.getItem('token');
+    fetch(API, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => {
         setTva(data?.tva_rate?.value ?? '19');
@@ -32,10 +32,14 @@ export default function Settings() {
       setError('النسبة يجب أن تكون بين 1 و 100');
       return;
     }
+    const token = localStorage.getItem('token');
     try {
       const res = await fetch(`${API}/tva_rate`, {
         method: 'PUT',
-        headers: HEADERS,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
         body: JSON.stringify({ value: String(val) })
       });
       if (!res.ok) throw new Error('Server error');

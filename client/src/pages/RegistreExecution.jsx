@@ -27,7 +27,7 @@ export default function RegistreExecution() {
 
   const fetchRecords = useCallback(async (pg = page, lim = limit, flt = activeFilters) => {
     setLoading(true);
-    const token = localStorage.getItem('token') || 'dummy-token';
+    const token = localStorage.getItem('token');
     const params = new URLSearchParams({ page: pg, limit: lim, ...flt }).toString();
     try {
       const res  = await fetch(`${API}?${params}`, { headers: { Authorization: `Bearer ${token}` } });
@@ -47,7 +47,7 @@ export default function RegistreExecution() {
   
   const handleDelete = async (id) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا الملف التنفيذي وكل ما يتعلق به؟')) return;
-    const token = localStorage.getItem('token') || 'dummy-token';
+    const token = localStorage.getItem('token');
     try {
       const res = await fetch(`${API}/${id}`, { 
         method: 'DELETE',
@@ -67,7 +67,7 @@ export default function RegistreExecution() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token') || 'dummy-token';
+    const token = localStorage.getItem('token');
     try {
       await fetch(API, {
         method: 'POST',

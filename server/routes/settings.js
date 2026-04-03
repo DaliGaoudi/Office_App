@@ -33,16 +33,8 @@ router.put('/:key', authenticate, async (req, res) => {
         const { value } = req.body;
         if (value === undefined || value === '') return res.status(400).json({ error: 'value required' });
 
-        const now = process.env.POSTGRES_URL ? 'CURRENT_TIMESTAMP' : "datetime('now')";
-        
-        let query;
-        if (process.env.POSTGRES_URL) {
-            query = `INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
-                     ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at`;
-        } else {
-            query = `INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
-                     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`;
-        }
+        const query = `INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+                      ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at`;
 
         await db.run(query, [req.params.key, String(value)]);
         res.json({ key: req.params.key, value: String(value), updated: true });
