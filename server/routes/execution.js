@@ -54,7 +54,7 @@ router.get('/facturation/list', authenticate, async (req, res) => {
         const l = parseInt(limit);
 
         let query = `SELECT c.id_r::text as id_r, c.ref, c.de_part, c.nom_cl1, c.nom_cl2, c.date_reg, c.remarque, c.salaire, c."TVA" as tva, c.status,
-                       o.id as action_id, o.type_operation, o.salaire as action_salaire, o."TVA" as action_tva, o.total as action_total
+                       o.id as action_id, o.type_operation, o.salaire as action_salaire, o."TVA" as action_tva
                       FROM clients_record c 
                       INNER JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
                       WHERE c.id_so::text = ?`;
@@ -89,16 +89,19 @@ router.get('/facturation/list', authenticate, async (req, res) => {
                     actions: []
                 });
             }
+            const s = parseFloat(row.action_salaire) || 0;
+            const t = parseFloat(row.action_tva) || 0;
+            const tt = s + t;
+
             groupedMap.get(row.id_r).actions.push({
                 id: row.action_id,
                 type: row.type_operation,
-                salaire: row.action_salaire,
-                tva: row.action_tva,
-                total: row.action_total,
-                // Add base/tva/expenses aliases for frontend (Facturation.jsx expects .base, .tva, .expenses, .total)
-                base: parseFloat(row.action_salaire) || 0,
+                salaire: s,
+                tva: t,
+                total: tt,
+                // Add base/tva/expenses aliases for frontend
+                base: s,
                 expenses: 0, 
-                // total is already there
             });
         });
 
