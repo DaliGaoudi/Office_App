@@ -221,14 +221,13 @@ router.get('/facturation/list', authenticate, async (req, res) => {
                        o.id_o::text as id_o, o.id as action_id, o.type_operation, o.salaire as action_salaire, o."TVA" as action_tva
                       FROM clients_record c 
                       INNER JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
-                      WHERE c.id_so = ?`;
-        let params = [req.user.id_so];
+                      WHERE c.id_so::text = $1`;
+        let params = [req.user.id_so.toString()];
 
-        if (ref)      { query += ` AND c.ref::text LIKE ?`;      params.push(`%${ref}%`); }
-        if (de_part)  { query += ` AND c.de_part LIKE ?`;  params.push(`%${de_part}%`); }
-        if (date_debut && date_fin) { query += ` AND o.date_o BETWEEN ? AND ?`; params.push(date_debut, date_fin); }
+        if (ref)      { query += ` AND c.ref::text LIKE $${params.length + 1}`;      params.push(`%${ref}%`); }
+        if (de_part)  { query += ` AND c.de_part::text LIKE $${params.length + 1}`;  params.push(`%${de_part}%`); }
 
-        query += ` ORDER BY c.id_r DESC LIMIT ? OFFSET ?`;
+        query += ` ORDER BY c.id_r DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
         const rows = await db.all(query, [...params, l, offset]);
         res.json({ data: (rows || []), page: parseInt(page) });
     } catch (err) {
