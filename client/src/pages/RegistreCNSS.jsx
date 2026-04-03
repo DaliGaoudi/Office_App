@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import Pagination from '../components/Pagination';
 import { STATUS_MAP } from '../utils/formatters';
 
-const API = 'http://localhost:3001/api/cnss';
+import API_BASE from '../config';
+
+const API = `${API_BASE}/cnss`;
 
 export default function RegistreCNSS() {
   const navigate = useNavigate();

@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { CalendarDays } from 'lucide-react';
+import API_BASE from '../config';
+
+const API = `${API_BASE}/calendar`;
 
 export default function Calendar() {
   const [events, setEvents] = useState([]);

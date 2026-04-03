@@ -15,6 +15,9 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
+// Health check
+app.get('/api/health', (req, res) => res.json({ status: 'ok', database: process.env.POSTGRES_URL ? 'postgres' : 'sqlite' }));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/registre', registreRoutes);
@@ -34,6 +37,11 @@ app.use('/api/settings', (req, res, next) => {
     next();
 }, settingsRoutes);
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// Export for Vercel
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+    });
+}
+
+module.exports = app;

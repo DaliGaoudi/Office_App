@@ -1,9 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = 'huissier_mourad_secret_legacy';
 
 function authenticate(req, res, next) {
     req.user = { id: 35, id_so: '35', role: 'admin' };
@@ -11,30 +8,36 @@ function authenticate(req, res, next) {
 }
 
 // Get events from calendar
-router.get('/', authenticate, (req, res) => {
-    // The legacy CodeIgniter returned "evenement"
-    db.all(`SELECT * FROM evenement WHERE id_so = ? ORDER BY id_even DESC LIMIT 200`, [req.user.id_so], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+router.get('/', authenticate, async (req, res) => {
+    try {
+        const rows = await db.all(`SELECT * FROM evenement WHERE id_so = ? ORDER BY id_even DESC LIMIT 200`, [req.user.id_so]);
         res.json({ data: rows });
-    });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Create new event
-router.post('/', authenticate, (req, res) => {
-    const record = req.body;
-    record.id_user = req.user.id;
-    record.id_so = req.user.id_so;
-    
-    const keys = Object.keys(record);
-    const values = Object.values(record);
-    const placeholders = keys.map(() => '?').join(',');
+router.post('/', authenticate, async (req, res) => {
+    try {
+        const record = req.body;
+        record.id_user = req.user.id;
+        record.id_so = req.user.id_so;
+        
+        const keys = Object.keys(record);
+        const values = Object.values(record);
+        const placeholders = keys.map(() => '?').join(',');
 
-    const query = `INSERT INTO evenement (${keys.join(',')}) VALUES (${placeholders})`;
-    
-    db.run(query, values, function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ id_even: this.lastID, ...record });
-    });
+        let query = `INSERT INTO evenement (${keys.join(',')}) VALUES (${placeholders})`;
+        if (process.env.POSTGRES_URL) {
+            query += ` RETURNING id_even`;
+        }
+        
+        const result = await db.run(query, values);
+        res.json({ id_even: result.lastID, ...record });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 module.exports = router;

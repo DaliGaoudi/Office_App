@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
+import API_BASE from '../config';
+
+const API = `${API_BASE}/registre`;
 
 export default function Registre() {
   const [data, setData] = useState([]);

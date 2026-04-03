@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Save, CheckCircle, AlertCircle, Percent } from 'lucide-react';
 
-const API = 'http://localhost:3001/api/settings';
+import API_BASE from '../config';
+
+const API = `${API_BASE}/settings`;
 const HEADERS = { 'Content-Type': 'application/json', Authorization: 'Bearer dummy-token' };
 
 export default function Settings() {

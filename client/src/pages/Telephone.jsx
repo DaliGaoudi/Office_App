@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { Search } from 'lucide-react';
+import API_BASE from '../config';
 
 export default function Telephone() {
   const [data, setData] = useState([]);
@@ -12,7 +11,7 @@ export default function Telephone() {
   const fetchTelephone = async () => {
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`http://localhost:3001/api/telephone?search=${search}`, {
+      const res = await fetch(`${API_BASE}/telephone?search=${search}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const json = await res.json();

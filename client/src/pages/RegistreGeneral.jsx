@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import Pagination from '../components/Pagination';
 import { formatAmount, STATUS_MAP } from '../utils/formatters';
 
-const API = 'http://localhost:3001/api/registre';
+import API_BASE from '../config';
+
+const API = `${API_BASE}/registre`;
 
 export default function RegistreGeneral() {
   const navigate = useNavigate();

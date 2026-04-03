@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer, Save, Check, Plus, Trash2, FileText, Activity, Milestone } from 'lucide-react';
 import { formatAmount, STATUS_MAP } from '../utils/formatters';
+import API_BASE from '../config';
 
-const API_BASE = 'http://localhost:3001/api';
+const API = API_BASE;
 
 export default function RecordDetail() {
     const { type, id } = useParams();
