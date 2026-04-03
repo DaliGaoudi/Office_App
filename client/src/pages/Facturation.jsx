@@ -94,7 +94,7 @@ export default function Facturation({ type = 'general' }) {
     if (dates.dateFin)   params.set('date_fin',   dates.dateFin);
 
     try {
-      const res  = await fetch(`${API_BASE}/api/${cfg.api}/facturation/list?${params}`, {
+      const res  = await fetch(`${API_BASE}/${cfg.api}/facturation/list?${params}`, {
         headers: { Authorization: 'Bearer dummy-token' }
       });
       const json = await res.json();
