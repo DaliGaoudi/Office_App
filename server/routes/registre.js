@@ -2,10 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-function authenticate(req, res, next) {
-    req.user = { id: 35, id_so: '35', role: 'admin' };
-    next();
-}
+const authenticate = require('../middleware/auth');
 
 // ── TVA cache (refreshed from settings table) ──────────────────────────────
 let cachedTVA = 19; // default — overridden on first DB read
@@ -342,7 +339,5 @@ router.delete('/:id', authenticate, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
-module.exports = router;
 
 module.exports = router;

@@ -2,10 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-function authenticate(req, res, next) {
-    req.user = { id: 35, id_so: '35', role: 'admin' };
-    next();
-}
+const authenticate = require('../middleware/auth');
 
 // GET all settings
 router.get('/', authenticate, async (req, res) => {

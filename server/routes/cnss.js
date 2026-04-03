@@ -2,10 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-function authenticate(req, res, next) {
-    req.user = { id: 35, id_so: '35', role: 'admin' };
-    next();
-}
+const authenticate = require('../middleware/auth');
 
 // Get all records for CNSS
 router.get('/', authenticate, async (req, res) => {
@@ -192,7 +189,5 @@ router.delete('/:id', authenticate, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
-module.exports = router;
 
 module.exports = router;
