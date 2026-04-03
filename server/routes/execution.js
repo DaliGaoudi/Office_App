@@ -131,13 +131,13 @@ router.get('/', authenticate, async (req, res) => {
         if (de_part) { ws.push('c.de_part LIKE ?'); ps.push('%'+de_part+'%'); }
         if (date_inscri) { ws.push('c.date_inscri LIKE ?'); ps.push('%'+date_inscri+'%'); }
         
-        const query = `SELECT DISTINCT c.*, c.id_r as id_o FROM clients_record c 
-                       INNER JOIN "œuvre_type" o ON c.id_r = o.id_o 
+        const query = `SELECT DISTINCT c.*, c.id_r::text as id_o FROM clients_record c 
+                       INNER JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
                        WHERE ${ws.join(' AND ')} ORDER BY c.id_r DESC LIMIT ? OFFSET ?`;
 
         const rows = await db.all(query, [...ps, parseInt(limit), offset]);
         const countQuery = `SELECT COUNT(DISTINCT c.id_r) as count FROM clients_record c 
-                            INNER JOIN "œuvre_type" o ON c.id_r = o.id_o 
+                            INNER JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
                             WHERE ${ws.join(' AND ')}`;
         const cRow = await db.get(countQuery, ps);
         res.json({ data: (rows || []), total: cRow.count, page: parseInt(page), totalPages: Math.ceil(cRow.count / limit) });

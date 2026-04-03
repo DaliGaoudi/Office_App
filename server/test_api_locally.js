@@ -1,5 +1,5 @@
-const db = require('./db');
 require('dotenv').config();
+const db = require('./db');
 
 async function test() {
     console.log("Testing API Query Locally against Postgres...");
