@@ -240,11 +240,12 @@ router.get('/facturation/list', authenticate, async (req, res) => {
         const { ref, de_part, remarque, date_debut, date_fin, page = 1, limit = 50 } = req.query;
         const offset = (parseInt(page) - 1) * parseInt(limit);
 
-        let query = `SELECT id_r, ref, de_part, nom_cl1, nom_cl2, date_reg, remarque, salaire, "TVA" as tva, status,
+        let query = `SELECT id_r::text as id_r, ref, de_part, nom_cl1, nom_cl2, date_reg, remarque, salaire, "TVA" as tva, status,
                             origine, exemple, version_bureau, orientation, mobilite,
-                            imprimer, inscri, delimitation, poste, autre
-                     FROM clients_record WHERE id_so = ?`;
+                            imprimer, inscri, delimitation, poste, autre, id_so::text as id_so
+                     FROM clients_record WHERE id_so::text = ?`;
         let params = [req.user.id_so];
+        console.log(`Facturation params:`, params);
 
         if (ref)      { query += ` AND ref::text LIKE ?`;      params.push(`%${ref}%`); }
         if (de_part)  { query += ` AND de_part LIKE ?`;  params.push(`%${de_part}%`); }
@@ -285,7 +286,12 @@ router.get('/facturation/list', authenticate, async (req, res) => {
                     calculated_total: b.total
                 };
             })
-            .filter(row => row.calculated_total > 0);
+            .filter(row => {
+                const hasCost = row.calculated_total > 0;
+                // If the user wants to see records even with 0 cost but with certain status, we can add it here.
+                // For now, adhering strictly to "i only want to see records that actually have costs added"
+                return hasCost;
+            });
 
         const grandTotal   = withValue.reduce((sum, r) => sum + r.calculated_total, 0);
         const totalRecords = withValue.length;

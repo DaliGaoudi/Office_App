@@ -56,7 +56,7 @@ router.get('/facturation/list', authenticate, async (req, res) => {
         let query = `SELECT c.id_r::text as id_r, c.ref, c.de_part, c.nom_cl1, c.nom_cl2, c.date_reg, c.remarque, c.salaire, c."TVA" as tva, c.status,
                        o.id_o::text as id_o, o.id as action_id, o.type_operation, o.salaire as action_salaire, o."TVA" as action_tva
                       FROM clients_record c 
-                      INNER JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
+                      LEFT JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
                       WHERE c.id_so::text = ?`;
         let params = [req.user.id_so];
 
