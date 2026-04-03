@@ -11,7 +11,6 @@ if (process.env.POSTGRES_URL) {
 
     db = {
         query: async (text, params = []) => {
-            // Convert ? to $1, $2... for Postgres
             let i = 1;
             const pgText = text.replace(/\?/g, () => `$${i++}`);
             const result = await pool.query(pgText, params);
