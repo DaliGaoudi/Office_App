@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, Fragment } from 'react';
 import { Search, Printer, FileText, ChevronDown, ChevronUp, CheckSquare, Square } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import { formatAmount, STATUS_MAP } from '../utils/formatters';
+import API_BASE from '../config';
 
 /* ─── config per register type ───────────────────────────────────────────── */
 const CONFIG = {
@@ -93,7 +94,7 @@ export default function Facturation({ type = 'general' }) {
     if (dates.dateFin)   params.set('date_fin',   dates.dateFin);
 
     try {
-      const res  = await fetch(`http://localhost:3001/api/${cfg.api}/facturation/list?${params}`, {
+      const res  = await fetch(`${API_BASE}/api/${cfg.api}/facturation/list?${params}`, {
         headers: { Authorization: 'Bearer dummy-token' }
       });
       const json = await res.json();

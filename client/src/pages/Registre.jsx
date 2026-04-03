@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import API_BASE from '../config';
 
-const API = `${API_BASE}/registre`;
-
 export default function Registre() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const search = new URLSearchParams(location.search).get('search') || '';
+  const token = localStorage.getItem('token');
+
   const [data, setData] = useState([]);
-  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,9 +18,8 @@ export default function Registre() {
 
   const fetchRecords = async () => {
     setLoading(true);
-    const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`http://localhost:3001/api/registre?search=${search}`, {
+      const res = await fetch(`${API_BASE}/api/registre?search=${search}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const json = await res.json();

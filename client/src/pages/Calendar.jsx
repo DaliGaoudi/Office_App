@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
-import { CalendarDays } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, User, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import API_BASE from '../config';
-
-const API = `${API_BASE}/calendar`;
 
 export default function Calendar() {
   const [events, setEvents] = useState([]);
@@ -13,9 +11,10 @@ export default function Calendar() {
   }, []);
 
   const fetchEvents = async () => {
+    setLoading(true);
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`http://localhost:3001/api/calendar`, {
+      const res = await fetch(`${API_BASE}/api/calendar`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const json = await res.json();
