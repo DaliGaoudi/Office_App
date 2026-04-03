@@ -21,21 +21,21 @@ router.get('/', authenticate, async (req, res) => {
         
         let query = `SELECT DISTINCT c.*, c.id_r as id_o FROM clients_record c 
                        INNER JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
-                       WHERE c.id_so::text = $1`;
-        let params = [req.user.id_so.toString()];
+                       WHERE c.id_so::text = ?`;
+        let params = [req.user.id_so];
 
         if (search) {
-            query += ` AND (c.ref::text LIKE $2 OR c.nom_cl1 LIKE $2 OR c.de_part LIKE $2)`;
-            params.push(`%${search}%`);
+            query += ` AND (c.ref::text LIKE ? OR c.nom_cl1 LIKE ? OR c.de_part LIKE ?)`;
+            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
         }
 
         const countQuery = `SELECT COUNT(DISTINCT c.id_r) as count FROM clients_record c 
                             INNER JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
-                            WHERE c.id_so::text = $1 ${search ? 'AND (c.ref::text LIKE $2 OR c.nom_cl1 LIKE $2 OR c.de_part LIKE $2)' : ''}`;
+                            WHERE c.id_so::text = ? ${search ? 'AND (c.ref::text LIKE ? OR c.nom_cl1 LIKE ? OR c.de_part LIKE ?)' : ''}`;
         
         const cRow = await db.get(countQuery, params);
         
-        query += ` ORDER BY c.id_r DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+        query += ` ORDER BY c.id_r DESC LIMIT ? OFFSET ?`;
         const rows = await db.all(query, [...params, l, offset]);
 
         res.json({ data: (rows || []), total: parseInt(cRow?.count || 0), page: parseInt(page) });
@@ -57,19 +57,19 @@ router.get('/facturation/list', authenticate, async (req, res) => {
                        o.id_o::text as id_o, o.id as action_id, o.type_operation, o.salaire as action_salaire, o."TVA" as action_tva
                       FROM clients_record c 
                       INNER JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
-                      WHERE c.id_so::text = $1`;
-        let params = [req.user.id_so.toString()];
+                      WHERE c.id_so::text = ?`;
+        let params = [req.user.id_so];
 
         if (ref) {
-            query += ` AND c.ref::text LIKE $${params.length + 1}`;
+            query += ` AND c.ref::text LIKE ?`;
             params.push(`%${ref}%`);
         }
         if (de_part) {
-            query += ` AND c.de_part::text LIKE $${params.length + 1}`;
+            query += ` AND c.de_part::text LIKE ?`;
             params.push(`%${de_part}%`);
         }
 
-        query += ` ORDER BY c.id_r DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+        query += ` ORDER BY c.id_r DESC LIMIT ? OFFSET ?`;
         const rows = await db.all(query, [...params, l, offset]);
         res.json({ data: (rows || []), page: parseInt(page) });
     } catch (err) {
@@ -81,7 +81,7 @@ router.get('/facturation/list', authenticate, async (req, res) => {
 // Single Record
 router.get('/:id', authenticate, async (req, res) => {
     try {
-        const row = await db.get('SELECT *, id_r as id_o FROM clients_record WHERE id_r::text = $1 AND id_so::text = $2', [req.params.id, req.user.id_so]);
+        const row = await db.get('SELECT *, id_r as id_o FROM clients_record WHERE id_r::text = ? AND id_so::text = ?', [req.params.id, req.user.id_so]);
         if (!row) return res.status(404).json({ error: 'Not found' });
         res.json(row);
     } catch (err) {
@@ -92,7 +92,7 @@ router.get('/:id', authenticate, async (req, res) => {
 // Actions for Record
 router.get('/:id/actions', authenticate, async (req, res) => {
     try {
-        const rows = await db.all('SELECT * FROM "œuvre_type" WHERE id_o::text = $1 ORDER BY id ASC', [req.params.id]);
+        const rows = await db.all('SELECT * FROM "œuvre_type" WHERE id_o::text = ? ORDER BY id ASC', [req.params.id]);
         res.json((rows || []).map(r => ({ ...r, calculated_salaire: computeActionSalaire(r) })));
     } catch (err) {
         res.status(500).json({ error: err.message });
