@@ -1,61 +1,60 @@
 const { createPool } = require('@vercel/postgres');
-const path = require('path');
 
+let pool;
 let db;
 
 if (process.env.POSTGRES_URL) {
-    console.log('Using Vercel Postgres Pool.');
-    const pool = createPool({
-        connectionString: process.env.POSTGRES_URL
-    });
+    pool = createPool({ connectionString: process.env.POSTGRES_URL });
+    console.log("Using Vercel Postgres Pool.");
 
     db = {
         query: async (text, params = []) => {
             let i = 1;
             const pgText = text.replace(/\?/g, () => `$${i++}`);
             const result = await pool.query(pgText, params);
-            return {
-                rows: result.rows,
-                lastID: result.rows[0] ? (result.rows[0].id_r || result.rows[0].id_even || result.rows[0].id_cn || result.rows[0].id || null) : null,
-                changes: result.rowCount
-            };
+            return result;
         },
-        all: async (text, params = []) => (await db.query(text, params)).rows,
-        get: async (text, params = []) => (await db.query(text, params)).rows[0],
-        run: async (text, params = []) => await db.query(text, params),
-        close: () => pool.end()
+        all: async (text, params = []) => {
+            let i = 1;
+            const pgText = text.replace(/\?/g, () => `$${i++}`);
+            const result = await pool.query(pgText, params);
+            return result.rows;
+        },
+        get: async (text, params = []) => {
+            let i = 1;
+            const pgText = text.replace(/\?/g, () => `$${i++}`);
+            const result = await pool.query(pgText, params);
+            return result.rows[0];
+        },
+        run: async (text, params = []) => {
+            let i = 1;
+            let pgText = text.replace(/\?/g, () => `$${i++}`);
+            
+            // Automatic RETURNING clause only if not already present
+            if (pgText.toLowerCase().includes('insert') && !pgText.toLowerCase().includes('returning')) {
+                pgText += " RETURNING id_r, id_cn, id";
+            }
+            
+            const result = await pool.query(pgText, params);
+            const lr = result.rows[0];
+            return { 
+                lastID: lr ? (lr.id_r || lr.id_cn || lr.id || null) : null,
+                changes: result.rowCount 
+            };
+        }
     };
 } else {
-    console.log('Using Local SQLite.');
-    const sqliteModuleName = 'sqlite3';
-    const sqlite3 = require(sqliteModuleName).verbose();
-    const sqliteDb = new sqlite3.Database(path.join(__dirname, 'database_v3.sqlite'));
-    
+    // Local SQLite fallback
+    const sqlite3 = require('sqlite3');
+    const path = require('path');
+    const localDbPath = path.join(__dirname, 'database_v3.sqlite');
+    const sqliteDb = new sqlite3.Database(localDbPath);
+
     db = {
-        query: (text, params = []) => new Promise((resolve, reject) => {
-            // Remove Postgres-specific casts for local dev
-            const sqliteText = text.replace(/::text/gi, '');
-            const isSelect = sqliteText.trim().toUpperCase().startsWith('SELECT');
-            const method = isSelect ? 'all' : 'run';
-            
-            sqliteDb[method](sqliteText, params, function(err, result) {
-                if (err) return reject(err);
-                resolve({
-                    rows: isSelect ? result : [],
-                    lastID: this.lastID,
-                    changes: this.changes
-                });
-            });
-        }),
-        all: async (text, params = []) => (await db.query(text, params)).rows,
-        get: async (text, params = []) => {
-            const res = await db.query(text, params);
-            return res.rows ? res.rows[0] : null;
-        },
-        run: async (text, params = []) => await db.query(text, params),
-        close: () => new Promise((resolve, reject) => {
-            sqliteDb.close((err) => err ? reject(err) : resolve());
-        })
+        all: (text, params) => new Promise((rv, rj) => sqliteDb.all(text, params, (err, rows) => err ? rj(err) : rv(rows))),
+        get: (text, params) => new Promise((rv, rj) => sqliteDb.get(text, params, (err, row) => err ? rj(err) : rv(row))),
+        run: (text, params) => new Promise((rv, rj) => sqliteDb.run(text, params, function(err) { err ? rj(err) : rv({ lastID: this.lastID, changes: this.changes }); })),
+        query: (text, params) => new Promise((rv, rj) => sqliteDb.all(text, params, (err, rows) => err ? rj(err) : rv({ rows })))
     };
 }
 
