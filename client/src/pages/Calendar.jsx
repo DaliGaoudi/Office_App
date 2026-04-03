@@ -14,7 +14,7 @@ export default function Calendar() {
     setLoading(true);
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`${API_BASE}/api/calendar`, {
+      const res = await fetch(`${API_BASE}/calendar`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const json = await res.json();

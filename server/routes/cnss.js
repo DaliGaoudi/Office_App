@@ -144,10 +144,9 @@ router.get('/facturation/list', authenticate, async (req, res) => {
         if (date_debut && date_fin) { ws.push('o.date_o BETWEEN ? AND ?'); ps.push(date_debut, date_fin); }
         
         const condition = ws.join(' AND ');
-        const castType = process.env.POSTGRES_URL ? 'NUMERIC' : 'REAL';
         const query = `SELECT c.id_cn, c.nom_ste, c.num_affaire, c.num_cnss, c.status, 
                               COALESCE(SUM(CAST(o.montant AS ${castType})), 0) AS total_montant 
-                       FROM cnss AS c LEFT JOIN cnss_oeuvre AS o ON o.id_cn = c.id_cn 
+                       FROM cnss AS c LEFT JOIN cnss_oeuvre AS o ON o.id_cn::text = c.id_cn::text 
                        WHERE ${condition} GROUP BY c.id_cn ORDER BY c.id_cn DESC`;
 
         const rows = await db.all(query, ps);

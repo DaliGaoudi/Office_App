@@ -19,7 +19,7 @@ export default function Registre() {
   const fetchRecords = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/registre?search=${search}`, {
+      const res = await fetch(`${API_BASE}/registre?search=${search}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const json = await res.json();
