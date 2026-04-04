@@ -1,117 +1,80 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const authenticate = require('../middleware/auth');
-const { Parser } = require('json2csv');
 
-/**
- * GET /api/telephone
- * Get contacts with search and filtering
- */
+const authenticate = require('../middleware/auth');
+
+// Get telephone directory
 router.get('/', authenticate, async (req, res) => {
     try {
-        const { search = '', format = 'json' } = req.query;
+        const { search = '' } = req.query;
+        const id_so = req.user.id_so;
+        
         let query = `SELECT * FROM telephone WHERE id_so = ?`;
-        let params = [req.user.id_so];
+        let params = [id_so];
 
         if (search) {
-            query += ` AND (nom LIKE ? OR tel1 LIKE ? OR tel2 LIKE ? OR email LIKE ? OR profession LIKE ?)`;
+            query += ` AND (nom LIKE ? OR prenom LIKE ? OR num_tel1 LIKE ? OR num_tel2 LIKE ?)`;
             const searchPattern = `%${search}%`;
-            params.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern);
+            params.push(searchPattern, searchPattern, searchPattern, searchPattern);
         }
 
-        query += ` ORDER BY nom ASC`;
+        query += ` ORDER BY nom ASC, prenom ASC LIMIT 200`;
 
         const rows = await db.all(query, params);
-
-        if (format === 'csv') {
-            const fields = ['nom', 'profession', 'tel1', 'tel2', 'tel3', 'tel4', 'tel5', 'fax1', 'fax2', 'email', 'adresse', 'ville', 'codep'];
-            const opts = { fields };
-            const parser = new Parser(opts);
-            const csv = parser.parse(rows);
-            res.header('Content-Type', 'text/csv');
-            res.attachment('annuaire.csv');
-            return res.send(csv);
-        }
-
         res.json({ data: rows });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-/**
- * GET /api/telephone/categories
- * Get Genre and Profession lists
- */
-router.get('/categories', authenticate, async (req, res) => {
-    try {
-        const genres = await db.all(`SELECT * FROM genre_tel WHERE id_so = ?`, [req.user.id_so]);
-        const professions = await db.all(`SELECT * FROM profession_tel WHERE id_so = ?`, [req.user.id_so]);
-        res.json({ genres, professions });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-/**
- * POST /api/telephone
- * Add new contact
- */
+// Create new contact
 router.post('/', authenticate, async (req, res) => {
     try {
-        const data = req.body;
-        data.id_user = req.user.id;
-        data.id_so = req.user.id_so;
-        data.date_ajout = new Date().toISOString().split('T')[0];
+        const { nom, prenom, num_tel1, num_tel2, email_tel, adresse_tel, observation_tel } = req.body;
+        const id_so = req.user.id_so;
 
-        // Default empty values for missing fields to avoid NULLs in older DB logic
-        const defaultFields = ['nom', 'adresse', 'adressepersonnel', 'profession', 'codep', 'ville', 'zone', 'etat', 'tel1', 'tel2', 'tel3', 'tel4', 'tel5', 'fax1', 'fax2', 'email', 'character1', 'nom1', 'position1', 'phone1', 'email1', 'character2', 'nom2', 'position2', 'phone2', 'email2', 'character3', 'nom3', 'position3', 'phone3', 'email3', 'id_r', 'id_o', 'type', 'registre'];
-        defaultFields.forEach(f => { if (data[f] === undefined) data[f] = ''; });
-
-        const keys = Object.keys(data);
-        const values = Object.values(data);
-        const placeholders = keys.map(() => '?').join(',');
-
-        const query = `INSERT INTO telephone (${keys.join(',')}) VALUES (${placeholders})`;
-        const result = await db.run(query, values);
+        const query = `
+            INSERT INTO telephone (nom, prenom, num_tel1, num_tel2, email_tel, adresse_tel, observation_tel, id_so)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING id_tel
+        `;
         
-        res.status(201).json({ id_tel: result.lastID, ...data });
+        const result = await db.run(query, [nom, prenom, num_tel1, num_tel2, email_tel, adresse_tel, observation_tel, id_so]);
+        res.json({ id_tel: result.lastID, nom, prenom, num_tel1, num_tel2, email_tel, adresse_tel, observation_tel });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-/**
- * PUT /api/telephone/:id
- * Update contact
- */
+// Update contact
 router.put('/:id', authenticate, async (req, res) => {
     try {
         const { id } = req.params;
-        const data = req.body;
-        
-        const keys = Object.keys(data).filter(k => k !== 'id_tel');
-        const values = keys.map(k => data[k]);
-        values.push(id, req.user.id_so);
+        const { nom, prenom, num_tel1, num_tel2, email_tel, adresse_tel, observation_tel } = req.body;
+        const id_so = req.user.id_so;
 
-        const setClause = keys.map(k => `${k} = ?`).join(', ');
-        const query = `UPDATE telephone SET ${setClause} WHERE id_tel = ? AND id_so = ?`;
+        const query = `
+            UPDATE telephone 
+            SET nom = ?, prenom = ?, num_tel1 = ?, num_tel2 = ?, email_tel = ?, adresse_tel = ?, observation_tel = ?
+            WHERE id_tel = ? AND id_so = ?
+        `;
         
-        await db.run(query, values);
+        await db.run(query, [nom, prenom, num_tel1, num_tel2, email_tel, adresse_tel, observation_tel, id, id_so]);
         res.json({ success: true, id_tel: id });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-/**
- * DELETE /api/telephone/:id
- */
+// Delete contact
 router.delete('/:id', authenticate, async (req, res) => {
     try {
         const { id } = req.params;
-        await db.run(`DELETE FROM telephone WHERE id_tel = ? AND id_so = ?`, [id, req.user.id_so]);
+        const id_so = req.user.id_so;
+
+        const query = `DELETE FROM telephone WHERE id_tel = ? AND id_so = ?`;
+        await db.run(query, [id, id_so]);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });

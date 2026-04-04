@@ -1,79 +1,67 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+
 const authenticate = require('../middleware/auth');
 
-/**
- * GET /api/calendar
- * Get events within a range or for the dashboard
- */
+// Get events from calendar
 router.get('/', authenticate, async (req, res) => {
     try {
-        const { start_date, end_date, limit = 200 } = req.query;
-        let query = `SELECT * FROM evenement WHERE id_so = ?`;
-        let params = [req.user.id_so];
-
-        if (start_date && end_date) {
-            query += ` AND debut_date >= ? AND fin_date <= ?`;
-            params.push(start_date, end_date);
-        }
-
-        query += ` ORDER BY fin_date ASC LIMIT ?`;
-        params.push(parseInt(limit));
-
-        const rows = await db.all(query, params);
+        const rows = await db.all(`SELECT * FROM evenement WHERE id_so = ? ORDER BY id_even DESC LIMIT 200`, [req.user.id_so]);
         res.json({ data: rows });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-/**
- * GET /api/calendar/today
- * Dashbaord helper for today's events
- */
-router.get('/today', authenticate, async (req, res) => {
-    try {
-        const today = new Date().toISOString().split('T')[0];
-        const query = `SELECT * FROM evenement WHERE id_so = ? AND (fin_date LIKE ? OR debut_date LIKE ?) ORDER BY fin_date ASC`;
-        const params = [req.user.id_so, `%${today}%`, `%${today}%` ];
-        const rows = await db.all(query, params);
-        res.json({ data: rows });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-/**
- * POST /api/calendar
- */
+// Create new event
 router.post('/', authenticate, async (req, res) => {
     try {
-        const record = req.body;
-        record.id_user = req.user.id;
-        record.id_so = req.user.id_so;
-        record.date_ajout = new Date().toISOString().split('T')[0];
+        const { title, start, time_even, description, tribunal_even } = req.body;
+        const id_user = req.user.id;
+        const id_so = req.user.id_so;
         
-        const keys = Object.keys(record);
-        const values = Object.values(record);
-        const placeholders = keys.map(() => '?').join(',');
-
-        const query = `INSERT INTO evenement (${keys.join(',')}) VALUES (${placeholders})`;
-        const result = await db.run(query, values);
+        const query = `
+            INSERT INTO evenement (title, start, time_even, description, tribunal_even, id_user, id_so)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            RETURNING id_even
+        `;
         
-        res.status(201).json({ id_even: result.lastID, ...record });
+        const result = await db.run(query, [title, start, time_even, description, tribunal_even, id_user, id_so]);
+        res.json({ id_even: result.lastID, title, start, time_even, description, tribunal_even });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-/**
- * DELETE /api/calendar/:id
- */
+// Update event
+router.put('/:id', authenticate, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, start, time_even, description, tribunal_even } = req.body;
+        const id_so = req.user.id_so;
+
+        const query = `
+            UPDATE evenement 
+            SET title = ?, start = ?, time_even = ?, description = ?, tribunal_even = ?
+            WHERE id_even = ? AND id_so = ?
+        `;
+        
+        await db.run(query, [title, start, time_even, description, tribunal_even, id, id_so]);
+        res.json({ success: true, id_even: id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete event
 router.delete('/:id', authenticate, async (req, res) => {
     try {
         const { id } = req.params;
-        await db.run(`DELETE FROM evenement WHERE id_even = ? AND id_so = ?`, [id, req.user.id_so]);
+        const id_so = req.user.id_so;
+
+        const query = `DELETE FROM evenement WHERE id_even = ? AND id_so = ?`;
+        await db.run(query, [id, id_so]);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
