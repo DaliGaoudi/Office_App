@@ -26,6 +26,7 @@ app.use('/api/cnss', require('./routes/cnss'));
 app.use('/api/telephone', telephoneRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/ai', require('./routes/ai'));
 
 // Settings — after update, flush TVA cache in registre
 app.use('/api/settings', (req, res, next) => {

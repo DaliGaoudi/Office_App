@@ -84,6 +84,8 @@ const Sidebar = () => {
   );
 }
 
+import AIAssistant from './components/AIAssistant';
+
 const Layout = ({ children }) => {
   const { user } = useAuth();
   return (
@@ -101,6 +103,7 @@ const Layout = ({ children }) => {
         </div>
         {children}
       </div>
+      <AIAssistant />
     </div>
   );
 }
