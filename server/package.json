@@ -17,8 +17,10 @@
     "dotenv": "^17.4.0",
     "express": "^5.2.1",
     "iconv-lite": "^0.7.2",
+    "json2csv": "^6.0.0-alpha.2",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.1",
-    "multer": "^2.1.1"
+    "multer": "^2.1.1",
+    "sqlite3": "^6.0.1"
   }
 }
