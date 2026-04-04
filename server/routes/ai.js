@@ -69,6 +69,81 @@ async function updateActStatus(id_so, id_r, status) {
     return { success: true, message: `L'acte ${id_r} a été mis à jour avec le statut: ${status}.` };
 }
 
+/**
+ * AI Tool: Manage Calendar (Create/Update/Delete)
+ */
+async function manageCalendar(id_so, action, id_even, data) {
+    if (action === 'create') {
+        const { title, start, time_even, description, tribunal_even } = data;
+        const res = await db.run(
+            `INSERT INTO evenement (title, start, time_even, description, tribunal_even, id_so) VALUES (?, ?, ?, ?, ?, ?)`,
+            [title, start, time_even, description, tribunal_even, id_so]
+        );
+        return { success: true, id: res.lastID, message: "Événement créé avec succès." };
+    }
+    
+    // For Update/Delete, verify ownership
+    const row = await db.get(`SELECT id_even FROM evenement WHERE id_even = ? AND id_so::text = ?`, [id_even, id_so]);
+    if (!row) throw new Error("Événement non trouvé ou accès refusé.");
+
+    if (action === 'delete') {
+        await db.run(`DELETE FROM evenement WHERE id_even = ?`, [id_even]);
+        return { success: true, message: "Événement supprimé." };
+    }
+    
+    if (action === 'update') {
+        const { title, start, time_even, description, tribunal_even } = data;
+        await db.run(
+            `UPDATE evenement SET title=?, start=?, time_even=?, description=?, tribunal_even=? WHERE id_even=?`,
+            [title, start, time_even, description, tribunal_even, id_even]
+        );
+        return { success: true, message: "Événement mis à jour." };
+    }
+}
+
+/**
+ * AI Tool: Modify Registry Record (Any field)
+ */
+async function modifyRegistryRecord(id_so, id_r, updates) {
+    const row = await db.get(`SELECT id_r FROM clients_record WHERE id_r = ? AND id_so::text = ?`, [id_r, id_so]);
+    if (!row) throw new Error("Acte non trouvé ou accès refusé.");
+
+    const keys = Object.keys(updates);
+    if (keys.length === 0) return { success: true, message: "Aucune mise à jour fournie." };
+
+    const setStr = keys.map(k => `${k} = ?`).join(', ');
+    const params = [...Object.values(updates), id_r];
+
+    await db.run(`UPDATE clients_record SET ${setStr} WHERE id_r = ?`, params);
+    return { success: true, message: `L'acte ${id_r} a été mis à jour.` };
+}
+
+/**
+ * AI Tool: Get Case Intelligence (Record + History)
+ */
+async function getCaseIntelligence(id_so, id_r) {
+    const record = await db.get(`SELECT * FROM clients_record WHERE id_r = ? AND id_so::text = ?`, [id_r, id_so]);
+    if (!record) return { error: "Dossier non trouvé." };
+
+    const steps = await db.all(`SELECT * FROM "œuvre_type" WHERE id_o::text = ? ORDER BY date_o ASC`, [id_r]);
+    return { record, history: steps };
+}
+
+/**
+ * AI Tool: Comprehensive Client Search
+ */
+async function searchAllClients(id_so, query) {
+    const fromRegistry = await db.all(
+        `SELECT id_r, nom_cl1, nom_cl2, de_part, ref FROM clients_record WHERE id_so::text = ? AND (nom_cl1 LIKE ? OR nom_cl2 LIKE ? OR de_part LIKE ?) LIMIT 5`,
+        [id_so, `%${query}%`, `%${query}%`, `%${query}%`]
+    );
+    const fromContacts = await db.all(
+        `SELECT id_tel, nom, prenom, num_tel1 FROM telephone WHERE id_so::text = ? AND (nom LIKE ? OR prenom LIKE ?) LIMIT 5`,
+        [id_so, `%${query}%`, `%${query}%`]
+    );
+    return { registryMatches: fromRegistry, contactMatches: fromContacts };
+}
+
 router.post('/chat', authenticate, async (req, res) => {
     try {
         const { messages } = req.body;
@@ -79,11 +154,11 @@ router.post('/chat', authenticate, async (req, res) => {
                 type: "function",
                 function: {
                     name: "search_acts",
-                    description: "Rechercher des actes ou des dossiers dans le registre général.",
+                    description: "Rechercher des actes ou des dossiers.",
                     parameters: {
                         type: "object",
                         properties: {
-                            query: { type: "string", description: "Le nom du client ou la référence à chercher" }
+                            query: { type: "string", description: "Nom ou référence" }
                         }
                     }
                 }
@@ -92,16 +167,12 @@ router.post('/chat', authenticate, async (req, res) => {
                 type: "function",
                 function: {
                     name: "update_act_status",
-                    description: "Mettre à jour le statut d'un acte dans le registre.",
+                    description: "Changer rapidement le statut d'un acte.",
                     parameters: {
                         type: "object",
                         properties: {
-                            id_r: { type: "number", description: "L'identifiant (id_r) de l'acte à mettre à jour" },
-                            status: { 
-                                type: "string", 
-                                enum: ['not_started', 'has_deposit', 'in_progress', 'completed'],
-                                description: "Le nouveau statut de l'acte" 
-                            }
+                            id_r: { type: "number" },
+                            status: { type: "string", enum: ['not_started', 'has_deposit', 'in_progress', 'completed'] }
                         },
                         required: ["id_r", "status"]
                     }
@@ -110,22 +181,68 @@ router.post('/chat', authenticate, async (req, res) => {
             {
                 type: "function",
                 function: {
-                    name: "search_contacts",
-                    description: "Rechercher un contact dans l'annuaire téléphonique.",
+                    name: "manage_calendar",
+                    description: "Ajouter, modifier ou supprimer un événement du calendrier.",
                     parameters: {
                         type: "object",
                         properties: {
-                            query: { type: "string", description: "Le nom ou le numéro de téléphone" }
-                        }
+                            action: { type: "string", enum: ['create', 'update', 'delete'] },
+                            id_even: { type: "number", description: "Requis pour update/delete" },
+                            data: {
+                                type: "object",
+                                properties: {
+                                    title: { type: "string" },
+                                    start: { type: "string", description: "Format YYYY-MM-DD" },
+                                    time_even: { type: "string", description: "Format HH:MM" },
+                                    description: { type: "string" },
+                                    tribunal_even: { type: "string" }
+                                }
+                            }
+                        },
+                        required: ["action"]
                     }
                 }
             },
             {
                 type: "function",
                 function: {
-                    name: "get_upcoming_events",
-                    description: "Obtenir les prochains rendez-vous ou audiences du calendrier.",
-                    parameters: { type: "object", properties: {} }
+                    name: "modify_registry_record",
+                    description: "Modifier n'importe quel détail d'un acte (adresse, noms, remarques).",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            id_r: { type: "number" },
+                            updates: {
+                                type: "object",
+                                description: "Champs à mettre à jour (ex: {nom_cl1: 'Nouveau Nom', cl1_adresse: '...' })"
+                            }
+                        },
+                        required: ["id_r", "updates"]
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "get_case_intelligence",
+                    description: "Obtenir l'historique complet d'un dossier pour analyse et résumé.",
+                    parameters: {
+                        type: "object",
+                        properties: { id_r: { type: "number" } },
+                        required: ["id_r"]
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "search_all_clients_comprehensive",
+                    description: "Rechercher un client partout (registre et annuaire).",
+                    parameters: {
+                        type: "object",
+                        properties: { query: { type: "string" } },
+                        required: ["query"]
+                    }
                 }
             }
         ];
@@ -135,7 +252,12 @@ router.post('/chat', authenticate, async (req, res) => {
             messages: [
                 { 
                     role: "system", 
-                    content: "Tu es l'Assistant IA de l'Étude HD. Tu peux LIRE les registres (recherche actes/contacts/calendrier) et AGIR sur eux (mettre à jour les statuts). Réponds de manière professionnelle en français. SI TU DOIS METTRE À JOUR UN STATUT, confirme toujours l'action." 
+                    content: `Tu es l'Intelligence de l'Étude HD. Tu gères le cabinet d'huissier.
+                        - Tu as plein accès au calendrier et au registre général.
+                        - Tu peux LIRE, CRÉER et MODIFIER des événements et des dossiers.
+                        - Tu peux analyser l'historique d'un cas (get_case_intelligence) pour en faire des résumés.
+                        - Tu peux auto-compléter des infos si tu les trouves dans l'annuaire lors de la création d'actes.
+                        Reste professionnel, précis et confirme toujours les modifications.` 
                 },
                 ...messages
             ],
@@ -158,6 +280,14 @@ router.post('/chat', authenticate, async (req, res) => {
                        result = await searchActs(id_so, functionArgs.query);
                    } else if (functionName === "update_act_status") {
                        result = await updateActStatus(id_so, functionArgs.id_r, functionArgs.status);
+                   } else if (functionName === "manage_calendar") {
+                       result = await manageCalendar(id_so, functionArgs.action, functionArgs.id_even, functionArgs.data);
+                   } else if (functionName === "modify_registry_record") {
+                       result = await modifyRegistryRecord(id_so, functionArgs.id_r, functionArgs.updates);
+                   } else if (functionName === "get_case_intelligence") {
+                       result = await getCaseIntelligence(id_so, functionArgs.id_r);
+                   } else if (functionName === "search_all_clients_comprehensive") {
+                       result = await searchAllClients(id_so, functionArgs.query);
                    } else if (functionName === "search_contacts") {
                        result = await searchContacts(id_so, functionArgs.query);
                    } else if (functionName === "get_upcoming_events") {
@@ -175,11 +305,10 @@ router.post('/chat', authenticate, async (req, res) => {
                 });
             }
 
-            // Second call with tool results
             const secondResponse = await openai.chat.completions.create({
                 model: "openai/gpt-4o-mini",
                 messages: [
-                    { role: "system", content: "Réponds à l'utilisateur en te basant sur les données extraites." },
+                    { role: "system", content: "Réponds à l'utilisateur avec une synthèse claire des données ou confirme les changements." },
                     ...messages,
                     responseMessage,
                     ...toolResults
@@ -193,7 +322,7 @@ router.post('/chat', authenticate, async (req, res) => {
 
     } catch (err) {
         console.error("AI Assistant Error:", err);
-        res.status(500).json({ error: "Erreur lors de la communication avec l'IA. Vérifiez votre clé API OpenRouter." });
+        res.status(500).json({ error: "Erreur IA. Vérifiez la configuration OpenRouter." });
     }
 });
 
