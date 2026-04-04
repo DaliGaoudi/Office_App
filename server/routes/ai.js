@@ -57,6 +57,18 @@ async function getCalendar(id_so) {
     `, [id_so, today]);
 }
 
+/**
+ * AI Tool: Update Act Status
+ */
+async function updateActStatus(id_so, id_r, status) {
+    // Validate that the record belongs to the user
+    const row = await db.get(`SELECT id_r FROM clients_record WHERE id_r = ? AND id_so::text = ?`, [id_r, id_so]);
+    if (!row) throw new Error("Accès refusé ou acte inexistant.");
+
+    await db.run(`UPDATE clients_record SET status = ? WHERE id_r = ?`, [status, id_r]);
+    return { success: true, message: `L'acte ${id_r} a été mis à jour avec le statut: ${status}.` };
+}
+
 router.post('/chat', authenticate, async (req, res) => {
     try {
         const { messages } = req.body;
@@ -73,6 +85,25 @@ router.post('/chat', authenticate, async (req, res) => {
                         properties: {
                             query: { type: "string", description: "Le nom du client ou la référence à chercher" }
                         }
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "update_act_status",
+                    description: "Mettre à jour le statut d'un acte dans le registre.",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            id_r: { type: "number", description: "L'identifiant (id_r) de l'acte à mettre à jour" },
+                            status: { 
+                                type: "string", 
+                                enum: ['not_started', 'has_deposit', 'in_progress', 'completed'],
+                                description: "Le nouveau statut de l'acte" 
+                            }
+                        },
+                        required: ["id_r", "status"]
                     }
                 }
             },
@@ -100,9 +131,12 @@ router.post('/chat', authenticate, async (req, res) => {
         ];
 
         const response = await openai.chat.completions.create({
-            model: "openai/gpt-4o-mini", // Efficient and smart enough for this
+            model: "openai/gpt-4o-mini",
             messages: [
-                { role: "system", content: "Tu es l'Assistant IA de l'Étude HD, une application de gestion pour huissier de justice. Tu as accès aux données de l'étude (actes, contacts, calendrier). Réponds de manière professionnelle et concise en français. Si tu ne trouves pas d'information, suggère à l'utilisateur de vérifier manuellement." },
+                { 
+                    role: "system", 
+                    content: "Tu es l'Assistant IA de l'Étude HD. Tu peux LIRE les registres (recherche actes/contacts/calendrier) et AGIR sur eux (mettre à jour les statuts). Réponds de manière professionnelle en français. SI TU DOIS METTRE À JOUR UN STATUT, confirme toujours l'action." 
+                },
                 ...messages
             ],
             tools: tools,
@@ -111,7 +145,6 @@ router.post('/chat', authenticate, async (req, res) => {
 
         const responseMessage = response.choices[0].message;
 
-        // Check if the model wants to call a tool
         if (responseMessage.tool_calls) {
             const toolResults = [];
             
@@ -120,12 +153,18 @@ router.post('/chat', authenticate, async (req, res) => {
                 const functionArgs = JSON.parse(toolCall.function.arguments);
                 
                 let result;
-                if (functionName === "search_acts") {
-                    result = await searchActs(id_so, functionArgs.query);
-                } else if (functionName === "search_contacts") {
-                    result = await searchContacts(id_so, functionArgs.query);
-                } else if (functionName === "get_upcoming_events") {
-                    result = await getCalendar(id_so);
+                try {
+                   if (functionName === "search_acts") {
+                       result = await searchActs(id_so, functionArgs.query);
+                   } else if (functionName === "update_act_status") {
+                       result = await updateActStatus(id_so, functionArgs.id_r, functionArgs.status);
+                   } else if (functionName === "search_contacts") {
+                       result = await searchContacts(id_so, functionArgs.query);
+                   } else if (functionName === "get_upcoming_events") {
+                       result = await getCalendar(id_so);
+                   }
+                } catch (e) {
+                   result = { error: e.message };
                 }
                 
                 toolResults.push({
