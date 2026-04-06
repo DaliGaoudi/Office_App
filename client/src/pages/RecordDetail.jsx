@@ -446,20 +446,40 @@ export default function RecordDetail() {
                                     <th>#</th>
                                     <th>نوع العملية</th>
                                     <th>التاريخ</th>
-                                    <th>ملاحظات</th>
-                                    <th>المبلغ (د.ت)</th>
+                                    <th>أصل</th>
+                                    <th>نضائر</th>
+                                    <th>نسخة</th>
+                                    <th>توجه</th>
+                                    <th>تحرير</th>
+                                    <th>ترسيم</th>
+                                    <th>تنقل</th>
+                                    <th>نسخ</th>
+                                    <th>بريد</th>
+                                    <th>أخرى</th>
+                                    <th>VAT</th>
+                                    <th>المجموع</th>
                                     <th className="no-print">عمل</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {actions.length === 0 ? (
-                                    <tr><td colSpan={6} style={{ textAlign:'center', opacity:0.5, padding:'2rem' }}>لا توجد محاضر مرتبطة بهذا الملف</td></tr>
+                                    <tr><td colSpan={16} style={{ textAlign:'center', opacity:0.5, padding:'2rem' }}>لا توجد محاضر مرتبطة بهذا الملف</td></tr>
                                 ) : actions.map((act, idx) => (
                                     <tr key={act.id}>
                                         <td style={{ opacity: 0.5 }}>{idx + 1}</td>
                                         <td style={{ fontWeight: 600 }}>{act.type_operation || '—'}</td>
                                         <td>{act.date_r || '—'}</td>
-                                        <td style={{ fontSize: '0.85rem', opacity: 0.8 }}>{act.remarques || '—'}</td>
+                                        <td>{formatAmount(act.origine)}</td>
+                                        <td>{formatAmount(act.exemple)}</td>
+                                        <td>{formatAmount(act.versionbureau)}</td>
+                                        <td>{formatAmount(act.orientation)}</td>
+                                        <td>{formatAmount(act.delimitation)}</td>
+                                        <td>{formatAmount(act.inscri)}</td>
+                                        <td>{formatAmount(act.mobilite)}</td>
+                                        <td>{formatAmount(act.imprimer)}</td>
+                                        <td>{formatAmount(act.postal)}</td>
+                                        <td>{formatAmount(act.autre)}</td>
+                                        <td style={{ fontSize: '0.8rem', opacity: 0.7 }}>{formatAmount(act.TVA)}</td>
                                         <td style={{ color: 'var(--primary)', fontWeight: 700 }}>
                                             {formatAmount(act.total)}
                                         </td>
