@@ -152,6 +152,7 @@ export default function Facturation({ type = 'general' }) {
     if (sels.includes(actionId)) {
         setSelectedActions({ ...selectedActions, [fileId]: sels.filter(id => id !== actionId) });
     } else {
+      
         setSelectedActions({ ...selectedActions, [fileId]: [...sels, actionId] });
     }
   };
