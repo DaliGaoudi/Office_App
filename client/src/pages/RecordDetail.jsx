@@ -25,15 +25,17 @@ export default function RecordDetail() {
 
     const fetchRecord = useCallback(async () => {
         if (isNew) {
-            const today = new Date().toISOString().split('T')[0].replace(/-/g, '/');
             const initialState = {
                 date_reg: today,
                 date_inscri: today,
+                date_echeance: '', // Will be calculated
                 status: 'not_started',
                 acompte: '0',
                 origine: '0', exemple: '0', version_bureau: '0', orientation: '0', mobilite: '0',
                 imprimer: '0', inscri: '0', delimitation: '0', poste: '0', autre: '0',
-                id_r: '' // Manual input
+                service_petitioner_name: '',
+                service_petitioner_contact: '',
+                id_r: '' 
             };
             setRecord(initialState);
             setFormData(initialState);
@@ -131,13 +133,16 @@ export default function RecordDetail() {
         e.preventDefault();
         const token = localStorage.getItem('token');
         try {
-            await fetch(`${API_BASE}/execution/${id}/actions`, {
+            const res = await fetch(`${API_BASE}/execution/${id}/actions`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(actionForm)
             });
-            setShowActionModal(false);
-            fetchRecord();
+            if (res.ok) {
+                setShowActionModal(false);
+                setActionForm({ type_operation: '', date_r: '', remarques: '', origine: '0', exemple: '0', versionbureau: '0', mobilite: '0', orientation: '0', imprimer: '0', inscri: '0', delimitation: '0', postal: '0', autre: '0', TVA: '0', salaire: '0' });
+                fetchRecord();
+            }
         } catch (e) { console.error(e); }
     };
 
@@ -160,22 +165,29 @@ export default function RecordDetail() {
 
     const tabConfig = [
         { id: 'general', label: 'المعلومات العامة' },
-        { id: 'client1', label: 'طالب الخدمة' },
+        { id: 'petitioner', label: isExecution ? 'المخاطب' : 'طالب الخدمة' },
+        { id: 'client1', label: 'طالب (Petitioner)' },
         { id: 'client2', label: 'المطلوب' },
-        { id: 'financials', label: 'المصاريف والخدمات' }
+        { id: 'financials', label: 'أجور و مصاريف' }
     ];
 
     const fieldGroups = {
         general: [
-            { key: 'id_r', label: 'الرقم بجليد المحاضر (ID)', type: 'number' },
-            { key: 'ref', label: 'العدد الترتيبي' },
-            { key: 'date_reg', label: 'تاريخ المحضر' },
-            { key: 'de_part', label: 'طالب الخدمة (جهة)' },
+            { key: 'ref', label: 'العدد الترتيبي', placeholder: 'تلقائي' },
+            { key: 'date_reg', label: 'تاريخ تبليغ المحضر', type: 'date' },
+            { key: 'date_echeance', label: 'تاريخ أجل الخدمة', type: 'date', readonly: true },
+            { key: 'de_part', label: 'جهة طالب الخدمة' },
             { key: 'remarque', label: 'نوع المحضر/ملاحظات', type: 'textarea' },
-            { key: 'tribunal', label: 'المحكمة' },
-            { key: 'nombre', label: 'عدد القضية' },
-            { key: 'date_s', label: 'تاريخ السند' },
-            { key: 'resultat', label: 'المآل النهائي' }
+            ...(isExecution ? [
+                { key: 'tribunal', label: 'المحكمة' },
+                { key: 'nombre', label: 'عدد القضية' },
+                { key: 'date_s', label: 'تاريخ السند' },
+                { key: 'resultat', label: 'المآل النهائي' }
+            ] : [])
+        ],
+        petitioner: [
+            { key: 'service_petitioner_name', label: isExecution ? 'اسم المخاطب' : 'اسم طالب الخدمة' },
+            { key: 'service_petitioner_contact', label: 'الاتصال' }
         ],
         client1: [
             { key: 'nom_cl1', label: 'اسم الطالب' },
@@ -195,16 +207,16 @@ export default function RecordDetail() {
         ],
         financials: [
             { key: 'acompte', label: 'تسبقة (Dinar)' },
-            { key: 'origine', label: 'أصل (Origine)' },
-            { key: 'exemple', label: 'نظير (Exemple)' },
+            { key: 'origine', label: 'أصل المحضر (Or)' },
+            { key: 'exemple', label: 'نضائر (Ex)' },
             { key: 'version_bureau', label: 'نسخة مكتب' },
-            { key: 'orientation', label: 'إرشاد (Orientation)' },
-            { key: 'mobilite', label: 'تنقل (Mobilité)' },
-            { key: 'imprimer', label: 'مطبوعات' },
-            { key: 'inscri', label: 'ترسيم' },
+            { key: 'orientation', label: 'توجه (Ornt)' },
             { key: 'delimitation', label: 'تحرير' },
+            { key: 'inscri', label: 'ترسيم' },
+            { key: 'mobilite', label: 'التنقل' },
+            { key: 'imprimer', label: 'نسخ أوراق' },
             { key: 'poste', label: 'بريد' },
-            { key: 'autre', label: 'أخرى (Autre)' }
+            { key: 'autre', label: 'المختلفات' }
         ]
     };
 
@@ -280,22 +292,33 @@ export default function RecordDetail() {
                                             />
                                         ) : (
                                             <input 
-                                                type={field.key === 'acompte' || fieldGroups.financials.find(f => f.key === field.key) ? 'number' : 'text'} 
+                                                type={field.type === 'date' ? 'date' : (field.key === 'acompte' || fieldGroups.financials.find(f => f.key === field.key) ? 'number' : 'text')} 
                                                 value={formData[field.key] || ''} 
+                                                readOnly={field.readonly}
+                                                placeholder={field.placeholder}
                                                 onChange={(e) => {
                                                     const newVal = e.target.value;
                                                     const newFormData = {...formData, [field.key]: newVal};
                                                     
-                                                    // Financial Auto-calc logic
+                                                    // Auto-calc deadline (date_reg + 5 days)
+                                                    if (field.key === 'date_reg') {
+                                                        const d = new Date(newVal);
+                                                        if (!isNaN(d.getTime())) {
+                                                            d.setDate(d.getDate() + 5);
+                                                            newFormData.date_echeance = d.toISOString().split('T')[0];
+                                                        }
+                                                    }
+
+                                                    // Financial Auto-calc logic (Fees + VAT + Expenses)
                                                     if (fieldGroups.financials.find(f => f.key === field.key)) {
-                                                        const baseFields = ['origine', 'exemple', 'version_bureau', 'orientation', 'mobilite'];
-                                                        const expenseFields = ['imprimer', 'inscri', 'delimitation', 'poste', 'autre'];
+                                                        const feeFields = ['origine', 'exemple', 'version_bureau', 'orientation'];
+                                                        const expenseFields = ['delimitation', 'inscri', 'mobilite', 'imprimer', 'poste', 'autre'];
                                                         
-                                                        const base = baseFields.reduce((sum, k) => sum + (parseFloat(newFormData[k]) || 0), 0);
-                                                        const tva = Math.round(base * 0.19); // Standard 19%
+                                                        const fees = feeFields.reduce((sum, k) => sum + (parseFloat(newFormData[k]) || 0), 0);
+                                                        const tva = Math.round(fees * 0.19); // 19% VAT on Fees only
                                                         const exp = expenseFields.reduce((sum, k) => sum + (parseFloat(newFormData[k]) || 0), 0);
                                                         
-                                                        newFormData.salaire = (base + tva + exp).toString();
+                                                        newFormData.salaire = (fees + tva + exp).toString();
                                                         newFormData.TVA = tva.toString();
                                                     }
 
@@ -305,7 +328,7 @@ export default function RecordDetail() {
                                                     }
                                                     setFormData(newFormData);
                                                 }}
-                                                style={{ width: '100%', padding: '0.6rem' }}
+                                                style={{ width: '100%', padding: '0.6rem', opacity: field.readonly ? 0.6 : 1 }}
                                             />
                                         )}
                                     </div>
@@ -319,7 +342,7 @@ export default function RecordDetail() {
                                         <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{formatAmount(formData.salaire || 0)} د.ت</div>
                                     </div>
                                     <div style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '0.5rem' }}>
-                                        (الأصل + TVA 19% + المصاريف)
+                                        (أجور + VAT 19% + مصاريف)
                                     </div>
                                 </div>
                             )}
@@ -447,16 +470,67 @@ export default function RecordDetail() {
                                     value={actionForm.remarques} onChange={e => setActionForm({...actionForm, remarques: e.target.value})} />
                             </div>
 
-                            {/* Financial breakdown */}
+                            {/* Financial breakdown for Action */}
                             <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '1rem' }}>
-                                <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color:'var(--primary)' }}>تفاصيل الأتعاب (للحساب التلقائي)</h4>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.8rem' }}>
-                                    {['origine', 'exemple', 'versionbureau', 'mobilite', 'orientation', 'imprimer', 'inscri', 'delimitation', 'postal', 'autre'].map(f => (
-                                        <div key={f}>
-                                            <label style={{ fontSize:'0.7rem', opacity:0.6 }}>{f}</label>
-                                            <input type="number" step="1" value={actionForm[f]} onChange={e => setActionForm({...actionForm, [f]: e.target.value})} style={{ width:'100%', padding:'0.4rem', fontSize:'0.85rem' }} />
-                                        </div>
-                                    ))}
+                                <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color:'var(--primary)' }}>تفاصيل الأتعاب والمصاريف</h4>
+                                
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <h5 style={{ fontSize: '0.75rem', marginBottom: '0.5rem', opacity: 0.8 }}>الأجور (تخضع لـ VAT)</h5>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                                        {[
+                                            {k:'origine', l:'أصل'}, {k:'exemple', l:'نضائر'}, 
+                                            {k:'versionbureau', l:'نسخة مكتب'}, {k:'orientation', l:'توجه'}
+                                        ].map(f => (
+                                            <div key={f.k}>
+                                                <label style={{ fontSize:'0.65rem', opacity:0.6 }}>{f.l}</label>
+                                                <input type="number" value={actionForm[f.k]} 
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        const newForm = {...actionForm, [f.k]: val};
+                                                        const fees = ['origine', 'exemple', 'versionbureau', 'orientation'].reduce((s, k) => s + (parseFloat(newForm[k]) || 0), 0);
+                                                        const tva = Math.round(fees * 0.19);
+                                                        const expenses = ['inscri', 'delimitation', 'mobilite', 'imprimer', 'postal', 'autre'].reduce((s, k) => s + (parseFloat(newForm[k]) || 0), 0);
+                                                        newForm.TVA = tva.toString();
+                                                        newForm.salaire = (fees + tva + expenses).toString();
+                                                        setActionForm(newForm);
+                                                    }} 
+                                                    style={{ width:'100%', padding:'0.3rem', fontSize:'0.8rem' }} 
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h5 style={{ fontSize: '0.75rem', marginBottom: '0.5rem', opacity: 0.8 }}>المصاريف</h5>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+                                        {[
+                                            {k:'delimitation', l:'تحرير'}, {k:'inscri', l:'ترسيم'}, {k:'mobilite', l:'تنقل'},
+                                            {k:'imprimer', l:'نسخ'}, {k:'postal', l:'بريد'}, {k:'autre', l:'أخرى'}
+                                        ].map(f => (
+                                            <div key={f.k}>
+                                                <label style={{ fontSize:'0.65rem', opacity:0.6 }}>{f.l}</label>
+                                                <input type="number" value={actionForm[f.k]} 
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        const newForm = {...actionForm, [f.k]: val};
+                                                        const fees = ['origine', 'exemple', 'versionbureau', 'orientation'].reduce((s, k) => s + (parseFloat(newForm[k]) || 0), 0);
+                                                        const tva = Math.round(fees * 0.19);
+                                                        const expenses = ['inscri', 'delimitation', 'mobilite', 'imprimer', 'postal', 'autre'].reduce((s, k) => s + (parseFloat(newForm[k]) || 0), 0);
+                                                        newForm.TVA = tva.toString();
+                                                        newForm.salaire = (fees + tva + expenses).toString();
+                                                        setActionForm(newForm);
+                                                    }} 
+                                                    style={{ width:'100%', padding:'0.3rem', fontSize:'0.8rem' }} 
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(var(--primary-rgb), 0.1)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>المجموع للمرحلة:</span>
+                                    <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{formatAmount(actionForm.salaire || 0)} د.ت</span>
                                 </div>
                             </div>
 

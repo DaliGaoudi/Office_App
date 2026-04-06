@@ -95,7 +95,7 @@ export default function RegistreGeneral() {
           <input type="text" placeholder="العدد الترتبي" value={filters.ref} onChange={e => setFilters({ ...filters, ref: e.target.value })} />
           <input type="text" placeholder="طالب الخدمة"  value={filters.de_part} onChange={e => setFilters({ ...filters, de_part: e.target.value })} />
           <input type="text" placeholder="اسم الطالب"   value={filters.nom_cl1} onChange={e => setFilters({ ...filters, nom_cl1: e.target.value })} />
-          <input type="text" placeholder="تاريخ المحضر (YYYY/MM/DD)" value={filters.date_reg} onChange={e => setFilters({ ...filters, date_reg: e.target.value })} />
+          <input type="text" placeholder="تاريخ تبليغ المحضر (YYYY/MM/DD)" value={filters.date_reg} onChange={e => setFilters({ ...filters, date_reg: e.target.value })} />
           <button type="submit" className="btn"><Search size={18} /> بحث</button>
           <button type="button" className="btn" style={{ background: 'rgba(255,255,255,0.08)' }}
             onClick={() => { setFilters({ ref: '', nom_cl1: '', de_part: '', date_reg: '' }); setActiveFilters({}); setPage(1); }}>
@@ -117,7 +117,7 @@ export default function RegistreGeneral() {
                   <th>طالب الخدمة</th>
                   <th>الطالب</th>
                   <th>المطلوب</th>
-                  <th>تاريخ المحضر</th>
+                  <th>تاريخ تبليغ المحضر</th>
                   <th>نوع المحضر</th>
                   <th style={{ color: '#a78bfa' }}>المبلغ (د.ت)</th>
                   <th>الحالة</th>

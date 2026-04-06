@@ -5,11 +5,21 @@ const authenticate = require('../middleware/auth');
 
 function computeActionSalaire(row) {
     if (!row) return 0;
-    const s = parseFloat(row.salaire) || 0;
-    const t = parseFloat(row["TVA"]) || 0;
-    const tt = parseFloat(row.total) || 0;
-    if (tt > 0) return tt;
-    return s + t;
+    
+    // Check if it's already calculated/stored
+    const storedTotal = parseFloat(row.total) || 0;
+    
+    const fees = ['origine','exemple','versionbureau','orientation']
+        .reduce((s, k) => s + (parseInt(row[k]) || 0), 0);
+    // Note: in œuvre_type table from old schema, it was versionbureau (one word) and no 'version_bureau'
+    
+    const rate = 19; // Assume 19% or get from row if stored
+    const tva = Math.round(fees * rate / 100);
+    const expenses = ['delimitation','inscri','mobilite','imprimer','poste','autre']
+        .reduce((s, k) => s + (parseInt(row[k]) || 0), 0);
+        
+    const calculated = fees + tva + expenses;
+    return calculated > 0 ? calculated : (parseFloat(row.salaire) || storedTotal);
 }
 
 // Main Execution List
@@ -150,6 +160,73 @@ router.delete('/:id', authenticate, async (req, res) => {
         res.json({ success: true, deletedID: id });
     } catch (err) {
         res.status(500).json({ error: err.message, v: "2.1" });
+    }
+});
+
+// ── Action (Stage) Management ──────────────────────────────────────────────
+
+// Add Action to Record
+router.post('/:id/actions', authenticate, async (req, res) => {
+    try {
+        const { id } = req.params; // record ID (id_o)
+        const action = req.body;
+        
+        const keys = [
+            'type_operation', 'date_r', 'val_financiere', 'remarques', 'id_o', 'id_user', 'id_so',
+            'origine', 'exemple', 'versionbureau', 'mobilite', 'orientation', 'imprimer', 'TVA', 'montantpartiel1', 'salaire'
+        ];
+        
+        const data = {};
+        keys.forEach(k => {
+            if (k === 'id_o') data[k] = id;
+            else if (k === 'id_user') data[k] = req.user.id;
+            else if (k === 'id_so') data[k] = req.user.id_so;
+            else if (k === 'date_r' && !action[k]) data[k] = new Date().toISOString().split('T')[0];
+            else data[k] = action[k] || (['type_operation', 'date_r', 'remarques'].includes(k) ? '' : '0');
+        });
+
+        const columns = Object.keys(data);
+        const placeholders = columns.map(() => '?').join(',');
+        const query = `INSERT INTO "œuvre_type" (${columns.join(',')}) VALUES (${placeholders}) RETURNING id`;
+        
+        const result = await db.run(query, Object.values(data));
+        res.json({ success: true, id: result.lastID, ...data });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update Action
+router.put('/actions/:actionId', authenticate, async (req, res) => {
+    try {
+        const { actionId } = req.params;
+        const action = req.body;
+        
+        delete action.id;
+        delete action.id_user;
+        delete action.id_so;
+        
+        const keys = Object.keys(action);
+        if (keys.length === 0) return res.json({ success: true });
+        
+        const setString = keys.map(k => `${k} = ?`).join(', ');
+        const query = `UPDATE "œuvre_type" SET ${setString} WHERE id = ? AND id_so = ?`;
+        
+        await db.run(query, [...Object.values(action), actionId, req.user.id_so]);
+        res.json({ success: true, updatedID: actionId });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete Action
+router.delete('/actions/:actionId', authenticate, async (req, res) => {
+    try {
+        const { actionId } = req.params;
+        await db.run('DELETE FROM "œuvre_type" WHERE id = ? AND id_so = ?', [actionId, req.user.id_so]);
+        res.json({ success: true, deletedID: actionId });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 

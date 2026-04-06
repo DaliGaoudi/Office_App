@@ -23,7 +23,7 @@ const Sidebar = () => {
         </li>
 
         {/* ── Registres ── */}
-        <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Registres</li>
+        <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>السجلات (Registres)</li>
         <li>
           <NavLink to="/general" className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
             <BookOpen size={18} /> Registre Général
@@ -41,7 +41,7 @@ const Sidebar = () => {
         </li>
 
         {/* ── Facturation ── */}
-        <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Facturation</li>
+        <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>أجور و مصاريف (Facturation)</li>
         <li>
           <NavLink to="/facturation/general" className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
             <Receipt size={18} /> Fact. Générale
@@ -59,7 +59,7 @@ const Sidebar = () => {
         </li>
 
         {/* ── Autres ── */}
-        <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Autres</li>
+        <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>إضافات (Autres)</li>
         <li>
           <NavLink to="/telephone" className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
             <Users size={18} /> Annuaire

@@ -16,19 +16,22 @@ async function refreshTVA() {
     }
 }
 
-// Warm up cache on startup
-refreshTVA();
-
-// Same formula as legacy jQuery calcSum — uses live TVA from settings
+// New formula: Fees (origine, exemple, version_bureau, orientation) + VAT (on Fees) + Expenses (others)
 function computeSalaire(row) {
     const stored = parseFloat(row.salaire) || 0;
-    if (stored > 0) return stored;
-    const sum1 = ['origine','exemple','version_bureau','orientation','mobilite']
+    // We check for a flag 'use_stored' or similar if we wanted to prioritize legacy, 
+    // but user says this applies to existing and new records.
+    // However, if salaire was manually entered and no breakdown exists, we might want to keep it.
+    // Based on user: "الجملة العامة = أجور + VAT + مصاريف"
+    
+    const fees = ['origine','exemple','version_bureau','orientation']
         .reduce((s, k) => s + (parseInt(row[k]) || 0), 0);
-    const tva = Math.round(sum1 * cachedTVA / 100);
-    const sum2 = ['imprimer','inscri','delimitation','poste','autre']
-        .reduce((s, k) => s + (parseInt(row[k]) || 0), 0) + tva;
-    return sum1 + sum2;
+    const tva = Math.round(fees * (parseFloat(cachedTVA) || 19) / 100);
+    const expenses = ['delimitation','inscri','mobilite','imprimer','poste','autre']
+        .reduce((s, k) => s + (parseInt(row[k]) || 0), 0);
+        
+    const total = fees + tva + expenses;
+    return total > 0 ? total : stored;
 }
 
 module.exports.refreshTVA = refreshTVA;
@@ -109,11 +112,37 @@ router.post('/', authenticate, async (req, res) => {
             'cl2_adressepersonnel', 'fin_date', 'remarque', 'date_reg', 'date_inscri', 'origine',
             'exemple', 'imprimer', 'orientation', 'mobilite', 'version_bureau', 'TVA', 'salaire',
             'acompte', 'resume', 'date_ajout', 'id_user', 'id_so', 'status', 'date_s', 'nombre',
-            'tribunal', 'resultat', 'tel2_cl1', 'tel2_cl2'
+            'tribunal', 'resultat', 'tel2_cl1', 'tel2_cl2',
+            'service_petitioner_name', 'service_petitioner_contact', 'date_echeance'
         ];
 
         const finalRecord = {};
+        
+        // 1. Auto-increment ref if not provided
+        if (!req.body.ref) {
+            const maxRefRow = await db.get(`SELECT MAX(ref) as max_ref FROM clients_record WHERE id_so = ?`, [req.user.id_so]);
+            finalRecord.ref = (parseInt(maxRefRow?.max_ref) || 0) + 1;
+        } else {
+            finalRecord.ref = req.body.ref;
+        }
+
+        // 2. Calculate date_echeance (date_reg + 5 days)
+        const date_reg = req.body.date_reg || new Date().toISOString().split('T')[0];
+        if (!req.body.date_echeance && date_reg) {
+            try {
+                const d = new Date(date_reg);
+                if (!isNaN(d.getTime())) {
+                    d.setDate(d.getDate() + 5);
+                    finalRecord.date_echeance = d.toISOString().split('T')[0];
+                }
+            } catch (e) {
+                console.error("Error calculating date_echeance:", e);
+            }
+        }
+
         allColumns.forEach(col => {
+            if (finalRecord[col] !== undefined) return; // already set (ref or date_echeance)
+            
             const val = req.body[col];
             if (val !== undefined && val !== null && val !== '') {
                 finalRecord[col] = val;
@@ -122,10 +151,10 @@ router.post('/', authenticate, async (req, res) => {
                 else if (col === 'id_so') finalRecord[col] = req.user.id_so;
                 else if (col === 'date_ajout') finalRecord[col] = new Date().toLocaleString('fr-FR');
                 else if (col === 'status') finalRecord[col] = (parseFloat(req.body.acompte) > 0) ? 'has_deposit' : 'not_started';
-                else if (['id_r', 'ref'].includes(col)) {
-                    // let it be handled by Postgres if possible
-                } else if (['nom_cl1', 'nom_cl2', 'de_part', 'date_reg', 'remarque', 'date_s', 'nombre', 'tribunal', 'resultat'].includes(col)) {
-                    finalRecord[col] = '';
+                else if (['id_r'].includes(col)) {
+                    // handled by Postgres
+                } else if (['nom_cl1', 'nom_cl2', 'de_part', 'date_reg', 'remarque', 'date_s', 'nombre', 'tribunal', 'resultat', 'service_petitioner_name', 'service_petitioner_contact', 'date_echeance'].includes(col)) {
+                    finalRecord[col] = finalRecord[col] || '';
                 } else {
                     finalRecord[col] = '0';
                 }
@@ -193,45 +222,21 @@ router.patch('/:id/status', authenticate, async (req, res) => {
 
 // Facturation — filterable billing list with salaire total
 function computeSalaireBreakdown(row) {
-    const dateStr = row.date_reg || '';
-    const isOld = dateStr && new Date(dateStr.replace(/\//g, '-')) < new Date('2018-01-01');
-    const rate = isOld ? 13 : (parseFloat(cachedTVA) || 19);
+    const rate = parseFloat(cachedTVA) || 19;
 
-    const baseRaw = ['origine','exemple','version_bureau','orientation','mobilite']
+    const fees = ['origine','exemple','version_bureau','orientation']
         .reduce((s, k) => s + (parseInt(row[k]) || 0), 0);
-    const expensesRaw = ['imprimer','inscri','delimitation','poste','autre']
+    const expenses = ['delimitation','inscri','mobilite','imprimer','poste','autre']
         .reduce((s, k) => s + (parseInt(row[k]) || 0), 0);
-    const storedTotal = parseFloat(row.salaire) || 0;
-
-    let base, tva, expenses, total;
-
-    if (baseRaw > 0 || expensesRaw > 0) {
-        base = baseRaw;
-        const storedTVA = parseFloat(row.tva) || 0; // check for lower/upper case
-        tva = (storedTVA > 0) ? storedTVA : Math.round(base * rate / 100);
-        expenses = expensesRaw;
-        total = base + tva + expenses;
-    } else if (storedTotal > 0) {
-        const storedTVA = parseFloat(row.tva) || 0;
-        if (storedTVA > 0) {
-            tva = storedTVA;
-            base = storedTotal - tva;
-            expenses = 0;
-        } else {
-            base = Math.round((storedTotal / (1 + rate / 100)) * 1000) / 1000;
-            tva = storedTotal - base;
-            expenses = 0;
-        }
-        total = storedTotal;
-    } else {
-        base = 0; tva = 0; expenses = 0; total = 0;
-    }
+    
+    const tva = Math.round(fees * rate / 100);
+    const total = fees + tva + expenses;
 
     return {
-        base: Math.round(base * 1000) / 1000,
-        tva: Math.round(tva * 1000) / 1000,
-        expenses: Math.round(expenses * 1000) / 1000,
-        total: Math.round(total * 1000) / 1000
+        base: fees, // "Fees" (أجور)
+        tva: tva,
+        expenses: expenses,
+        total: total
     };
 }
 

@@ -14,9 +14,9 @@ const CONFIG = {
       { key: 'nom_cl1',  label: 'الطالب' },
       { key: 'nom_cl2',  label: 'المطلوب' },
       { key: 'date_reg', label: 'التاريخ' },
-      { key: 'base_fare', label: 'الأجرة', isAmount: true },
-      { key: 'tva',       label: 'TVA', isAmount: true },
-      { key: 'expenses',  label: 'مصاريف', isAmount: true },
+      { key: 'base_fare', label: 'الأجور', isAmount: true },
+      { key: 'tva',       label: 'VAT 19%', isAmount: true },
+      { key: 'expenses',  label: 'المصاريف', isAmount: true },
       { key: 'calculated_total', label: 'الجملة', isAmount: true, isTotal: true },
       { key: 'status',    label: 'الحالة' },
     ],
@@ -33,9 +33,9 @@ const CONFIG = {
       { key: 'nom_cl1',     label: 'الطالب' },
       { key: 'nom_cl2',     label: 'المطلوب' },
       { key: 'date_inscri', label: 'التاريخ' },
-      { key: 'base_fare',   label: 'الأجرة', isAmount: true },
-      { key: 'tva',         label: 'TVA', isAmount: true },
-      { key: 'expenses',    label: 'مصاريف', isAmount: true },
+      { key: 'base_fare',   label: 'الأجور', isAmount: true },
+      { key: 'tva',         label: 'VAT 19%', isAmount: true },
+      { key: 'expenses',    label: 'المصاريف', isAmount: true },
       { key: 'calculated_total', label: 'الجملة', isAmount: true, isTotal: true },
       { key: 'status',      label: 'الحالة' },
     ],
@@ -173,7 +173,7 @@ export default function Facturation({ type = 'general' }) {
       <div className="topbar no-print" style={{ marginBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <FileText size={22} style={{ color: 'var(--primary)' }} />
-          <h2 style={{ color: 'var(--primary)', margin: 0 }}>الفوترة — {cfg.label}</h2>
+          <h2 style={{ color: 'var(--primary)', margin: 0 }}>أجور و مصاريف — {cfg.label}</h2>
         </div>
         <button className="btn" onClick={() => window.print()} disabled={data.length === 0}>
           <Printer size={18} /> طباعة الفاتورة
@@ -203,8 +203,8 @@ export default function Facturation({ type = 'general' }) {
         <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(var(--primary-rgb), 0.02)' }}>
             <div style={{ display: 'flex', gap: '2rem' }}>
                 <div className="summary-item"><label>عدد الملفات:</label> <strong>{count}</strong></div>
-                <div className="summary-item"><label>جملة الأجرة:</label> <strong>{formatAmount(currentTotals.base)}</strong></div>
-                <div className="summary-item"><label>جملة TVA:</label> <strong>{formatAmount(currentTotals.tva)}</strong></div>
+                <div className="summary-item"><label>جملة الأجور:</label> <strong>{formatAmount(currentTotals.base)}</strong></div>
+                <div className="summary-item"><label>جملة VAT:</label> <strong>{formatAmount(currentTotals.tva)}</strong></div>
                 <div className="summary-item"><label>جملة المصاريف:</label> <strong>{formatAmount(currentTotals.expenses)}</strong></div>
             </div>
             <div style={{ textAlign: 'left' }}>
