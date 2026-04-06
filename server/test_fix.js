@@ -38,7 +38,7 @@ async function testFix() {
         const columns = Object.keys(data);
         const quotedColumns = columns.map(c => `"${c}"`);
         const placeholders = columns.map((_, i) => `$${i + 1}`).join(',');
-        const query = `INSERT INTO "œuvre_type" (${quotedColumns.join(',')}) VALUES (${placeholders}) RETURNING "id"`;
+        const query = `INSERT INTO "œuvre_type" (${quotedColumns.join(',')}) VALUES (${placeholders}) RETURNING *`;
         
         console.log("Executing Query:", query);
         console.log("With Params:", Object.values(data));

@@ -200,11 +200,19 @@ router.post('/:id/actions', authenticate, async (req, res) => {
         const placeholders = columns.map((_, i) => `$${i + 1}`).join(',');
         
         // Use db.run which handles placeholder conversion for Postgres.
-        // We explicitly add RETURNING "id" so that db.run doesn't append its generic list of IDs.
-        const query = `INSERT INTO "œuvre_type" (${quotedColumns.join(',')}) VALUES (${placeholders}) RETURNING "id"`;
+        // We explicitly add RETURNING * to capture everything, including the generated ID.
+        const query = `INSERT INTO "œuvre_type" (${quotedColumns.join(',')}) VALUES (${placeholders}) RETURNING *`;
         const result = await db.run(query, Object.values(data));
         
-        res.json({ success: true, id: result.lastID, ...data });
+        let newId = result.lastID;
+        
+        // Final fallback: if lastID is still null, try one last check for the max ID
+        if (!newId) {
+            const maxRow = await db.get('SELECT MAX(id) as maxid FROM "œuvre_type"');
+            newId = maxRow ? maxRow.maxid : null;
+        }
+
+        res.json({ success: true, id: newId, ...data });
     } catch (err) {
         console.error("Action insertion error:", err);
         res.status(500).json({ error: err.message });
@@ -235,10 +243,10 @@ router.put('/actions/:actionId', authenticate, async (req, res) => {
 });
 
 // Delete Action
-router.delete('/actions/:actionId', authenticate, async (req, res) => {
+router.delete('/:id/actions/:actionId', authenticate, async (req, res) => {
     try {
         const { actionId } = req.params;
-        await db.run('DELETE FROM "œuvre_type" WHERE id = ? AND id_so = ?', [actionId, req.user.id_so]);
+        await db.run('DELETE FROM "œuvre_type" WHERE id::text = ? AND id_so::text = ?', [actionId, req.user.id_so]);
         res.json({ success: true, deletedID: actionId });
     } catch (err) {
         res.status(500).json({ error: err.message });
