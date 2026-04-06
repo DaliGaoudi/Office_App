@@ -29,8 +29,11 @@ router.get('/', authenticate, async (req, res) => {
         const offset = (parseInt(page) - 1) * parseInt(limit);
         const l = parseInt(limit);
         
-        let query = `SELECT DISTINCT c.*, c.id_r as id_o FROM clients_record c 
-                       INNER JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
+        // Query to sum the 'salaire' (total price) of all actions per record
+        let query = `SELECT c.*, c.id_r as id_o, 
+                       COALESCE(SUM(CAST(NULLIF(o.salaire, '') AS NUMERIC)), 0) as total_salaire
+                       FROM clients_record c 
+                       LEFT JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
                        WHERE c.id_so::text = ?`;
         let params = [req.user.id_so];
 
@@ -38,6 +41,8 @@ router.get('/', authenticate, async (req, res) => {
             query += ` AND (c.ref::text LIKE ? OR c.nom_cl1 LIKE ? OR c.de_part LIKE ?)`;
             params.push(`%${search}%`, `%${search}%`, `%${search}%`);
         }
+
+        query += ` GROUP BY c.id_r`;
 
         const countQuery = `SELECT COUNT(DISTINCT c.id_r) as count FROM clients_record c 
                             INNER JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
@@ -147,7 +152,11 @@ router.get('/:id', authenticate, async (req, res) => {
 router.get('/:id/actions', authenticate, async (req, res) => {
     try {
         const rows = await db.all('SELECT * FROM "œuvre_type" WHERE id_o::text = ? ORDER BY id ASC', [req.params.id]);
-        res.json((rows || []).map(r => ({ ...r, calculated_salaire: computeActionSalaire(r) })));
+        res.json((rows || []).map(r => ({ 
+            ...r, 
+            total: parseFloat(r.salaire) || 0, // Ensure 'total' is available for frontend
+            calculated_salaire: computeActionSalaire(r) 
+        })));
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

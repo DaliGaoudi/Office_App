@@ -125,13 +125,14 @@ export default function RegistreExecution() {
                   <th>المطلوب</th>
                   <th>تاريخ التسجيل</th>
                   <th>نوع المحضر</th>
+                  <th>المبلغ الجملي</th>
                   <th>الحالة</th>
                   <th className="no-print">عمل</th>
                 </tr>
               </thead>
               <tbody>
                 {data.length === 0 ? (
-                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>لا توجد نتائج</td></tr>
+                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>لا توجد نتائج</td></tr>
                 ) : data.map(item => (
                   <tr key={item.id_o}>
                     <td>{item.ref}</td>
@@ -140,6 +141,7 @@ export default function RegistreExecution() {
                     <td>{item.nom_cl2}</td>
                     <td>{item.date_inscri}</td>
                     <td>{item.remarque}</td>
+                    <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{formatAmount(item.total_salaire)}</td>
                     <td>
                       {(() => {
                         const s = STATUS_MAP[item.status] || STATUS_MAP.not_started;
