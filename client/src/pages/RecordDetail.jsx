@@ -21,6 +21,7 @@ export default function RecordDetail() {
     // Actions list for execution type
     const [actions, setActions]       = useState([]);
     const [showActionModal, setShowActionModal] = useState(false);
+    const [editingActionId, setEditingActionId] = useState(null);
     const [actionForm, setActionForm] = useState({ type_operation: '', date_r: '', remarques: '', origine: '0', exemple: '0', versionbureau: '0', mobilite: '0', orientation: '0', imprimer: '0', inscri: '0', delimitation: '0', postal: '0', autre: '0', TVA: '0', salaire: '0' });
 
     const fetchRecord = useCallback(async () => {
@@ -129,21 +130,49 @@ export default function RecordDetail() {
         } catch (e) { console.error(e); }
     };
 
-    const handleAddAction = async (e) => {
+    const handleSaveAction = async (e) => {
         e.preventDefault();
         const token = localStorage.getItem('token');
+        const method = editingActionId ? 'PUT' : 'POST';
+        const url = editingActionId 
+            ? `${API_BASE}/execution/${id}/actions/${editingActionId}`
+            : `${API_BASE}/execution/${id}/actions`;
+
         try {
-            const res = await fetch(`${API_BASE}/execution/${id}/actions`, {
-                method: 'POST',
+            const res = await fetch(url, {
+                method: method,
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(actionForm)
             });
             if (res.ok) {
                 setShowActionModal(false);
+                setEditingActionId(null);
                 setActionForm({ type_operation: '', date_r: '', remarques: '', origine: '0', exemple: '0', versionbureau: '0', mobilite: '0', orientation: '0', imprimer: '0', inscri: '0', delimitation: '0', postal: '0', autre: '0', TVA: '0', salaire: '0' });
                 fetchRecord();
             }
         } catch (e) { console.error(e); }
+    };
+
+    const handleEditAction = (act) => {
+        setEditingActionId(act.id);
+        setActionForm({
+            type_operation: act.type_operation || '',
+            date_r: act.date_r || '',
+            remarques: act.remarques || '',
+            origine: act.origine || '0',
+            exemple: act.exemple || '0',
+            versionbureau: act.versionbureau || '0',
+            mobilite: act.mobilite || '0',
+            orientation: act.orientation || '0',
+            imprimer: act.imprimer || '0',
+            inscri: act.inscri || '0',
+            delimitation: act.delimitation || '0',
+            postal: act.postal || '0',
+            autre: act.autre || '0',
+            TVA: act.TVA || '0',
+            salaire: act.salaire || '0'
+        });
+        setShowActionModal(true);
     };
 
     const handleDeleteAction = async (actionId) => {
@@ -405,7 +434,7 @@ export default function RecordDetail() {
                             <Plus size={20} />
                             <h3 style={{ margin: 0 }}>مراحل التنفيذ (المحاضر المرتبطة)</h3>
                         </div>
-                        <button className="btn no-print" onClick={() => setShowActionModal(true)}>
+                        <button className="btn no-print" onClick={() => { setEditingActionId(null); setActionForm({ type_operation: '', date_r: '', remarques: '', origine: '0', exemple: '0', versionbureau: '0', mobilite: '0', orientation: '0', imprimer: '0', inscri: '0', delimitation: '0', postal: '0', autre: '0', TVA: '0', salaire: '0' }); setShowActionModal(true); }}>
                             <Plus size={18} /> إضافة مرحلة
                         </button>
                     </div>
@@ -435,9 +464,14 @@ export default function RecordDetail() {
                                             {formatAmount(act.total)}
                                         </td>
                                         <td className="no-print">
-                                            <button className="btn-icon" style={{ color: '#ef4444' }} onClick={() => handleDeleteAction(act.id)}>
-                                                <Trash2 size={16} />
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <button className="btn-icon" style={{ color: 'var(--primary)' }} onClick={() => handleEditAction(act)}>
+                                                    <Activity size={16} />
+                                                </button>
+                                                <button className="btn-icon" style={{ color: '#ef4444' }} onClick={() => handleDeleteAction(act.id)}>
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -451,8 +485,10 @@ export default function RecordDetail() {
             {showActionModal && (
                 <div className="modal-overlay no-print" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
                     <div className="glass card animate-scale" style={{ width: 600, padding:'2rem', maxHeight: '90vh', overflowY: 'auto' }}>
-                        <h3 style={{ color: 'var(--primary)', marginBottom: '1.5rem' }}>إضافة مرحلة تنفيذ جديدة</h3>
-                        <form onSubmit={handleAddAction} style={{ display:'flex', flexDirection:'column', gap:'1.2rem' }}>
+                        <h3 style={{ color: 'var(--primary)', marginBottom: '1.5rem' }}>
+                            {editingActionId ? 'تعديل مرحلة التنفيذ' : 'إضافة مرحلة تنفيذ جديدة'}
+                        </h3>
+                        <form onSubmit={handleSaveAction} style={{ display:'flex', flexDirection:'column', gap:'1.2rem' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>
                                     <label style={{ display:'block', marginBottom:'0.3rem', fontSize:'0.8rem', opacity:0.7 }}>نوع العملية</label>
@@ -535,7 +571,9 @@ export default function RecordDetail() {
                             </div>
 
                             <div style={{ display:'flex', gap: '1rem', marginTop: '1rem' }}>
-                                <button type="submit" className="btn" style={{ flex: 1 }}>إضافة</button>
+                                <button type="submit" className="btn" style={{ flex: 1 }}>
+                                    {editingActionId ? 'حفظ التعديلات' : 'إضافة'}
+                                </button>
                                 <button type="button" className="btn" style={{ flex: 1, background: 'rgba(255,255,255,0.1)' }} onClick={() => setShowActionModal(false)}>إلغاء</button>
                             </div>
                         </form>

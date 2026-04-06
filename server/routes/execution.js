@@ -223,6 +223,45 @@ router.delete('/:id/actions/:actionId', authenticate, async (req, res) => {
     }
 });
 
+// Update Action
+router.put('/:id/actions/:actionId', authenticate, async (req, res) => {
+    try {
+        const { actionId } = req.params;
+        const action = req.body;
+        
+        const keys = [
+            'type_operation', 'date_r', 'val_financiere', 'remarques',
+            'origine', 'exemple', 'versionbureau', 'mobilite', 'orientation', 'imprimer', 'TVA', 
+            'montantpartiel1', 'montantpartiel2', 'salaire', 'inscri', 'delimitation', 'postal', 'autre'
+        ];
+        
+        const data = {};
+        keys.forEach(k => {
+            const val = action[k];
+            if (['type_operation', 'date_r', 'remarques'].includes(k)) {
+                data[k] = val || '';
+            } else {
+                data[k] = val ? (isNaN(val) ? val : parseFloat(val)) : 0;
+            }
+        });
+
+        const setClause = Object.keys(data).map((c, i) => `"${c}" = $${i + 1}`).join(', ');
+        const query = `UPDATE "œuvre_type" SET ${setClause} WHERE id::text = $${Object.keys(data).length + 1} AND id_so::text = $${Object.keys(data).length + 2} RETURNING *`;
+        
+        const params = [...Object.values(data), actionId, req.user.id_so];
+        const result = await db.run(query, params);
+
+        if (result.changes === 0) {
+            return res.status(404).json({ error: 'Action not found' });
+        }
+
+        res.json({ success: true, id: actionId, ...data });
+    } catch (err) {
+        console.error("Action update error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Delete Record
 router.delete('/:id', authenticate, async (req, res) => {
     try {
