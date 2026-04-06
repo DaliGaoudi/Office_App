@@ -195,8 +195,10 @@ router.post('/:id/actions', authenticate, async (req, res) => {
             }
         });
 
-        // Quote all column names to handle case-sensitivity (e.g. "TVA") and special characters
+        const columns = Object.keys(data);
         const quotedColumns = columns.map(c => `"${c}"`);
+        const placeholders = columns.map((_, i) => `$${i + 1}`).join(',');
+        
         // Use db.run which handles placeholder conversion for Postgres.
         // We explicitly add RETURNING "id" so that db.run doesn't append its generic list of IDs.
         const query = `INSERT INTO "œuvre_type" (${quotedColumns.join(',')}) VALUES (${placeholders}) RETURNING "id"`;
