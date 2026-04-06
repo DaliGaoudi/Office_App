@@ -29,11 +29,13 @@ router.get('/', authenticate, async (req, res) => {
         const offset = (parseInt(page) - 1) * parseInt(limit);
         const l = parseInt(limit);
         
-        // Query to sum the 'salaire' (total price) of all actions per record
+        // Query to sum the 'salaire' (total price) of all actions per record using a subquery to avoid GROUP BY issues
         let query = `SELECT c.*, c.id_r as id_o, 
-                       COALESCE(SUM(CAST(NULLIF(o.salaire, '') AS NUMERIC)), 0) as total_salaire
+                       (SELECT COALESCE(SUM(CAST(NULLIF(o.salaire, '') AS NUMERIC)), 0) 
+                        FROM "œuvre_type" o 
+                        WHERE o.id_o::text = c.id_r::text) as total_salaire
                        FROM clients_record c 
-                       LEFT JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
+                       INNER JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
                        WHERE c.id_so::text = ?`;
         let params = [req.user.id_so];
 
@@ -41,8 +43,6 @@ router.get('/', authenticate, async (req, res) => {
             query += ` AND (c.ref::text LIKE ? OR c.nom_cl1 LIKE ? OR c.de_part LIKE ?)`;
             params.push(`%${search}%`, `%${search}%`, `%${search}%`);
         }
-
-        query += ` GROUP BY c.id_r`;
 
         const countQuery = `SELECT COUNT(DISTINCT c.id_r) as count FROM clients_record c 
                             INNER JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
