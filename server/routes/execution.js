@@ -141,7 +141,9 @@ router.get('/:id', authenticate, async (req, res) => {
     }
 });
 
-// Actions for Record
+// ── Action (Stage) Management ──────────────────────────────────────────────
+
+// Actions for Record (Moved up for priority)
 router.get('/:id/actions', authenticate, async (req, res) => {
     try {
         const rows = await db.all('SELECT * FROM "œuvre_type" WHERE id_o::text = ? ORDER BY id ASC', [req.params.id]);
@@ -151,27 +153,12 @@ router.get('/:id/actions', authenticate, async (req, res) => {
     }
 });
 
-// Delete Record
-router.delete('/:id', authenticate, async (req, res) => {
-    try {
-        const { id } = req.params;
-        await db.run('DELETE FROM "œuvre_type" WHERE id_o::text = $1 AND id_so::text = $2', [id, req.user.id_so]);
-        await db.run('DELETE FROM clients_record WHERE id_r::text = $1 AND id_so::text = $2', [id, req.user.id_so]);
-        res.json({ success: true, deletedID: id });
-    } catch (err) {
-        res.status(500).json({ error: err.message, v: "2.1" });
-    }
-});
-
-// ── Action (Stage) Management ──────────────────────────────────────────────
-
 // Add Action to Record
 router.post('/:id/actions', authenticate, async (req, res) => {
     try {
         const { id } = req.params; // record ID (id_o)
         const action = req.body;
         
-        // Comprehensive list of columns found in œuvre_type
         const keys = [
             'type_operation', 'date_r', 'val_financiere', 'remarques', 'id_o', 'id_user', 'id_so',
             'origine', 'exemple', 'versionbureau', 'mobilite', 'orientation', 'imprimer', 'TVA', 
@@ -185,7 +172,6 @@ router.post('/:id/actions', authenticate, async (req, res) => {
             else if (k === 'id_so') data[k] = parseInt(req.user.id_so);
             else if (k === 'date_r' && !action[k]) data[k] = new Date().toISOString().split('T')[0];
             else {
-                // Ensure numeric fields are numbers, not strings, if possible
                 const val = action[k];
                 if (['type_operation', 'date_r', 'remarques'].includes(k)) {
                     data[k] = val || '';
@@ -194,62 +180,58 @@ router.post('/:id/actions', authenticate, async (req, res) => {
                 }
             }
         });
+        
+        // No manual ID generation needed anymore! Database handles it via SERIAL.
 
         const columns = Object.keys(data);
         const quotedColumns = columns.map(c => `"${c}"`);
         const placeholders = columns.map((_, i) => `$${i + 1}`).join(',');
-        
-        // Use db.run which handles placeholder conversion for Postgres.
-        // We explicitly add RETURNING * to capture everything, including the generated ID.
         const query = `INSERT INTO "œuvre_type" (${quotedColumns.join(',')}) VALUES (${placeholders}) RETURNING *`;
         const result = await db.run(query, Object.values(data));
         
-        let newId = result.lastID;
-        
-        // Final fallback: if lastID is still null, try one last check for the max ID
-        if (!newId) {
-            const maxRow = await db.get('SELECT MAX(id) as maxid FROM "œuvre_type"');
-            newId = maxRow ? maxRow.maxid : null;
-        }
+        // db.run returns lastID which will be the new 'id'
+        const finalId = result.lastID;
 
-        res.json({ success: true, id: newId, ...data });
+        res.json({ success: true, id: finalId, ...data });
     } catch (err) {
         console.error("Action insertion error:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// Update Action
-router.put('/actions/:actionId', authenticate, async (req, res) => {
+// Delete Action (Moved up and robustified for 'null' IDs)
+router.delete('/:id/actions/:actionId', authenticate, async (req, res) => {
     try {
-        const { actionId } = req.params;
-        const action = req.body;
-        
-        delete action.id;
-        delete action.id_user;
-        delete action.id_so;
-        
-        const keys = Object.keys(action);
-        if (keys.length === 0) return res.json({ success: true });
-        
-        const setString = keys.map(k => `${k} = ?`).join(', ');
-        const query = `UPDATE "œuvre_type" SET ${setString} WHERE id = ? AND id_so = ?`;
-        
-        await db.run(query, [...Object.values(action), actionId, req.user.id_so]);
-        res.json({ success: true, updatedID: actionId });
+        const { id, actionId } = req.params;
+        let query;
+        let params;
+
+        if (actionId === 'null' || !actionId) {
+            // Special cleanup for legacy records that have NULL in the id column
+            query = 'DELETE FROM "œuvre_type" WHERE id_o::text = $1 AND id IS NULL AND id_so::text = $2';
+            params = [id, req.user.id_so];
+        } else {
+            query = 'DELETE FROM "œuvre_type" WHERE id::text = $1 AND id_so::text = $2';
+            params = [actionId, req.user.id_so];
+        }
+
+        await db.run(query, params);
+        res.json({ success: true, deletedID: actionId });
     } catch (err) {
+        console.error("Action deletion error:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// Delete Action
-router.delete('/:id/actions/:actionId', authenticate, async (req, res) => {
+// Delete Record
+router.delete('/:id', authenticate, async (req, res) => {
     try {
-        const { actionId } = req.params;
-        await db.run('DELETE FROM "œuvre_type" WHERE id::text = ? AND id_so::text = ?', [actionId, req.user.id_so]);
-        res.json({ success: true, deletedID: actionId });
+        const { id } = req.params;
+        await db.run('DELETE FROM "œuvre_type" WHERE id_o::text = $1 AND id_so::text = $2', [id, req.user.id_so]);
+        await db.run('DELETE FROM clients_record WHERE id_r::text = $1 AND id_so::text = $2', [id, req.user.id_so]);
+        res.json({ success: true, deletedID: id });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err.message, v: "2.1" });
     }
 });
 
