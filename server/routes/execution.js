@@ -171,27 +171,40 @@ router.post('/:id/actions', authenticate, async (req, res) => {
         const { id } = req.params; // record ID (id_o)
         const action = req.body;
         
+        // Comprehensive list of columns found in œuvre_type
         const keys = [
             'type_operation', 'date_r', 'val_financiere', 'remarques', 'id_o', 'id_user', 'id_so',
-            'origine', 'exemple', 'versionbureau', 'mobilite', 'orientation', 'imprimer', 'TVA', 'montantpartiel1', 'salaire'
+            'origine', 'exemple', 'versionbureau', 'mobilite', 'orientation', 'imprimer', 'TVA', 
+            'montantpartiel1', 'montantpartiel2', 'salaire', 'inscri', 'delimitation', 'postal', 'autre'
         ];
         
         const data = {};
         keys.forEach(k => {
-            if (k === 'id_o') data[k] = id;
-            else if (k === 'id_user') data[k] = req.user.id;
-            else if (k === 'id_so') data[k] = req.user.id_so;
+            if (k === 'id_o') data[k] = parseInt(id);
+            else if (k === 'id_user') data[k] = parseInt(req.user.id);
+            else if (k === 'id_so') data[k] = parseInt(req.user.id_so);
             else if (k === 'date_r' && !action[k]) data[k] = new Date().toISOString().split('T')[0];
-            else data[k] = action[k] || (['type_operation', 'date_r', 'remarques'].includes(k) ? '' : '0');
+            else {
+                // Ensure numeric fields are numbers, not strings, if possible
+                const val = action[k];
+                if (['type_operation', 'date_r', 'remarques'].includes(k)) {
+                    data[k] = val || '';
+                } else {
+                    data[k] = val ? (isNaN(val) ? val : parseFloat(val)) : 0;
+                }
+            }
         });
 
-        const columns = Object.keys(data);
-        const placeholders = columns.map(() => '?').join(',');
-        const query = `INSERT INTO "œuvre_type" (${columns.join(',')}) VALUES (${placeholders}) RETURNING id`;
-        
+        // Quote all column names to handle case-sensitivity (e.g. "TVA") and special characters
+        const quotedColumns = columns.map(c => `"${c}"`);
+        // Use db.run which handles placeholder conversion for Postgres.
+        // We explicitly add RETURNING "id" so that db.run doesn't append its generic list of IDs.
+        const query = `INSERT INTO "œuvre_type" (${quotedColumns.join(',')}) VALUES (${placeholders}) RETURNING "id"`;
         const result = await db.run(query, Object.values(data));
+        
         res.json({ success: true, id: result.lastID, ...data });
     } catch (err) {
+        console.error("Action insertion error:", err);
         res.status(500).json({ error: err.message });
     }
 });
