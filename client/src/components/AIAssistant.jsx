@@ -6,7 +6,7 @@ export default function AIAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Bonjour ! Je suis votre Assistant IA. Comment puis-je vous aider aujourd\'hui ?' }
+    { role: 'assistant', content: 'مرحباً! أنا مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -46,10 +46,10 @@ export default function AIAssistant() {
       if (res.ok) {
         setMessages(prev => [...prev, { role: 'assistant', content: data.content }]);
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: "Désolé, j'ai rencontré une erreur. Vérifiez votre clé API." }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: "عذراً، حدث خطأ. يرجى التحقق من المفتاح الخاص بك." }]);
       }
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'assistant', content: "Erreur de connexion au serveur AI." }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: "خطأ في الاتصال بخادم الذكاء الاصطناعي." }]);
     }
     setLoading(false);
   };
@@ -58,7 +58,7 @@ export default function AIAssistant() {
     return (
       <div 
         className="fab animate-fade" 
-        style={{ bottom: '2rem', right: '2rem', zIndex: 1000 }}
+        style={{ bottom: '2rem', left: '2rem', zIndex: 1000 }}
         onClick={() => setIsOpen(true)}
       >
         <Bot size={28} />
@@ -72,7 +72,7 @@ export default function AIAssistant() {
       style={{
         position: 'fixed',
         bottom: '2rem',
-        right: '2.5rem',
+        left: '2.5rem',
         width: isMinimized ? '200px' : '400px',
         height: isMinimized ? '60px' : '600px',
         maxWidth: '90vw',
@@ -87,12 +87,12 @@ export default function AIAssistant() {
         border: '1px solid rgba(255, 255, 255, 0.1)',
       }}
     >
-      <div className="modal-header" style={{ marginBottom: 0, padding: '1rem 1.5rem', background: 'rgba(59, 130, 246, 0.1)' }}>
+      <div className="modal-header" style={{ marginBottom: 0, padding: '1rem 1.5rem', background: 'rgba(198, 40, 40, 0.1)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{ padding: '0.4rem', background: 'var(--primary)', borderRadius: '8px', color: 'white' }}>
             <Bot size={18} />
           </div>
-          <h3 style={{ fontSize: '1rem', margin: 0 }}>Assistant IA</h3>
+          <h3 style={{ fontSize: '1rem', margin: 0 }}>المساعد الذكي</h3>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button className="btn-icon" onClick={() => setIsMinimized(!isMinimized)}>
@@ -127,7 +127,7 @@ export default function AIAssistant() {
                   {m.content}
                 </div>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                  {m.role === 'user' ? 'Vous' : 'Assistant'}
+                  {m.role === 'user' ? 'أنت' : 'المساعد'}
                 </span>
               </div>
             ))}
@@ -142,7 +142,7 @@ export default function AIAssistant() {
                   gap: '0.5rem'
                 }}>
                   <Loader2 size={14} className="animate-spin" />
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>L'assistant réfléchit...</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>المساعد يفكر...</span>
                 </div>
               </div>
             )}
@@ -155,7 +155,7 @@ export default function AIAssistant() {
                 type="text" 
                 value={input} 
                 onChange={e => setInput(e.target.value)}
-                placeholder="Posez une question..."
+                placeholder="اسأل سؤالاً..."
                 style={{ paddingRight: '3rem' }}
                 disabled={loading}
               />

@@ -1,17 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --bg-dark: #0f172a;
-  --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  --sidebar-bg: rgba(30, 41, 59, 0.7);
-  --card-bg: rgba(255, 255, 255, 0.03);
-  --card-border: rgba(255, 255, 255, 0.08);
-  --primary: #3b82f6;
-  --primary-hover: #2563eb;
-  --accent: #10b981;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --bg-dark: #121212;
+  --bg-gradient: linear-gradient(180deg, #121212 0%, #1e1e1e 100%);
+  --sidebar-bg: rgba(30, 30, 30, 0.8);
+  --card-bg: #1e1e1e;
+  --card-border: #2c2c2c;
+  --primary: #c62828;
+  --primary-hover: #8e0000;
+  --accent-gold: #c9a227;
+  --text-main: #ffffff;
+  --text-muted: #b0b0b0;
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  
+  /* Status Colors */
+  --status-success: #2e7d32;
+  --status-warning: #f9a825;
+  --status-error: #d32f2f;
 }
 
 * {
@@ -41,9 +46,9 @@ body {
 }
 
 .glass-panel {
-  background: rgba(30, 41, 59, 0.6);
+  background: var(--sidebar-bg);
   backdrop-filter: blur(16px);
-  border-left: 1px solid var(--card-border); /* Moved to RTL border */
+  border-left: 1px solid var(--card-border);
 }
 
 /* Typography */
@@ -108,8 +113,9 @@ p {
 }
 
 .nav-link:hover, .nav-link.active {
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(198, 40, 40, 0.1);
   color: var(--primary);
+  box-shadow: inset -4px 0 0 var(--accent-gold); /* Gold prestige accent on active */
 }
 
 .main-content {
@@ -342,7 +348,8 @@ tr:hover {
 }
 
 .calendar-day.today {
-  background: rgba(59, 130, 246, 0.05);
+  background: rgba(198, 40, 40, 0.05);
+  border: 1px solid rgba(201, 162, 39, 0.3); /* Gold hint today */
 }
 
 .calendar-day.other-month {
@@ -364,7 +371,7 @@ tr:hover {
   font-size: 0.75rem;
   padding: 0.3rem 0.6rem;
   border-radius: 6px;
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(198, 40, 40, 0.1);
   border-right: 3px solid var(--primary);
   color: var(--text-main);
   cursor: pointer;
@@ -376,7 +383,7 @@ tr:hover {
 
 .event-pill:hover {
   transform: scale(1.02);
-  background: rgba(59, 130, 246, 0.25);
+  background: rgba(198, 40, 40, 0.2);
 }
 
 /* Contact Cards */
@@ -485,13 +492,22 @@ tr:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 4px 12px rgba(198, 40, 40, 0.4);
   cursor: pointer;
   transition: all 0.3s;
   z-index: 100;
 }
 
-.fab:hover {
-  transform: scale(1.1) rotate(90deg);
-  background: var(--primary-hover);
+/* Status Badges */
+.badge {
+  padding: 0.3rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
 }
+
+.badge-green { background: rgba(46, 125, 50, 0.15); color: #81c784; }
+.badge-blue { background: rgba(198, 40, 40, 0.1); color: var(--primary); }
+.badge-amber { background: rgba(249, 168, 37, 0.15); color: #ffca28; }
+.badge-gray { background: rgba(176, 176, 176, 0.15); color: #bdbdbd; }
