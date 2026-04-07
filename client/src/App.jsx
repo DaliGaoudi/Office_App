@@ -1,6 +1,6 @@
 import { useState, createContext, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, NavLink } from 'react-router-dom';
-import { Shield, BookOpen, Users, CalendarDays, LogOut, FileText, Receipt, Settings as SettingsIcon } from 'lucide-react';
+import { Shield, BookOpen, Users, CalendarDays, LogOut, FileText, Receipt, Settings as SettingsIcon, Sun, Moon } from 'lucide-react';
 import './index.css';
 
 import logo from './assets/logo.png';
@@ -9,6 +9,10 @@ import logo from './assets/logo.png';
 const AuthContext = createContext();
 
 const useAuth = () => useContext(AuthContext);
+
+// Context for Theme
+const ThemeContext = createContext();
+const useTheme = () => useContext(ThemeContext);
 
 // --- Layout & Components --- //
 
@@ -93,6 +97,8 @@ import AIAssistant from './components/AIAssistant';
 
 const Layout = ({ children }) => {
   const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <div className="layout-container animate-fade">
       <Sidebar />
@@ -103,6 +109,9 @@ const Layout = ({ children }) => {
             <p>أدر مكتبك بذكاء وكفاءة</p>
           </div>
           <div className="profile-section">
+            <button className="btn-icon" onClick={toggleTheme} title="تبديل المظهر" style={{ marginRight: '0.5rem' }}>
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
             <span className="glass" style={{ padding: '0.5rem 1rem', borderRadius: '20px', color: 'var(--primary)' }}>مدير</span>
           </div>
         </div>
@@ -178,6 +187,14 @@ import Settings from './pages/Settings';
 function App() {
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user')) || null);
   const [token, setToken] = useState(() => localStorage.getItem('token') || null);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
   const login = (userData, userToken) => {
     setUser(userData);
@@ -195,30 +212,32 @@ function App() {
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout }}>
-      <BrowserRouter>
-        {!user ? (
-          <Routes>
-            <Route path="*" element={<Login />} />
-          </Routes>
-        ) : (
-          <Layout>
+      <ThemeContext.Provider value={{ theme, toggleTheme }}>
+        <BrowserRouter>
+          {!user ? (
             <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/general" element={<RegistreGeneral />} />
-              <Route path="/execution" element={<RegistreExecution />} />
-              <Route path="/cnss" element={<RegistreCNSS />} />
-              <Route path="/telephone" element={<Telephone />} />
-              <Route path="/calendar" element={<Calendar />} />
-              <Route path="/record/:type/:id" element={<RecordDetail />} />
-              <Route path="/facturation/general"   element={<Facturation type="general" />} />
-              <Route path="/facturation/execution" element={<Facturation type="execution" />} />
-              <Route path="/facturation/cnss"      element={<Facturation type="cnss" />} />
-              <Route path="/settings"              element={<Settings />} />
-              <Route path="*" element={<Navigate to="/" />} />
+              <Route path="*" element={<Login />} />
             </Routes>
-          </Layout>
-        )}
-      </BrowserRouter>
+          ) : (
+            <Layout>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/general" element={<RegistreGeneral />} />
+                <Route path="/execution" element={<RegistreExecution />} />
+                <Route path="/cnss" element={<RegistreCNSS />} />
+                <Route path="/telephone" element={<Telephone />} />
+                <Route path="/calendar" element={<Calendar />} />
+                <Route path="/record/:type/:id" element={<RecordDetail />} />
+                <Route path="/facturation/general"   element={<Facturation type="general" />} />
+                <Route path="/facturation/execution" element={<Facturation type="execution" />} />
+                <Route path="/facturation/cnss"      element={<Facturation type="cnss" />} />
+                <Route path="/settings"              element={<Settings />} />
+                <Route path="*" element={<Navigate to="/" />} />
+              </Routes>
+            </Layout>
+          )}
+        </BrowserRouter>
+      </ThemeContext.Provider>
     </AuthContext.Provider>
   );
 }

@@ -73,6 +73,7 @@ export default function AIAssistant() {
         position: 'fixed',
         bottom: '2rem',
         left: '2.5rem',
+        background: 'var(--surface)',
         width: isMinimized ? '200px' : '400px',
         height: isMinimized ? '60px' : '600px',
         maxWidth: '90vw',
@@ -87,7 +88,7 @@ export default function AIAssistant() {
         border: '1px solid rgba(255, 255, 255, 0.1)',
       }}
     >
-      <div className="modal-header" style={{ marginBottom: 0, padding: '1rem 1.5rem', background: 'rgba(198, 40, 40, 0.1)' }}>
+      <div className="modal-header" style={{ marginBottom: 0, padding: '1rem 1.5rem', background: 'var(--nav-active-bg)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{ padding: '0.4rem', background: 'var(--primary)', borderRadius: '8px', color: 'white' }}>
             <Bot size={18} />
@@ -118,11 +119,12 @@ export default function AIAssistant() {
                   maxWidth: '85%',
                   padding: '0.8rem 1rem',
                   borderRadius: m.role === 'user' ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
-                  background: m.role === 'user' ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                  background: m.role === 'user' ? 'var(--primary)' : 'var(--nav-active-bg)',
+                  color: m.role === 'user' ? '#ffffff' : 'var(--text-main)',
                   fontSize: '0.9rem',
                   lineHeight: '1.4',
                   whiteSpace: 'pre-wrap',
-                  border: m.role === 'user' ? 'none' : '1px solid var(--card-border)'
+                  border: m.role === 'user' ? 'none' : '1px solid var(--border)'
                 }}>
                   {m.content}
                 </div>
@@ -134,7 +136,7 @@ export default function AIAssistant() {
             {loading && (
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                 <div style={{ 
-                  background: 'rgba(255,255,255,0.05)', 
+                  background: 'var(--nav-active-bg)', 
                   padding: '0.8rem 1.2rem', 
                   borderRadius: '14px 14px 14px 2px',
                   display: 'flex',
