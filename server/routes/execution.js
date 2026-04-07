@@ -61,6 +61,46 @@ router.get('/', authenticate, async (req, res) => {
     }
 });
 
+// Create new Execution Record (Base create)
+router.post('/', authenticate, async (req, res) => {
+    try {
+        const { ref, de_part, nom_cl1, nom_cl2, date_inscri, remarque } = req.body;
+        const id_so = req.user.id_so;
+        const id_user = req.user.id;
+
+        // 1. Create the base record in clients_record
+        // We use a simplified insert similar to registre.js but tailored for execution start
+        const insertClientQuery = `
+            INSERT INTO clients_record (ref, de_part, nom_cl1, nom_cl2, date_reg, remarque, id_so, id_user, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'not_started')
+            RETURNING id_r
+        `;
+        const clientResult = await db.run(insertClientQuery, [
+            ref || '', de_part || '', nom_cl1 || '', nom_cl2 || '', 
+            date_inscri || new Date().toISOString().split('T')[0], 
+            remarque || '', id_so, id_user
+        ]);
+
+        const newId = clientResult.lastID;
+
+        // 2. Create the initial execution entry in œuvre_type to "mark" it as an execution file
+        const insertExecQuery = `
+            INSERT INTO "œuvre_type" (id_o, type_operation, date_r, id_so, id_user)
+            VALUES (?, ?, ?, ?, ?)
+        `;
+        await db.run(insertExecQuery, [
+            newId, remarque || 'فتح ملف تنفيذ', 
+            date_inscri || new Date().toISOString().split('T')[0],
+            id_so, id_user
+        ]);
+
+        res.json({ success: true, id: newId });
+    } catch (err) {
+        console.error("Execution Create Error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Facturation List (The problematic one)
 router.get('/facturation/list', authenticate, async (req, res) => {
     console.log("Vercel executing Facturation List v2.1");

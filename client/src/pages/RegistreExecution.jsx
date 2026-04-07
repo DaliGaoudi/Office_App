@@ -69,14 +69,25 @@ export default function RegistreExecution() {
     e.preventDefault();
     const token = localStorage.getItem('token');
     try {
-      await fetch(API, {
+      const res = await fetch(API, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-      setShowModal(false);
-      fetchRecords(page, limit, activeFilters);
-    } catch (e) { console.error(e); }
+      const json = await res.json();
+      if (json.success && json.id) {
+        setShowModal(false);
+        // Clear form
+        setFormData({ ref: '', de_part: '', nom_cl1: '', nom_cl2: '', date_inscri: '', remarque: '' });
+        // Take user to the new record page instead of just refreshing
+        navigate(`/record/execution/${json.id}`);
+      } else {
+        alert("حدث خطأ في الحفظ");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("فشل الاتصال بالخادم");
+    }
   };
 
   return (
