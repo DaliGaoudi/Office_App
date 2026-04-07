@@ -44,7 +44,7 @@ export default function Dashboard() {
       className="glass" 
       style={{ 
         padding: '1.5rem', 
-        borderLeft: `4px solid ${color}`, 
+        borderRight: `4px solid ${color}`, 
         cursor: link ? 'pointer' : 'default',
         transition: 'transform 0.2s',
         display: 'flex',
@@ -72,40 +72,40 @@ export default function Dashboard() {
     <div className="animate-fade">
       <div className="topbar">
         <div>
-          <h2 style={{ fontSize: '1.8rem', color: 'var(--primary)', marginBottom: '0.2rem' }}>Vue d'ensemble</h2>
-          <p>Bienvenue sur votre espace de gestion d'étude d'huissier.</p>
+          <h2 style={{ fontSize: '1.8rem', color: 'var(--primary)', marginBottom: '0.2rem' }}>نظرة عامة</h2>
+          <p>مرحباً بك في فضاء إدارة مكتب العدل المنفذ الخاص بك.</p>
         </div>
         <div className="glass" style={{ padding: '0.6rem 1rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
           <Bell size={20} style={{ color: 'var(--text-muted)' }} />
           <div style={{ width: '1px', height: '20px', background: 'var(--card-border)' }}></div>
-          <span style={{ fontWeight: '500', fontSize: '0.9rem' }}>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+          <span style={{ fontWeight: '500', fontSize: '0.9rem' }}>{new Date().toLocaleDateString('fr-FR')}</span>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
         <StatCard 
-          title="Actes Généraux" 
+          title="المحاضر العامة" 
           value={data?.stats?.acts || 0} 
           icon={FileText} 
           color="var(--primary)" 
-          link="/registre" 
+          link="/general" 
         />
         <StatCard 
-          title="Dossiers Exécution" 
+          title="ملفات التنفيذ" 
           value={data?.stats?.execution || 0} 
           icon={Gavel} 
           color="#f59e0b" 
           link="/execution" 
         />
         <StatCard 
-          title="Annuaire Contacts" 
+          title="دليل الهاتف" 
           value={data?.stats?.contacts || 0} 
           icon={Users} 
           color="#10b981" 
           link="/telephone" 
         />
         <StatCard 
-          title="Audiences à venir" 
+          title="الجلسات القادمة" 
           value={data?.stats?.upcomingCount || 0} 
           icon={CalendarDays} 
           color="#8b5cf6" 
@@ -118,9 +118,9 @@ export default function Dashboard() {
         <div className="glass" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <CalendarDays size={20} style={{ color: 'var(--primary)' }} /> Prochaines Audiences
+              <CalendarDays size={20} style={{ color: 'var(--primary)' }} /> الجلسات القريبة
             </h3>
-            <button className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => navigate('/calendar')}>Voir tout</button>
+            <button className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => navigate('/calendar')}>عرض الكل</button>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -142,7 +142,7 @@ export default function Dashboard() {
               ))
             ) : (
               <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                Pas d'audiences prévues prochainement.
+                لا توجد جلسات مجدولة قريباً.
               </div>
             )}
           </div>
@@ -151,17 +151,17 @@ export default function Dashboard() {
         {/* Quick Actions / Recent Activity */}
         <div className="glass" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <Activity size={20} style={{ color: 'var(--accent)' }} /> Actions Rapides
+            <Activity size={20} style={{ color: 'var(--accent)' }} /> إجراءات سريعة
           </h3>
-          <button className="btn" style={{ width: '100%', justifyContent: 'flex-start' }} onClick={() => navigate('/registre')}>
-             <Plus size={18} /> Nouvel Acte
+          <button className="btn" style={{ width: '100%', justifyContent: 'flex-start' }} onClick={() => navigate('/record/registre/new')}>
+             <Plus size={18} /> محضر جديد
           </button>
           <button className="btn" style={{ width: '100%', justifyContent: 'flex-start', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)' }} onClick={() => navigate('/telephone')}>
-             <Users size={18} /> Ajouter Contact
+             <Users size={18} /> إضافة جهة اتصال
           </button>
           <div className="glass" style={{ marginTop: 'auto', padding: '1rem', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-            <p style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: '500' }}>Système à jour</p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Toutes les bases de données sont synchronisées avec Postgres.</p>
+            <p style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: '500' }}>النظام محدث</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>جميع قواعد البيانات متزامنة مع الخادم بنجاح.</p>
           </div>
         </div>
       </div>

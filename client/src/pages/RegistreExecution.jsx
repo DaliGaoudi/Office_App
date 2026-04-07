@@ -83,7 +83,7 @@ export default function RegistreExecution() {
     <div className="animate-fade">
       {/* ── Toolbar ── */}
       <div className="topbar" style={{ marginBottom: '1rem' }}>
-        <h2 style={{ color: 'var(--primary)' }}>دفتر التنفيذ (Registre d'Exécution)</h2>
+        <h2 style={{ color: 'var(--primary)' }}>دفتر التنفيذ</h2>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button className="btn" style={{ background: 'var(--card-bg)' }} onClick={() => setShowFilters(!showFilters)}>
             <Filter size={18} /> بحث
@@ -98,7 +98,7 @@ export default function RegistreExecution() {
       {/* ── Filters ── */}
       {showFilters && (
         <form onSubmit={handleSearch} className="search-wrapper glass" style={{ padding: '1rem', flexWrap: 'wrap', direction: 'rtl', marginBottom: '1rem' }}>
-          <input type="text" placeholder="العدد الترتبي"   value={filters.ref}        onChange={e => setFilters({ ...filters, ref: e.target.value })} />
+          <input type="text" placeholder="العدد الترتيبي"   value={filters.ref}        onChange={e => setFilters({ ...filters, ref: e.target.value })} />
           <input type="text" placeholder="طالب الخدمة"     value={filters.de_part}    onChange={e => setFilters({ ...filters, de_part: e.target.value })} />
           <input type="text" placeholder="اسم الطالب"      value={filters.nom_cl1}    onChange={e => setFilters({ ...filters, nom_cl1: e.target.value })} />
           <input type="text" placeholder="تاريخ (YYYY/MM/DD)" value={filters.date_inscri} onChange={e => setFilters({ ...filters, date_inscri: e.target.value })} />
@@ -179,7 +179,7 @@ export default function RegistreExecution() {
           <div className="glass" style={{ padding: '2rem', width: 500, maxWidth: '90%', direction: 'rtl' }}>
             <h3 style={{ marginBottom: '1.5rem', color: 'var(--primary)' }}>إضافة محضر تنفيذي</h3>
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <input type="text" placeholder="العدد الترتبي *"    value={formData.ref}        onChange={e => setFormData({ ...formData, ref: e.target.value })} required />
+              <input type="text" placeholder="العدد الترتيبي *"    value={formData.ref}        onChange={e => setFormData({ ...formData, ref: e.target.value })} required />
               <input type="text" placeholder="طالب الخدمة"        value={formData.de_part}    onChange={e => setFormData({ ...formData, de_part: e.target.value })} />
               <input type="text" placeholder="اسم الطالب"         value={formData.nom_cl1}    onChange={e => setFormData({ ...formData, nom_cl1: e.target.value })} />
               <input type="text" placeholder="اسم المطلوب"        value={formData.nom_cl2}    onChange={e => setFormData({ ...formData, nom_cl2: e.target.value })} />

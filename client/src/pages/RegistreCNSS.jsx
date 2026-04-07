@@ -83,7 +83,7 @@ export default function RegistreCNSS() {
     <div className="animate-fade">
       {/* ── Toolbar ── */}
       <div className="topbar" style={{ marginBottom: '1rem' }}>
-        <h2 style={{ color: 'var(--primary)' }}>دوسيهات CNSS</h2>
+        <h2 style={{ color: 'var(--primary)' }}>ملفات الضمان الاجتماعي</h2>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button className="btn" style={{ background: 'var(--card-bg)' }} onClick={() => setShowFilters(!showFilters)}>
             <Filter size={18} /> بحث
@@ -168,7 +168,7 @@ export default function RegistreCNSS() {
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div className="glass" style={{ padding: '2rem', width: 500, maxWidth: '90%', direction: 'rtl' }}>
-            <h3 style={{ marginBottom: '1.5rem', color: 'var(--primary)' }}>إضافة دوسيه CNSS</h3>
+            <h3 style={{ marginBottom: '1.5rem', color: 'var(--primary)' }}>إضافة ملف الضمان الاجتماعي</h3>
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <input type="text" placeholder="رقم القضية *"  value={formData.num_affaire} onChange={e => setFormData({ ...formData, num_affaire: e.target.value })} required />
               <input type="text" placeholder="اسم الشركة *"  value={formData.nom_ste}     onChange={e => setFormData({ ...formData, nom_ste: e.target.value })} required />

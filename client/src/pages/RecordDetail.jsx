@@ -195,10 +195,10 @@ export default function RecordDetail() {
 
     const tabConfig = [
         { id: 'general', label: 'المعلومات العامة' },
-        { id: 'petitioner', label: isExecution ? 'المخاطب' : 'طالب الخدمة' },
-        { id: 'client1', label: 'طالب (Petitioner)' },
-        { id: 'client2', label: 'المطلوب' },
-        { id: 'financials', label: 'أجور و مصاريف' }
+        { id: 'petitioner', label: isExecution ? 'المخاطب' : 'جهة طالب الخدمة' },
+        { id: 'client1', label: 'الطالب' },
+        { id: 'client2', label: 'المطلوب ضدّه' },
+        { id: 'financials', label: 'الأجور والمصاريف' }
     ];
 
     const fieldGroups = {
@@ -228,7 +228,7 @@ export default function RecordDetail() {
             { key: 'cl1_avocat', label: 'المحامي' }
         ],
         client2: [
-            { key: 'nom_cl2', label: 'اسم المطلوب' },
+            { key: 'nom_cl2', label: 'اسم المطلوب ضدّه' },
             { key: 'cl2_profession', label: 'المهنة' },
             { key: 'cl2_adresse', label: 'العنوان' },
             { key: 'cl2_tel', label: 'الهاتف 1' },
@@ -236,11 +236,11 @@ export default function RecordDetail() {
             { key: 'cl2_avocat', label: 'المحامي' }
         ],
         financials: [
-            { key: 'acompte', label: 'تسبقة (Dinar)' },
-            { key: 'origine', label: 'أصل المحضر (Or)' },
-            { key: 'exemple', label: 'نضائر (Ex)' },
+            { key: 'acompte', label: 'تسبقة (د.ت)' },
+            { key: 'origine', label: 'أصل المحضر' },
+            { key: 'exemple', label: 'نضائر' },
             { key: 'version_bureau', label: 'نسخة مكتب' },
-            { key: 'orientation', label: 'توجه (Ornt)' },
+            { key: 'orientation', label: 'توجه' },
             { key: 'delimitation', label: 'تحرير' },
             { key: 'inscri', label: 'ترسيم' },
             { key: 'mobilite', label: 'التنقل' },
@@ -406,7 +406,7 @@ export default function RecordDetail() {
 
                 {/* ── Side Info (for Execution) ── */}
                 {(isExecution && !isNew) && (
-                    <div className="glass" style={{ padding: '2rem', height: '100%' }}>
+                    <div className="glass" style={{ padding: '2rem', height: '100%', borderRight: '4px solid var(--primary)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', color: 'var(--primary)' }}>
                             <Activity size={20} />
                             <h3 style={{ margin: 0 }}>إحصاءات الملف</h3>

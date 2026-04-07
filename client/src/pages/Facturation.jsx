@@ -7,7 +7,7 @@ import API_BASE from '../config';
 /* ─── config per register type ───────────────────────────────────────────── */
 const CONFIG = {
   general: {
-    label: 'دفتر عام', api: 'registre', dateField: 'date_reg',
+    label: 'الدفتر العام', api: 'registre', dateField: 'date_reg',
     columns: [
       { key: 'ref',      label: 'العدد' },
       { key: 'de_part',  label: 'طالب الخدمة' },
@@ -15,7 +15,7 @@ const CONFIG = {
       { key: 'nom_cl2',  label: 'المطلوب' },
       { key: 'date_reg', label: 'التاريخ' },
       { key: 'base_fare', label: 'الأجور', isAmount: true },
-      { key: 'tva',       label: 'VAT 19%', isAmount: true },
+      { key: 'tva',       label: 'أداء 19%', isAmount: true },
       { key: 'expenses',  label: 'المصاريف', isAmount: true },
       { key: 'calculated_total', label: 'الجملة', isAmount: true, isTotal: true },
       { key: 'status',    label: 'الحالة' },
@@ -34,7 +34,7 @@ const CONFIG = {
       { key: 'nom_cl2',     label: 'المطلوب' },
       { key: 'date_inscri', label: 'التاريخ' },
       { key: 'base_fare',   label: 'الأجور', isAmount: true },
-      { key: 'tva',         label: 'VAT 19%', isAmount: true },
+      { key: 'tva',         label: 'أداء 19%', isAmount: true },
       { key: 'expenses',    label: 'المصاريف', isAmount: true },
       { key: 'calculated_total', label: 'الجملة', isAmount: true, isTotal: true },
       { key: 'status',      label: 'الحالة' },
@@ -45,7 +45,7 @@ const CONFIG = {
     ],
   },
   cnss: {
-    label: 'دوسيهات CNSS', api: 'cnss', dateField: null,
+    label: 'ملفات الضمان الاجتماعي', api: 'cnss', dateField: null,
     columns: [
       { key: 'num_affaire',   label: 'رقم القضية' },
       { key: 'nom_ste',       label: 'الشركة' },

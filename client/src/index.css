@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
   --bg-dark: #0f172a;
@@ -21,13 +21,13 @@
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Cairo', 'Inter', sans-serif;
   background: var(--bg-gradient);
   color: var(--text-main);
   min-height: 100vh;
   margin: 0;
   display: flex;
-  direction: ltr; /* Keeping default LTR as requested */
+  direction: rtl; /* Full RTL Support */
 }
 
 /* Glassmorphism Utilities */
@@ -43,12 +43,12 @@ body {
 .glass-panel {
   background: rgba(30, 41, 59, 0.6);
   backdrop-filter: blur(16px);
-  border-right: 1px solid var(--card-border);
+  border-left: 1px solid var(--card-border); /* Moved to RTL border */
 }
 
 /* Typography */
 h1, h2, h3 {
-  font-weight: 600;
+  font-weight: 700; /* Bolder for Arabic */
   margin-bottom: 0.5rem;
 }
 
@@ -189,7 +189,7 @@ input:focus {
 table {
   width: 100%;
   border-collapse: collapse;
-  text-align: left;
+  text-align: right;
 }
 
 th, td {
@@ -365,7 +365,7 @@ tr:hover {
   padding: 0.3rem 0.6rem;
   border-radius: 6px;
   background: rgba(59, 130, 246, 0.15);
-  border-left: 3px solid var(--primary);
+  border-right: 3px solid var(--primary);
   color: var(--text-main);
   cursor: pointer;
   white-space: nowrap;

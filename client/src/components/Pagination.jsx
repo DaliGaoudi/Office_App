@@ -50,9 +50,9 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
       gap: '0.75rem',
       padding: '0.75rem 1rem',
       borderTop: '1px solid var(--card-border)',
-      direction: 'ltr',
+      direction: 'rtl',
     }}>
-      {/* Left: total count + page size chooser */}
+      {/* Right: total count + page size chooser (flipped in RTL) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
         <span>
           إجمالي: <strong style={{ color: 'var(--text-main)' }}>{total.toLocaleString()}</strong> سجل
@@ -77,7 +77,7 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
         </label>
       </div>
 
-      {/* Right: page buttons */}
+      {/* Left: page buttons (flipped in RTL) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
         {/* First */}
         <button
@@ -85,7 +85,7 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
           disabled={page === 1}
           onClick={() => onPageChange(1)}
           title="الصفحة الأولى"
-        ><ChevronsLeft size={15} /></button>
+        ><ChevronsRight size={15} /></button>
 
         {/* Prev */}
         <button
@@ -93,7 +93,7 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
           disabled={page === 1}
           onClick={() => onPageChange(page - 1)}
           title="السابق"
-        ><ChevronLeft size={15} /></button>
+        ><ChevronRight size={15} /></button>
 
         {/* Page numbers */}
         {pages.map((p, idx) => {
@@ -116,7 +116,7 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
           disabled={page === totalPages}
           onClick={() => onPageChange(page + 1)}
           title="التالي"
-        ><ChevronRight size={15} /></button>
+        ><ChevronLeft size={15} /></button>
 
         {/* Last */}
         <button
@@ -124,7 +124,7 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
           disabled={page === totalPages}
           onClick={() => onPageChange(totalPages)}
           title="الصفحة الأخيرة"
-        ><ChevronsRight size={15} /></button>
+        ><ChevronsLeft size={15} /></button>
       </div>
     </div>
   );

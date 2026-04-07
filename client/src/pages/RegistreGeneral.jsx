@@ -75,7 +75,7 @@ export default function RegistreGeneral() {
     <div className="animate-fade">
       {/* ── Toolbar ── */}
       <div className="topbar" style={{ marginBottom: '1rem' }}>
-        <h2 style={{ color: 'var(--primary)' }}>دفتر عام (Registre Général)</h2>
+        <h2 style={{ color: 'var(--primary)' }}>الدفتر العام</h2>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button className="btn" style={{ background: 'var(--card-bg)' }} onClick={() => setShowFilters(!showFilters)}>
             <Filter size={18} /> بحث
@@ -92,7 +92,7 @@ export default function RegistreGeneral() {
       {/* ── Search Filters ── */}
       {showFilters && (
         <form onSubmit={handleSearch} className="search-wrapper glass" style={{ padding: '1rem', flexWrap: 'wrap', direction: 'rtl', marginBottom: '1rem' }}>
-          <input type="text" placeholder="العدد الترتبي" value={filters.ref} onChange={e => setFilters({ ...filters, ref: e.target.value })} />
+          <input type="text" placeholder="العدد الترتيبي" value={filters.ref} onChange={e => setFilters({ ...filters, ref: e.target.value })} />
           <input type="text" placeholder="طالب الخدمة"  value={filters.de_part} onChange={e => setFilters({ ...filters, de_part: e.target.value })} />
           <input type="text" placeholder="اسم الطالب"   value={filters.nom_cl1} onChange={e => setFilters({ ...filters, nom_cl1: e.target.value })} />
           <input type="text" placeholder="تاريخ تبليغ المحضر (YYYY/MM/DD)" value={filters.date_reg} onChange={e => setFilters({ ...filters, date_reg: e.target.value })} />

@@ -110,7 +110,7 @@ export default function Telephone() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Voulez-vous vraiment supprimer ce contact ?')) return;
+    if (!window.confirm('هل تريد فعلاً حذف جهة الاتصال هذه؟')) return;
     const token = localStorage.getItem('token');
     try {
       const res = await fetch(`${API_BASE}/telephone/${id}`, {
@@ -133,33 +133,33 @@ export default function Telephone() {
     <div className="animate-fade">
       <div className="topbar">
         <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)' }}>
-          <User /> Annuaire Téléphonique
+          <User /> دليل الهاتف
         </h2>
         <button className="btn" onClick={() => handleOpenModal()}>
-          <Plus size={18} /> Nouveau Contact
+          <Plus size={18} /> جهة اتصال جديدة
         </button>
       </div>
 
       <div className="search-wrapper">
         <div style={{ position: 'relative', flex: 1 }}>
-          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <Search size={18} style={{ position: 'right', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input 
             type="text" 
             className="search-input" 
-            style={{ paddingLeft: '2.5rem' }}
-            placeholder="Rechercher par nom, prénom ou numéro..." 
+            style={{ paddingRight: '2.5rem' }}
+            placeholder="البحث بالاسم أو اللقب أو الرقم..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
       </div>
 
-      {loading && <p style={{padding:'2rem', textAlign: 'center'}}>Recherche en cours...</p>}
+      {loading && <p style={{padding:'2rem', textAlign: 'center'}}>جاري البحث...</p>}
       
       {!loading && data.length === 0 && (
         <div className="glass" style={{ padding: '4rem', textAlign: 'center', borderRadius: '16px' }}>
           <User size={48} style={{ color: 'var(--text-muted)', marginBottom: '1rem', opacity: 0.2 }} />
-          <p>Aucun contact trouvé</p>
+          <p>لم يتم العثور على جهات اتصال</p>
         </div>
       )}
 
@@ -173,7 +173,7 @@ export default function Telephone() {
               <div className="contact-info">
                 <h3>{contact.nom} {contact.prenom}</h3>
                 <span style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: '500' }}>
-                  {contact.qualite || 'Contact'}
+                  {contact.qualite || 'جهة اتصال'}
                 </span>
               </div>
             </div>
@@ -228,14 +228,14 @@ export default function Telephone() {
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
           <div className="modal-content glass" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editingContact ? 'Modifier le contact' : 'Nouveau contact'}</h3>
+              <h3>{editingContact ? 'تعديل جهة الاتصال' : 'إضافة جهة اتصال'}</h3>
               <button className="modal-close" onClick={() => setIsModalOpen(false)}><X /></button>
             </div>
             
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label>Nom</label>
+                  <label>اللقب</label>
                   <input 
                     type="text" 
                     value={formData.nom} 
@@ -244,7 +244,7 @@ export default function Telephone() {
                   />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label>Prénom</label>
+                  <label>الاسم</label>
                   <input 
                     type="text" 
                     value={formData.prenom} 
@@ -254,18 +254,18 @@ export default function Telephone() {
               </div>
 
               <div className="form-group">
-                <label>Qualité / Titre</label>
+                <label>الصفة / الرتبة</label>
                 <input 
                   type="text" 
                   value={formData.qualite} 
                   onChange={e => setFormData({...formData, qualite: e.target.value})} 
-                  placeholder="Ex: Avocat, Expert, etc."
+                  placeholder="مثال: محامي، خبير..."
                 />
               </div>
 
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label>Téléphone 1</label>
+                  <label>الهاتف 1</label>
                   <input 
                     type="text" 
                     value={formData.num_tel1} 
@@ -274,7 +274,7 @@ export default function Telephone() {
                   />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label>Téléphone 2</label>
+                  <label>الهاتف 2</label>
                   <input 
                     type="text" 
                     value={formData.num_tel2} 
@@ -284,7 +284,7 @@ export default function Telephone() {
               </div>
 
               <div className="form-group">
-                <label>Email</label>
+                <label>البريد الإلكتروني</label>
                 <input 
                   type="email" 
                   value={formData.email_tel} 
@@ -293,7 +293,7 @@ export default function Telephone() {
               </div>
 
               <div className="form-group">
-                <label>Adresse</label>
+                <label>العنوان</label>
                 <input 
                   type="text" 
                   value={formData.adresse_tel} 
@@ -302,7 +302,7 @@ export default function Telephone() {
               </div>
 
               <div className="form-group">
-                <label>Observations</label>
+                <label>ملاحظات</label>
                 <textarea 
                   className="glass"
                   style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', color: 'var(--text-main)', border: '1px solid var(--card-border)', background: 'rgba(15, 23, 42, 0.5)', minHeight: '60px', outline: 'none' }}
@@ -312,7 +312,7 @@ export default function Telephone() {
               </div>
 
               <button type="submit" className="btn" style={{ marginTop: '1rem' }}>
-                {editingContact ? 'Mettre à jour' : 'Enregistrer'}
+                {editingContact ? 'تحديث' : 'حفظ'}
               </button>
             </form>
           </div>
