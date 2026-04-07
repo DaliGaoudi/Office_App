@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react';
 import { 
-  Shield, 
   FileText, 
   Gavel, 
   Users, 
   CalendarDays, 
   ChevronRight, 
   Clock, 
-  Bell,
   Activity,
-  ArrowUpRight,
-  Plus
+  Plus,
+  Search,
+  Filter,
+  DollarSign,
+  AlertCircle,
+  X,
+  ExternalLink,
+  MapPin,
+  CheckCircle2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import API_BASE from '../config';
@@ -18,6 +23,9 @@ import API_BASE from '../config';
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [selectedCase, setSelectedCase] = useState(null); // For Quick View Drawer
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,127 +47,322 @@ export default function Dashboard() {
     setLoading(false);
   };
 
-  const StatCard = ({ title, value, icon: Icon, color, link }) => (
-    <div 
-      className="glass" 
-      style={{ 
-        padding: '1.5rem', 
-        borderRight: `4px solid ${color}`, 
-        cursor: link ? 'pointer' : 'default',
-        transition: 'transform 0.2s',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.5rem'
-      }}
-      onClick={() => link && navigate(link)}
-      onMouseEnter={(e) => link && (e.currentTarget.style.transform = 'translateY(-5px)')}
-      onMouseLeave={(e) => link && (e.currentTarget.style.transform = 'translateY(0)')}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</h3>
-        <Icon size={20} style={{ color: color }} />
+  const filteredCases = data?.recentCases?.filter(c => {
+    const matchesSearch = c.nom_cl1?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          c.de_part?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          c.ref?.toString().includes(searchTerm);
+    const matchesFilter = filterStatus === 'all' || c.status === filterStatus;
+    return matchesSearch && matchesFilter;
+  }) || [];
+
+  const MetricCard = ({ title, value, label, icon: Icon, color }) => (
+    <div className="glass" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <div style={{ padding: '0.75rem', borderRadius: '12px', background: `${color}15`, color: color }}>
+        <Icon size={22} />
       </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-        <p style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--text-main)' }}>{value}</p>
-        <span style={{ fontSize: '0.8rem', color: 'var(--accent)', display: 'flex', alignItems: 'center' }}>
-          <ArrowUpRight size={14} /> +2%
-        </span>
+      <div>
+        <h4 style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>{title}</h4>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
+          <span style={{ fontSize: '1.25rem', fontWeight: '700' }}>{value}</span>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-soft)' }}>{label}</span>
+        </div>
       </div>
     </div>
   );
 
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem' }}>جاري التحميل...</div>;
+
   return (
-    <div className="animate-fade">
-      <div className="topbar">
-        <div>
-          <h2 style={{ fontSize: '1.8rem', color: 'var(--primary)', marginBottom: '0.2rem' }}>نظرة عامة</h2>
-        </div>
-        <div className="glass" style={{ padding: '0.6rem 1rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-          <Bell size={20} style={{ color: 'var(--text-muted)' }} />
-          <div style={{ width: '1px', height: '20px', background: 'var(--card-border)' }}></div>
-          <span style={{ fontWeight: '500', fontSize: '0.9rem' }}>{new Date().toLocaleDateString('fr-FR')}</span>
-        </div>
+    <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      
+      {/* ── Quick Actions (Top) ── */}
+      <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+        <button className="btn" onClick={() => navigate('/record/registre/new')}>
+          <Plus size={18} /> محضر جديد
+        </button>
+        <button className="btn" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-main)' }}>
+          <FileText size={18} /> إنشاء مستند
+        </button>
+        <button className="btn" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-main)' }}>
+          <DollarSign size={18} /> تسجيل دفع
+        </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
-        <StatCard 
-          title="المحاضر العامة" 
-          value={data?.stats?.acts || 0} 
-          icon={FileText} 
-          color="var(--primary)" 
-          link="/general" 
-        />
-        <StatCard 
-          title="ملفات التنفيذ" 
-          value={data?.stats?.execution || 0} 
+      {/* ── 1. Metrics Grid ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+        <MetricCard 
+          title="الملفات النشطة" 
+          value={data?.metrics?.activeCount} 
+          label="ملف" 
           icon={Gavel} 
-          color="#f59e0b" 
-          link="/execution" 
+          color="var(--primary)" 
         />
-        <StatCard 
-          title="دليل الهاتف" 
-          value={data?.stats?.contacts || 0} 
-          icon={Users} 
-          color="#10b981" 
-          link="/telephone" 
+        <MetricCard 
+          title="مواعيد اليوم" 
+          value={data?.metrics?.dueToday} 
+          label="مهمة" 
+          icon={Clock} 
+          color="var(--accent-gold)" 
         />
-        <StatCard 
-          title="الجلسات القادمة" 
-          value={data?.stats?.upcomingCount || 0} 
+        <MetricCard 
+          title="هذا الأسبوع" 
+          value={data?.metrics?.dueWeek} 
+          label="موعد" 
           icon={CalendarDays} 
           color="#8b5cf6" 
-          link="/calendar" 
+        />
+        <MetricCard 
+          title="إنجازات الشهر" 
+          value={data?.metrics?.completedMonth} 
+          label="منتهي" 
+          icon={CheckCircle2} 
+          color="var(--status-success)" 
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
-        {/* Upcoming Audiences Section */}
-        <div className="glass" style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <CalendarDays size={20} style={{ color: 'var(--primary)' }} /> الجلسات القريبة
-            </h3>
-            <button className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => navigate('/calendar')}>عرض الكل</button>
+      <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1fr', gap: '2rem' }}>
+        
+        {/* ── Left Column: Cases & Tasks ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          {/* 2. Cases Management Table */}
+          <div className="glass" style={{ padding: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FileText size={20} style={{ color: 'var(--primary)' }} /> إدارة الملفات
+              </h3>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ position: 'relative' }}>
+                  <Search size={16} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-soft)' }} />
+                  <input 
+                    type="text" 
+                    placeholder="بحث في الملفات..." 
+                    style={{ paddingRight: '2.2rem', fontSize: '0.85rem', width: '200px' }}
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <select 
+                  style={{ width: 'auto', fontSize: '0.85rem' }}
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value)}
+                >
+                  <option value="all">كل الحالات</option>
+                  <option value="not_started">غير مبدأ</option>
+                  <option value="in_progress">قيد الإنجاز</option>
+                  <option value="finished">مكتمل</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>المرجع</th>
+                    <th>الطالب</th>
+                    <th>المطلوب ضده</th>
+                    <th>الحالة</th>
+                    <th>تاريخ الأجل</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCases.map(c => (
+                    <tr key={c.id_r} onClick={() => setSelectedCase(c)} style={{ cursor: 'pointer' }}>
+                      <td style={{ fontWeight: '600' }}>#{c.ref}</td>
+                      <td>{c.nom_cl1}</td>
+                      <td>{c.de_part}</td>
+                      <td>
+                        <span className={`badge badge-${c.status === 'finished' ? 'green' : c.status === 'not_started' ? 'red' : 'amber'}`}>
+                          {c.status === 'finished' ? 'مكتمل' : c.status === 'not_started' ? 'جديد' : 'قيد الإنجاز'}
+                        </span>
+                      </td>
+                      <td style={{ color: new Date(c.date_echeance) < new Date() ? 'var(--primary)' : 'inherit' }}>
+                        {c.date_echeance ? new Date(c.date_echeance).toLocaleDateString('fr-FR') : '--'}
+                      </td>
+                      <td><ChevronRight size={18} style={{ opacity: 0.3 }} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {data?.upcomingEvents?.length > 0 ? (
-              data.upcomingEvents.map(event => (
-                <div key={event.id_even} className="glass" style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)', textAlign: 'center', minWidth: '50px' }}>
-                      <span style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase' }}>{new Date(event.start).toLocaleDateString('fr-FR', { month: 'short' })}</span>
-                      <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 'bold' }}>{new Date(event.start).getDate()}</span>
+          {/* 4. Tasks / Actions Queue */}
+          <div className="glass" style={{ padding: '1.5rem' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+              <Activity size={20} style={{ color: 'var(--accent-gold)' }} /> قائمة المهام (To-Do)
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+              {data?.tasksQueue?.map(task => (
+                <div key={task.id_r} className="glass" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRight: '4px solid var(--primary)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 'bold' }}>أولوية عالية</span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-soft)' }}>#{task.ref}</span>
+                  </div>
+                  <h4 style={{ fontSize: '0.95rem', marginBottom: '0.25rem' }}>{task.nom_cl1} ضد {task.de_part}</h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <MapPin size={12} /> معاينة العنوان المذكور
+                  </p>
+                  <div style={{ marginTop: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--primary)' }}>متأخر: {task.date_echeance}</span>
+                    <button className="btn" style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem' }}>إنجاز</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Right Column: Deadlines & Timeline ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          {/* 3. Deadlines & Calendar */}
+          <div className="glass" style={{ padding: '1.5rem' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+              <CalendarDays size={20} style={{ color: 'var(--primary)' }} /> المواعيد والأجال
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {data?.deadlines?.map(dl => (
+                <div key={dl.id_even} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                  <div style={{ textAlign: 'center', minWidth: '45px' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-soft)', textTransform: 'uppercase' }}>
+                      {new Date(dl.start).toLocaleDateString('fr-FR', { month: 'short' })}
                     </div>
-                    <div>
-                      <h4 style={{ fontSize: '1rem', marginBottom: '0.2rem' }}>{event.title}</h4>
-                      <p style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Clock size={12} /> {event.time_even || '--:--'} • {event.tribunal_even || 'Lieu non spécifié'}</p>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{new Date(dl.start).getDate()}</div>
+                  </div>
+                  <div className="glass" style={{ flex: 1, padding: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                    <h4 style={{ fontSize: '0.85rem', marginBottom: '0.2rem' }}>{dl.title}</h4>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Clock size={12} /> {dl.time_even || '--:--'} • {dl.tribunal_even || 'لا يوجد مكان'}
                     </div>
                   </div>
-                  <ChevronRight size={18} style={{ color: 'var(--text-muted)' }} />
                 </div>
-              ))
-            ) : (
-              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                لا توجد جلسات مجدولة قريباً.
+              ))}
+            </div>
+          </div>
+
+          {/* 6. Payments Summary */}
+          <div className="glass" style={{ padding: '1.5rem' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+              <DollarSign size={20} style={{ color: 'var(--status-success)' }} /> ملخص الأداء
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                <span color="var(--text-muted)">المجموع المتوقع:</span>
+                <span style={{ fontWeight: 'bold' }}>{data?.payments?.expected?.toLocaleString()} د.ت</span>
               </div>
-            )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                <span color="var(--text-muted)">المبالغ المحصلة:</span>
+                <span style={{ fontWeight: 'bold', color: 'var(--status-success)' }}>{data?.payments?.collected?.toLocaleString()} د.ت</span>
+              </div>
+              <div style={{ height: '4px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden', marginTop: '0.5rem' }}>
+                <div style={{ 
+                  height: '100%', 
+                  background: 'var(--status-success)', 
+                  width: `${(data?.payments?.collected / data?.payments?.expected) * 100 || 0}%` 
+                }}></div>
+              </div>
+            </div>
+          </div>
+
+          {/* 9. Activity Timeline */}
+          <div className="glass" style={{ padding: '1.5rem' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+              <Activity size={20} style={{ color: 'var(--text-soft)' }} /> سجل النشاطات
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'relative' }}>
+              <div style={{ position: 'absolute', right: '7px', top: 0, bottom: 0, width: '2px', background: 'var(--border)', zIndex: 0 }}></div>
+              {data?.timeline?.map((item, idx) => (
+                <div key={idx} style={{ display: 'flex', gap: '1rem', position: 'relative', zIndex: 1 }}>
+                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: item.type === 'case' ? 'var(--primary)' : 'var(--accent-gold)', border: '4px solid var(--bg-main)' }}></div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.1rem' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>{item.action}</span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-soft)' }}>{item.date}</span>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.title}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-
-        {/* Quick Actions / Recent Activity */}
-        <div className="glass" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <Activity size={20} style={{ color: 'var(--accent)' }} /> إجراءات سريعة
-          </h3>
-          <button className="btn" style={{ width: '100%', justifyContent: 'flex-start' }} onClick={() => navigate('/record/registre/new')}>
-             <Plus size={18} /> محضر جديد
-          </button>
-          <button className="btn" style={{ width: '100%', justifyContent: 'flex-start', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)' }} onClick={() => navigate('/telephone')}>
-             <Users size={18} /> إضافة جهة اتصال
-          </button>
-        </div>
       </div>
+
+      {/* ── Quick View Drawer Logic ── */}
+      {selectedCase && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 1000,
+          display: 'flex',
+          justifyContent: 'flex-start' /* RTL Slide from left */
+        }} onClick={() => setSelectedCase(null)}>
+          <div className="animate-fade" style={{
+            width: '450px',
+            height: '100vh',
+            background: 'var(--surface)',
+            borderRight: '1px solid var(--border)',
+            padding: '2rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5rem',
+            boxShadow: 'var(--glass-shadow)'
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2>عرض سريع للملف</h2>
+              <button className="btn-icon" onClick={() => setSelectedCase(null)}><X size={20} /></button>
+            </div>
+
+            <div style={{ padding: '1rem', borderRadius: '12px', background: 'var(--nav-active-bg)', border: '1px solid var(--primary)' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 'bold' }}>#{selectedCase.ref}</div>
+              <h3 style={{ margin: '0.5rem 0' }}>{selectedCase.nom_cl1}</h3>
+              <p style={{ color: 'var(--text-muted)' }}>ضد {selectedCase.de_part}</p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="form-group">
+                <label>الحالة</label>
+                <div className={`badge badge-${selectedCase.status === 'finished' ? 'green' : 'amber'}`}>
+                  {selectedCase.status === 'finished' ? 'مكتمل' : 'قيد الإنجاز'}
+                </div>
+              </div>
+              <div className="form-group">
+                <label>تاريخ التسجيل</label>
+                <div style={{ fontSize: '0.95rem' }}>{selectedCase.date_reg}</div>
+              </div>
+              <div className="form-group">
+                <label>تاريخ الأجل</label>
+                <div style={{ fontSize: '0.95rem', color: 'var(--primary)' }}>{selectedCase.date_echeance}</div>
+              </div>
+              <div className="form-group">
+                <label>المبلغ الإجمالي</label>
+                <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{selectedCase.salaire?.toLocaleString()} د.ت</div>
+              </div>
+              {selectedCase.remarque && (
+                <div className="form-group">
+                  <label>ملاحظات</label>
+                  <p style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{selectedCase.remarque}</p>
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: 'auto', display: 'flex', gap: '1rem' }}>
+               <button className="btn" style={{ flex: 1 }} onClick={() => navigate(`/record/registre/${selectedCase.id_r}`)}>
+                 <ExternalLink size={18} /> معاينة كاملة وتعديل
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
