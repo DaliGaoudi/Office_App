@@ -73,7 +73,6 @@ export default function Dashboard() {
       <div className="topbar">
         <div>
           <h2 style={{ fontSize: '1.8rem', color: 'var(--primary)', marginBottom: '0.2rem' }}>نظرة عامة</h2>
-          <p>مرحباً بك في فضاء إدارة مكتب العدل المنفذ الخاص بك.</p>
         </div>
         <div className="glass" style={{ padding: '0.6rem 1rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
           <Bell size={20} style={{ color: 'var(--text-muted)' }} />
@@ -159,10 +158,6 @@ export default function Dashboard() {
           <button className="btn" style={{ width: '100%', justifyContent: 'flex-start', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)' }} onClick={() => navigate('/telephone')}>
              <Users size={18} /> إضافة جهة اتصال
           </button>
-          <div className="glass" style={{ marginTop: 'auto', padding: '1rem', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-            <p style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: '500' }}>النظام محدث</p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>جميع قواعد البيانات متزامنة مع الخادم بنجاح.</p>
-          </div>
         </div>
       </div>
     </div>

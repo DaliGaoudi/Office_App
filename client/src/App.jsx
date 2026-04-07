@@ -106,7 +106,6 @@ const Layout = ({ children }) => {
         <div className="topbar">
           <div>
             <h1>مرحباً، {user?.username}</h1>
-            <p>أدر مكتبك بذكاء وكفاءة</p>
           </div>
           <div className="profile-section">
             <button className="btn-icon" onClick={toggleTheme} title="تبديل المظهر" style={{ marginRight: '0.5rem' }}>
