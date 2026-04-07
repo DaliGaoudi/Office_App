@@ -10,6 +10,7 @@ export default function RecordDetail() {
     const { type, id } = useParams();
     const navigate = useNavigate();
     const isNew = id === 'new';
+    const today = new Date().toISOString().split('T')[0];
     
     const [record, setRecord] = useState(null);
     const [formData, setFormData] = useState({});
