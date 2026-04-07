@@ -29,14 +29,14 @@ router.get('/', authenticate, async (req, res) => {
         const offset = (parseInt(page) - 1) * parseInt(limit);
         const l = parseInt(limit);
         
-        // Query to sum the 'salaire' (total price) of all actions per record using a subquery to avoid GROUP BY issues
+        // Query to sum the 'salaire' (total price) of all actions per record using a subquery and EXISTS to avoid duplication
         let query = `SELECT c.*, c.id_r as id_o, 
-                       (SELECT COALESCE(SUM(CAST(NULLIF(o.salaire, '') AS NUMERIC)), 0) 
-                        FROM "œuvre_type" o 
-                        WHERE o.id_o::text = c.id_r::text) as total_salaire
+                       (SELECT COALESCE(SUM(CAST(NULLIF(o2.salaire, '') AS NUMERIC)), 0) 
+                        FROM "œuvre_type" o2 
+                        WHERE o2.id_o::text = c.id_r::text) as total_salaire
                        FROM clients_record c 
-                       INNER JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
-                       WHERE c.id_so::text = ?`;
+                       WHERE c.id_so::text = ? 
+                       AND EXISTS (SELECT 1 FROM "œuvre_type" o WHERE o.id_o::text = c.id_r::text)`;
         let params = [req.user.id_so];
 
         if (search) {
@@ -44,9 +44,10 @@ router.get('/', authenticate, async (req, res) => {
             params.push(`%${search}%`, `%${search}%`, `%${search}%`);
         }
 
-        const countQuery = `SELECT COUNT(DISTINCT c.id_r) as count FROM clients_record c 
-                            INNER JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
-                            WHERE c.id_so::text = ? ${search ? 'AND (c.ref::text LIKE ? OR c.nom_cl1 LIKE ? OR c.de_part LIKE ?)' : ''}`;
+        const countQuery = `SELECT COUNT(c.id_r) as count FROM clients_record c 
+                            WHERE c.id_so::text = ? 
+                            AND EXISTS (SELECT 1 FROM "œuvre_type" o WHERE o.id_o::text = c.id_r::text)
+                            ${search ? 'AND (c.ref::text LIKE ? OR c.nom_cl1 LIKE ? OR c.de_part LIKE ?)' : ''}`;
         
         const cRow = await db.get(countQuery, params);
         
