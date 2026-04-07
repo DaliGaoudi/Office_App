@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate, NavLink } from 'react-router-do
 import { Shield, BookOpen, Users, CalendarDays, LogOut, FileText, Receipt, Settings as SettingsIcon } from 'lucide-react';
 import './index.css';
 
+import logo from './assets/logo.png';
+
 // Context for Auth
 const AuthContext = createContext();
 
@@ -14,7 +16,10 @@ const Sidebar = () => {
   const { logout } = useAuth();
   return (
     <div className="sidebar glass-panel">
-      <h2><Shield /> دراسة الأستاذ</h2>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', padding: '0 1rem' }}>
+        <img src={logo} alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+        <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>مكتب الأستاذ مراد القعودي</h2>
+      </div>
       <ul className="nav-links">
         <li>
           <NavLink to="/" className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
