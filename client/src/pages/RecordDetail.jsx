@@ -195,29 +195,27 @@ export default function RecordDetail() {
 
     const tabConfig = [
         { id: 'general', label: 'المعلومات العامة' },
-        { id: 'petitioner', label: isExecution ? 'المخاطب' : 'جهة طالب الخدمة' },
         { id: 'client1', label: 'الطالب' },
-        { id: 'client2', label: 'المطلوب ضدّه' },
+        { id: 'client2', label: 'المطلوب' },
         { id: 'financials', label: 'الأجور والمصاريف' }
     ];
 
     const fieldGroups = {
         general: [
             { key: 'ref', label: 'العدد الترتيبي', placeholder: 'تلقائي' },
-            { key: 'date_reg', label: 'تاريخ تبليغ المحضر', type: 'date' },
-            { key: 'date_echeance', label: 'تاريخ أجل الخدمة', type: 'date', readonly: true },
-            { key: 'de_part', label: 'جهة طالب الخدمة' },
-            { key: 'remarque', label: 'نوع المحضر/ملاحظات', type: 'textarea' },
+            { key: 'remarque', label: 'نوع المحضر' },
+            { key: 'date_reg', label: 'تاريخ طلب الخدمة', type: 'date' },
+            { key: 'date_echeance', label: 'تاريخ آخر أجل لالتبليغ', type: 'date', readonly: true },
+            { key: 'date_inscri', label: 'تاريخ التبليغ', type: 'date' },
+            { key: 'de_part', label: 'طالب الخدمة' },
+            { key: 'service_petitioner_name', label: 'اسم طالب الخدمة' },
+            { key: 'service_petitioner_contact', label: 'بيانات الاتصال' },
             ...(isExecution ? [
                 { key: 'tribunal', label: 'المحكمة' },
                 { key: 'nombre', label: 'عدد القضية' },
                 { key: 'date_s', label: 'تاريخ السند' },
                 { key: 'resultat', label: 'المآل النهائي' }
             ] : [])
-        ],
-        petitioner: [
-            { key: 'service_petitioner_name', label: isExecution ? 'اسم المخاطب' : 'اسم طالب الخدمة' },
-            { key: 'service_petitioner_contact', label: 'الاتصال' }
         ],
         client1: [
             { key: 'nom_cl1', label: 'اسم الطالب' },
@@ -228,7 +226,7 @@ export default function RecordDetail() {
             { key: 'cl1_avocat', label: 'المحامي' }
         ],
         client2: [
-            { key: 'nom_cl2', label: 'اسم المطلوب ضدّه' },
+            { key: 'nom_cl2', label: 'اسم المطلوب' },
             { key: 'cl2_profession', label: 'المهنة' },
             { key: 'cl2_adresse', label: 'العنوان' },
             { key: 'cl2_tel', label: 'الهاتف 1' },
@@ -238,15 +236,16 @@ export default function RecordDetail() {
         financials: [
             { key: 'acompte', label: 'تسبقة (د.ت)' },
             { key: 'origine', label: 'أصل المحضر' },
-            { key: 'exemple', label: 'نضائر' },
+            { key: 'exemple', label: 'نظائر' },
             { key: 'version_bureau', label: 'نسخة مكتب' },
-            { key: 'orientation', label: 'توجه' },
-            { key: 'delimitation', label: 'تحرير' },
-            { key: 'inscri', label: 'ترسيم' },
+            { key: 'orientation', label: 'التوجه' },
+            { key: 'delimitation', label: 'التسجيل' },
+            { key: 'inscri', label: 'الترسيم' },
             { key: 'mobilite', label: 'التنقل' },
             { key: 'imprimer', label: 'نسخ أوراق' },
-            { key: 'poste', label: 'بريد' },
-            { key: 'autre', label: 'المختلفات' }
+            { key: 'poste', label: 'البريد' },
+            { key: 'autre', label: 'المختلفات' },
+            { key: 'TVA', label: 'الأداء على القيمة المضافة (VAT)', readonly: true }
         ]
     };
 
@@ -350,6 +349,8 @@ export default function RecordDetail() {
                                                         
                                                         newFormData.salaire = (fees + tva + exp).toString();
                                                         newFormData.TVA = tva.toString();
+                                                        newFormData.montant_partiel1 = fees.toString();
+                                                        newFormData.montant_partiel2 = exp.toString();
                                                     }
 
                                                     // Auto-transition not_started -> has_deposit if acompte is added
@@ -363,19 +364,44 @@ export default function RecordDetail() {
                                         )}
                                     </div>
                                 ))}
-                            </div>
 
-                            {activeTab === 'financials' && (
-                                <div className="glass" style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(var(--primary-rgb), 0.05)', border: '1px solid var(--primary)' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ color: 'var(--primary)', fontWeight: 'bold' }}>المجموع الجملي المحتسب:</div>
-                                        <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{formatAmount(formData.salaire || 0)} د.ت</div>
+                                {activeTab === 'financials' && (
+                                    <div style={{ gridColumn: 'span 2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1rem' }}>
+                                        <div className="glass" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                                            <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>مجموع الأجور (Sum 1)</div>
+                                            <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{formatAmount(['origine', 'exemple', 'version_bureau', 'orientation'].reduce((s,k) => s + (parseFloat(formData[k]) || 0), 0))} د.ت</div>
+                                        </div>
+                                        <div className="glass" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                                            <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>مجموع المصاريف (Sum 2)</div>
+                                            <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{formatAmount(['delimitation', 'inscri', 'mobilite', 'imprimer', 'poste', 'autre'].reduce((s,k) => s + (parseFloat(formData[k]) || 0), 0))} د.ت</div>
+                                        </div>
                                     </div>
-                                    <div style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '0.5rem' }}>
-                                        (أجور + VAT 19% + مصاريف)
-                                    </div>
+                                )}
+
+                                {/* Remarks Field (Visible Regardless of Tabs) */}
+                                <div style={{ gridColumn: 'span 2', marginTop: '1.5rem', borderTop: '1px solid var(--card-border)', paddingTop: '1.5rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>ملاحظات</label>
+                                    <textarea 
+                                        value={formData.resume || ''} 
+                                        onChange={(e) => setFormData({...formData, resume: e.target.value})}
+                                        className="glass"
+                                        style={{ width: '100%', padding: '0.6rem', minHeight: '100px', color: 'var(--text-main)', border: '1px solid var(--card-border)' }}
+                                        placeholder="أضف ملاحظاتك هنا..."
+                                    />
                                 </div>
-                            )}
+
+                                {activeTab === 'financials' && (
+                                    <div className="glass" style={{ gridColumn: 'span 2', marginTop: '2rem', padding: '1.5rem', background: 'rgba(var(--primary-rgb), 0.05)', border: '1px solid var(--primary)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ color: 'var(--primary)', fontWeight: 'bold' }}>المجموع الجملي المحتسب:</div>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{formatAmount(formData.salaire || 0)} د.ت</div>
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '0.5rem' }}>
+                                            (الأجور + VAT 19% + المصاريف)
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                             
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem', gap: '1rem' }}>
                                 {activeTab !== 'financials' ? (
@@ -528,8 +554,8 @@ export default function RecordDetail() {
                                     <h5 style={{ fontSize: '0.75rem', marginBottom: '0.5rem', opacity: 0.8 }}>الأجور (تخضع لـ VAT)</h5>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
                                         {[
-                                            {k:'origine', l:'أصل'}, {k:'exemple', l:'نضائر'}, 
-                                            {k:'versionbureau', l:'نسخة مكتب'}, {k:'orientation', l:'توجه'}
+                                            {k:'origine', l:'أصل'}, {k:'exemple', l:'نظائر'}, 
+                                            {k:'versionbureau', l:'نسخة مكتب'}, {k:'orientation', l:'التوجه'}
                                         ].map(f => (
                                             <div key={f.k}>
                                                 <label style={{ fontSize:'0.65rem', opacity:0.6 }}>{f.l}</label>
@@ -548,6 +574,9 @@ export default function RecordDetail() {
                                                 />
                                             </div>
                                         ))}
+                                    </div>
+                                    <div style={{ marginTop: '0.5rem', fontSize: '0.7rem', opacity: 0.7 }}>
+                                        مجموع الأجور (Sum 1): {formatAmount(['origine', 'exemple', 'versionbureau', 'orientation'].reduce((s,k) => s + (parseFloat(actionForm[k]) || 0), 0))}
                                     </div>
                                 </div>
 
@@ -555,8 +584,8 @@ export default function RecordDetail() {
                                     <h5 style={{ fontSize: '0.75rem', marginBottom: '0.5rem', opacity: 0.8 }}>المصاريف</h5>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
                                         {[
-                                            {k:'delimitation', l:'تحرير'}, {k:'inscri', l:'ترسيم'}, {k:'mobilite', l:'تنقل'},
-                                            {k:'imprimer', l:'نسخ'}, {k:'postal', l:'بريد'}, {k:'autre', l:'أخرى'}
+                                            {k:'delimitation', l:'التسجيل'}, {k:'inscri', l:'الترسيم'}, {k:'mobilite', l:'التنقل'},
+                                            {k:'imprimer', l:'نسخ'}, {k:'postal', l:'البريد'}, {k:'autre', l:'المختلفات'}
                                         ].map(f => (
                                             <div key={f.k}>
                                                 <label style={{ fontSize:'0.65rem', opacity:0.6 }}>{f.l}</label>
@@ -576,10 +605,18 @@ export default function RecordDetail() {
                                             </div>
                                         ))}
                                     </div>
+                                    <div style={{ marginTop: '0.5rem', fontSize: '0.7rem', opacity: 0.7 }}>
+                                        مجموع المصاريف (Sum 2): {formatAmount(['delimitation', 'inscri', 'mobilite', 'imprimer', 'postal', 'autre'].reduce((s,k) => s + (parseFloat(actionForm[k]) || 0), 0))}
+                                    </div>
+                                </div>
+
+                                <div style={{ marginTop: '1rem', padding: '0.75rem', display: 'flex', justifyContent: 'space-between', border: '1px solid var(--card-border)', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '0.75rem' }}>الأداء على القيمة المضافة (VAT):</div>
+                                    <div style={{ fontWeight: 600 }}>{formatAmount(actionForm.TVA || 0)}</div>
                                 </div>
 
                                 <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(var(--primary-rgb), 0.1)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>المجموع للمرحلة:</span>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>المجموع الجملي والمحتسب:</span>
                                     <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{formatAmount(actionForm.salaire || 0)} د.ت</span>
                                 </div>
                             </div>
