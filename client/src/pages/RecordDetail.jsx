@@ -208,7 +208,6 @@ export default function RecordDetail() {
             { key: 'date_echeance', label: 'تاريخ آخر أجل لالتبليغ', type: 'date', readonly: true },
             { key: 'date_inscri', label: 'تاريخ التبليغ', type: 'date' },
             { key: 'de_part', label: 'طالب الخدمة' },
-            { key: 'service_petitioner_name', label: 'اسم طالب الخدمة' },
             { key: 'service_petitioner_contact', label: 'بيانات الاتصال' },
             ...(isExecution ? [
                 { key: 'tribunal', label: 'المحكمة' },
@@ -257,7 +256,7 @@ export default function RecordDetail() {
                         <ArrowLeft size={18} /> رجوع
                     </button>
                     <h2 style={{color: 'var(--primary)', margin: 0}}>
-                        {isExecution ? 'ملف تنفيذ' : 'محضر'} #{record?.ref || id}
+                        {isExecution ? 'ملف تنفيذ' : 'محضر'} #{record?.ref || id} {formData.remarque && <span style={{ opacity: 0.7, fontSize: '0.9em', marginRight: '0.5rem' }}>— {formData.remarque}</span>}
                     </h2>
                 </div>
                     <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
@@ -366,14 +365,31 @@ export default function RecordDetail() {
                                 ))}
 
                                 {activeTab === 'financials' && (
-                                    <div style={{ gridColumn: 'span 2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1rem' }}>
-                                        <div className="glass" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                                            <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>مجموع الأجور (Sum 1)</div>
+                                    <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+                                        {/* Sum 1 Block */}
+                                        <div className="glass" style={{ padding: '1rem', background: 'rgba(var(--primary-rgb), 0.05)', border: '1px solid rgba(var(--primary-rgb), 0.1)' }}>
+                                            <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.3rem' }}>مجموع الأجور (Partiel 1)</div>
                                             <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{formatAmount(['origine', 'exemple', 'version_bureau', 'orientation'].reduce((s,k) => s + (parseFloat(formData[k]) || 0), 0))} د.ت</div>
                                         </div>
-                                        <div className="glass" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                                            <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>مجموع المصاريف (Sum 2)</div>
+
+                                        {/* VAT Block */}
+                                        <div className="glass" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)' }}>
+                                            <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.3rem' }}>الأداء على القيمة المضافة (VAT 19%)</div>
+                                            <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{formatAmount(formData.TVA || 0)} د.ت</div>
+                                        </div>
+
+                                        {/* Sum 2 Block */}
+                                        <div className="glass" style={{ padding: '1rem', background: 'rgba(255,193,7, 0.05)', border: '1px solid rgba(255,193,7, 0.1)' }}>
+                                            <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.3rem' }}>مجموع المصاريف (Partiel 2)</div>
                                             <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{formatAmount(['delimitation', 'inscri', 'mobilite', 'imprimer', 'poste', 'autre'].reduce((s,k) => s + (parseFloat(formData[k]) || 0), 0))} د.ت</div>
+                                        </div>
+
+                                        {/* Total Block */}
+                                        <div className="glass" style={{ marginTop: '1rem', padding: '1.5rem', background: 'var(--primary)', border: '1px solid var(--primary)', color: 'white' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>المجموع الجملي:</div>
+                                                <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>{formatAmount(formData.salaire || 0)} د.ت</div>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -389,18 +405,6 @@ export default function RecordDetail() {
                                         placeholder="أضف ملاحظاتك هنا..."
                                     />
                                 </div>
-
-                                {activeTab === 'financials' && (
-                                    <div className="glass" style={{ gridColumn: 'span 2', marginTop: '2rem', padding: '1.5rem', background: 'rgba(var(--primary-rgb), 0.05)', border: '1px solid var(--primary)' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <div style={{ color: 'var(--primary)', fontWeight: 'bold' }}>المجموع الجملي المحتسب:</div>
-                                            <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{formatAmount(formData.salaire || 0)} د.ت</div>
-                                        </div>
-                                        <div style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '0.5rem' }}>
-                                            (الأجور + VAT 19% + المصاريف)
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                             
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem', gap: '1rem' }}>
@@ -575,12 +579,9 @@ export default function RecordDetail() {
                                             </div>
                                         ))}
                                     </div>
-                                    <div style={{ marginTop: '0.5rem', fontSize: '0.7rem', opacity: 0.7 }}>
-                                        مجموع الأجور (Sum 1): {formatAmount(['origine', 'exemple', 'versionbureau', 'orientation'].reduce((s,k) => s + (parseFloat(actionForm[k]) || 0), 0))}
-                                    </div>
                                 </div>
 
-                                <div>
+                                <div style={{ marginBottom: '1rem' }}>
                                     <h5 style={{ fontSize: '0.75rem', marginBottom: '0.5rem', opacity: 0.8 }}>المصاريف</h5>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
                                         {[
@@ -605,19 +606,32 @@ export default function RecordDetail() {
                                             </div>
                                         ))}
                                     </div>
-                                    <div style={{ marginTop: '0.5rem', fontSize: '0.7rem', opacity: 0.7 }}>
-                                        مجموع المصاريف (Sum 2): {formatAmount(['delimitation', 'inscri', 'mobilite', 'imprimer', 'postal', 'autre'].reduce((s,k) => s + (parseFloat(actionForm[k]) || 0), 0))}
+                                </div>
+
+                                <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    {/* Sum 1 Block */}
+                                    <div className="glass" style={{ padding: '0.75rem', background: 'rgba(var(--primary-rgb), 0.05)', border: '1px solid rgba(var(--primary-rgb), 0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>مجموع الأجور (Partiel 1)</div>
+                                        <div style={{ fontWeight: 600 }}>{formatAmount(['origine', 'exemple', 'versionbureau', 'orientation'].reduce((s,k) => s + (parseFloat(actionForm[k]) || 0), 0))}</div>
                                     </div>
-                                </div>
 
-                                <div style={{ marginTop: '1rem', padding: '0.75rem', display: 'flex', justifyContent: 'space-between', border: '1px solid var(--card-border)', borderRadius: '8px' }}>
-                                    <div style={{ fontSize: '0.75rem' }}>الأداء على القيمة المضافة (VAT):</div>
-                                    <div style={{ fontWeight: 600 }}>{formatAmount(actionForm.TVA || 0)}</div>
-                                </div>
+                                    {/* VAT Block */}
+                                    <div className="glass" style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>الأداء على القيمة المضافة (VAT 19%)</div>
+                                        <div style={{ fontWeight: 600 }}>{formatAmount(actionForm.TVA || 0)}</div>
+                                    </div>
 
-                                <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(var(--primary-rgb), 0.1)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>المجموع الجملي والمحتسب:</span>
-                                    <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{formatAmount(actionForm.salaire || 0)} د.ت</span>
+                                    {/* Sum 2 Block */}
+                                    <div className="glass" style={{ padding: '0.75rem', background: 'rgba(255,193,7, 0.05)', border: '1px solid rgba(255,193,7, 0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>مجموع المصاريف (Partiel 2)</div>
+                                        <div style={{ fontWeight: 600 }}>{formatAmount(['delimitation', 'inscri', 'mobilite', 'imprimer', 'postal', 'autre'].reduce((s,k) => s + (parseFloat(actionForm[k]) || 0), 0))}</div>
+                                    </div>
+
+                                    {/* Total Block */}
+                                    <div className="glass" style={{ padding: '1rem', background: 'var(--primary)', border: '1px solid var(--primary)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>المجموع الجملي والمحتسب:</span>
+                                        <span style={{ fontSize: '1.2rem', fontWeight: 800 }}>{formatAmount(actionForm.salaire || 0)} د.ت</span>
+                                    </div>
                                 </div>
                             </div>
 
