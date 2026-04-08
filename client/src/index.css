@@ -547,3 +547,23 @@ tr:hover {
 .badge-amber { background: var(--status-warning-bg); color: var(--status-warning); }
 .badge-gray { background: rgba(128, 128, 128, 0.1); color: var(--text-muted); }
 .badge-red { background: var(--status-error-bg); color: var(--status-error); }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+  border-left: 1px solid var(--border);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+  border: 2px solid var(--bg-main);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
