@@ -187,6 +187,37 @@ router.get('/:id', authenticate, async (req, res) => {
     }
 });
 
+// Update Base Record
+router.put('/:id', authenticate, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const record = req.body;
+        
+        // Remove non-updatable fields
+        delete record.id_r;
+        delete record.id_o;
+        delete record.id_user;
+        delete record.id_so;
+        delete record.actions; // UI-only field from grouped list
+
+        const keys = Object.keys(record);
+        const values = Object.values(record);
+        
+        if (keys.length === 0) return res.json({ success: true });
+
+        const setString = keys.map(k => `"${k}" = ?`).join(', ');
+        const query = `UPDATE clients_record SET ${setString} WHERE id_r::text = ? AND id_so::text = ?`;
+        
+        values.push(id, req.user.id_so);
+        
+        await db.run(query, values);
+        res.json({ success: true, updatedID: id });
+    } catch (err) {
+        console.error("Execution base update error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ── Action (Stage) Management ──────────────────────────────────────────────
 
 // Actions for Record (Moved up for priority)

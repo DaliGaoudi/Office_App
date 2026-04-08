@@ -621,6 +621,8 @@ export default function RecordDetail() {
                                                             const expenses = ['inscri', 'delimitation', 'mobilite', 'imprimer', 'postal', 'autre'].reduce((s, k) => s + (parseFloat(newForm[k]) || 0), 0);
                                                             newForm.TVA = tva.toString();
                                                             newForm.salaire = (fees + tva + expenses).toString();
+                                                            newForm.montantpartiel1 = fees.toString();
+                                                            newForm.montantpartiel2 = expenses.toString();
                                                             setActionForm(newForm);
                                                         }} 
                                                         style={{ width:'100%', padding:'0.3rem', fontSize:'0.8rem' }} 
@@ -659,6 +661,8 @@ export default function RecordDetail() {
                                                             const expenses = ['inscri', 'delimitation', 'mobilite', 'imprimer', 'postal', 'autre'].reduce((s, k) => s + (parseFloat(newForm[k]) || 0), 0);
                                                             newForm.TVA = tva.toString();
                                                             newForm.salaire = (fees + tva + expenses).toString();
+                                                            newForm.montantpartiel1 = fees.toString();
+                                                            newForm.montantpartiel2 = expenses.toString();
                                                             setActionForm(newForm);
                                                         }} 
                                                         style={{ width:'100%', padding:'0.3rem', fontSize:'0.8rem' }} 

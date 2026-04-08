@@ -193,7 +193,7 @@ router.put('/:id', authenticate, async (req, res) => {
         
         if (keys.length === 0) return res.json({ success: true });
 
-        const setString = keys.map(k => `${k} = ?`).join(', ');
+        const setString = keys.map(k => `"${k}" = ?`).join(', ');
         const query = `UPDATE clients_record SET ${setString} WHERE id_r = ? AND id_so = ?`;
         
         values.push(id, req.user.id_so);
