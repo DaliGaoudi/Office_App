@@ -238,7 +238,7 @@ export default function RecordDetail() {
             { key: 'exemple', label: 'نظائر' },
             { key: 'version_bureau', label: 'نسخة مكتب' },
             { key: 'orientation', label: 'التوجه' },
-            { key: 'delimitation', label: 'الآنخراط/تحديد' },
+            { key: 'delimitation', label: 'التسجيل' },
             { key: 'inscri', label: 'الترسيم' },
             { key: 'mobilite', label: 'التنقل' },
             { key: 'imprimer', label: 'نسخ أوراق' },
