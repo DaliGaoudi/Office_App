@@ -238,7 +238,7 @@ export default function RecordDetail() {
             { key: 'exemple', label: 'نظائر' },
             { key: 'version_bureau', label: 'نسخة مكتب' },
             { key: 'orientation', label: 'التوجه' },
-            { key: 'delimitation', label: 'التسجيل' },
+            { key: 'delimitation', label: 'الآنخراط/تحديد' },
             { key: 'inscri', label: 'الترسيم' },
             { key: 'mobilite', label: 'التنقل' },
             { key: 'imprimer', label: 'نسخ أوراق' },
@@ -306,90 +306,137 @@ export default function RecordDetail() {
                     <div className="glass" style={{ padding: '2rem', position: 'relative' }}>
                         <form onSubmit={handleSave}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                                {fieldGroups[activeTab].map((field) => (
-                                    <div key={field.key} style={{ gridColumn: field.type === 'textarea' ? 'span 2' : 'span 1' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                                            {field.label}
-                                        </label>
-                                        {field.type === 'textarea' ? (
-                                            <textarea 
-                                                value={formData[field.key] || ''} 
-                                                onChange={(e) => setFormData({...formData, [field.key]: e.target.value})}
-                                                className="glass"
-                                                style={{ width: '100%', padding: '0.6rem', minHeight: '100px', color: 'var(--text-main)', border: '1px solid var(--card-border)' }}
-                                            />
-                                        ) : (
-                                            <input 
-                                                type={field.type === 'date' ? 'date' : (field.key === 'acompte' || fieldGroups.financials.find(f => f.key === field.key) ? 'number' : 'text')} 
-                                                value={formData[field.key] || ''} 
-                                                readOnly={field.readonly}
-                                                placeholder={field.placeholder}
-                                                onChange={(e) => {
-                                                    const newVal = e.target.value;
-                                                    const newFormData = {...formData, [field.key]: newVal};
-                                                    
-                                                    // Auto-calc deadline (date_reg + 5 days)
-                                                    if (field.key === 'date_reg') {
-                                                        const d = new Date(newVal);
-                                                        if (!isNaN(d.getTime())) {
-                                                            d.setDate(d.getDate() + 5);
-                                                            newFormData.date_echeance = d.toISOString().split('T')[0];
+                                {activeTab !== 'financials' ? (
+                                    fieldGroups[activeTab].map((field) => (
+                                        <div key={field.key} style={{ gridColumn: field.type === 'textarea' ? 'span 2' : 'span 1' }}>
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                                {field.label}
+                                            </label>
+                                            {field.type === 'textarea' ? (
+                                                <textarea 
+                                                    value={formData[field.key] || ''} 
+                                                    onChange={(e) => setFormData({...formData, [field.key]: e.target.value})}
+                                                    className="glass"
+                                                    style={{ width: '100%', padding: '0.6rem', minHeight: '100px', color: 'var(--text-main)', border: '1px solid var(--card-border)' }}
+                                                />
+                                            ) : (
+                                                <input 
+                                                    type={field.type === 'date' ? 'date' : (field.key === 'acompte' || fieldGroups.financials.find(f => f.key === field.key) ? 'number' : 'text')} 
+                                                    value={formData[field.key] || ''} 
+                                                    readOnly={field.readonly}
+                                                    placeholder={field.placeholder}
+                                                    onChange={(e) => {
+                                                        const newVal = e.target.value;
+                                                        const newFormData = {...formData, [field.key]: newVal};
+                                                        
+                                                        // Auto-calc deadline (date_reg + 5 days)
+                                                        if (field.key === 'date_reg') {
+                                                            const d = new Date(newVal);
+                                                            if (!isNaN(d.getTime())) {
+                                                                d.setDate(d.getDate() + 5);
+                                                                newFormData.date_echeance = d.toISOString().split('T')[0];
+                                                            }
                                                         }
-                                                    }
 
-                                                    // Financial Auto-calc logic (Fees + VAT + Expenses)
-                                                    if (fieldGroups.financials.find(f => f.key === field.key)) {
-                                                        const feeFields = ['origine', 'exemple', 'version_bureau', 'orientation'];
-                                                        const expenseFields = ['delimitation', 'inscri', 'mobilite', 'imprimer', 'poste', 'autre'];
-                                                        
-                                                        const fees = feeFields.reduce((sum, k) => sum + (parseFloat(newFormData[k]) || 0), 0);
-                                                        const tva = Math.round(fees * 0.19); // 19% VAT on Fees only
-                                                        const exp = expenseFields.reduce((sum, k) => sum + (parseFloat(newFormData[k]) || 0), 0);
-                                                        
-                                                        newFormData.salaire = (fees + tva + exp).toString();
-                                                        newFormData.TVA = tva.toString();
-                                                        newFormData.montant_partiel1 = fees.toString();
-                                                        newFormData.montant_partiel2 = exp.toString();
-                                                    }
+                                                        // Financial Auto-calc logic (Fees + VAT + Expenses)
+                                                        if (fieldGroups.financials.find(f => f.key === field.key)) {
+                                                            const feeFields = ['origine', 'exemple', 'version_bureau', 'orientation'];
+                                                            const expenseFields = ['delimitation', 'inscri', 'mobilite', 'imprimer', 'poste', 'autre'];
+                                                            
+                                                            const fees = feeFields.reduce((sum, k) => sum + (parseFloat(newFormData[k]) || 0), 0);
+                                                            const tva = Math.round(fees * 0.19); // 19% VAT on Fees only
+                                                            const exp = expenseFields.reduce((sum, k) => sum + (parseFloat(newFormData[k]) || 0), 0);
+                                                            
+                                                            newFormData.salaire = (fees + tva + exp).toString();
+                                                            newFormData.TVA = tva.toString();
+                                                            newFormData.montant_partiel1 = fees.toString();
+                                                            newFormData.montant_partiel2 = exp.toString();
+                                                        }
 
-                                                    // Auto-transition not_started -> has_deposit if acompte is added
-                                                    if (field.key === 'acompte' && parseFloat(newVal) > 0 && (formData.status === 'not_started' || !formData.status)) {
-                                                        newFormData.status = 'has_deposit';
-                                                    }
-                                                    setFormData(newFormData);
-                                                }}
-                                                style={{ width: '100%', padding: '0.6rem', opacity: field.readonly ? 0.6 : 1 }}
-                                            />
-                                        )}
-                                    </div>
-                                ))}
-
-                                {activeTab === 'financials' && (
-                                    <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
-                                        {/* Sum 1 Block */}
-                                        <div className="glass" style={{ padding: '1rem', background: 'rgba(var(--primary-rgb), 0.05)', border: '1px solid rgba(var(--primary-rgb), 0.1)' }}>
-                                            <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.3rem' }}>مجموع الأجور (Partiel 1)</div>
-                                            <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{formatAmount(['origine', 'exemple', 'version_bureau', 'orientation'].reduce((s,k) => s + (parseFloat(formData[k]) || 0), 0))} د.ت</div>
+                                                        // Auto-transition not_started -> has_deposit if acompte is added
+                                                        if (field.key === 'acompte' && parseFloat(newVal) > 0 && (formData.status === 'not_started' || !formData.status)) {
+                                                            newFormData.status = 'has_deposit';
+                                                        }
+                                                        setFormData(newFormData);
+                                                    }}
+                                                    style={{ width: '100%', padding: '0.6rem', opacity: field.readonly ? 0.6 : 1 }}
+                                                />
+                                            )}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                        {/* Block 1: Deposit */}
+                                        <div className="glass" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>تسبقة (د.ت)</label>
+                                            <input type="number" value={formData.acompte || '0'} onChange={(e) => setFormData({...formData, acompte: e.target.value})} style={{ width: '100%', padding: '0.6rem' }} />
                                         </div>
 
-                                        {/* VAT Block */}
-                                        <div className="glass" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)' }}>
-                                            <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.3rem' }}>الأداء على القيمة المضافة (VAT 19%)</div>
-                                            <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{formatAmount(formData.TVA || 0)} د.ت</div>
-                                        </div>
-
-                                        {/* Sum 2 Block */}
-                                        <div className="glass" style={{ padding: '1rem', background: 'rgba(255,193,7, 0.05)', border: '1px solid rgba(255,193,7, 0.1)' }}>
-                                            <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.3rem' }}>مجموع المصاريف (Partiel 2)</div>
-                                            <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{formatAmount(['delimitation', 'inscri', 'mobilite', 'imprimer', 'poste', 'autre'].reduce((s,k) => s + (parseFloat(formData[k]) || 0), 0))} د.ت</div>
-                                        </div>
-
-                                        {/* Total Block */}
-                                        <div className="glass" style={{ marginTop: '1rem', padding: '1.5rem', background: 'var(--primary)', border: '1px solid var(--primary)', color: 'white' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>المجموع الجملي:</div>
-                                                <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>{formatAmount(formData.salaire || 0)} د.ت</div>
+                                        {/* Block 2: Fees (Sum 1) */}
+                                        <div className="glass" style={{ padding: '1.5rem', background: 'rgba(var(--primary-rgb), 0.05)', border: '1px solid rgba(var(--primary-rgb), 0.1)' }}>
+                                            <h4 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--primary)', fontWeight: 600 }}>الأجور (تخضع لـ VAT)</h4>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
+                                                {['origine', 'exemple', 'version_bureau', 'orientation'].map(k => (
+                                                    <div key={k}>
+                                                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.8rem', opacity: 0.7 }}>{fieldGroups.financials.find(f => f.key === k).label}</label>
+                                                        <input type="number" value={formData[k] || '0'} onChange={(e) => {
+                                                            const newVal = e.target.value;
+                                                            const newFormData = {...formData, [k]: newVal};
+                                                            const fees = ['origine', 'exemple', 'version_bureau', 'orientation'].reduce((s, key) => s + (parseFloat(newFormData[key]) || 0), 0);
+                                                            const tva = Math.round(fees * 0.19);
+                                                            const exp = ['delimitation', 'inscri', 'mobilite', 'imprimer', 'poste', 'autre'].reduce((s, key) => s + (parseFloat(newFormData[key]) || 0), 0);
+                                                            newFormData.salaire = (fees + tva + exp).toString();
+                                                            newFormData.TVA = tva.toString();
+                                                            newFormData.montant_partiel1 = fees.toString();
+                                                            setFormData(newFormData);
+                                                        }} style={{ width: '100%', padding: '0.6rem' }} />
+                                                    </div>
+                                                ))}
                                             </div>
+                                            {/* Partial Sum 1 Badge */}
+                                            <div className="glass" style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(var(--primary-rgb), 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>مجموع الأجور (Partiel 1):</span>
+                                                <span style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary)' }}>{formatAmount(formData.montant_partiel1 || 0)} د.ت</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Block 3: VAT Badge */}
+                                        <div className="glass" style={{ padding: '1.2rem 1.5rem', border: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '0.9rem', opacity: 0.8 }}>الأداء على القيمة المضافة (VAT 19%):</span>
+                                            <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>{formatAmount(formData.TVA || 0)} د.ت</span>
+                                        </div>
+
+                                        {/* Block 4: Expenses (Sum 2) */}
+                                        <div className="glass" style={{ padding: '1.5rem', background: 'rgba(255,193,7, 0.03)', border: '1px solid rgba(255,193,7, 0.1)' }}>
+                                            <h4 style={{ fontSize: '1rem', marginBottom: '1rem', color: '#ffc107', fontWeight: 600 }}>المصاريف</h4>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
+                                                {['delimitation', 'inscri', 'mobilite', 'imprimer', 'poste', 'autre'].map(k => (
+                                                    <div key={k}>
+                                                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.8rem', opacity: 0.7 }}>{fieldGroups.financials.find(f => f.key === k).label}</label>
+                                                        <input type="number" value={formData[k] || '0'} onChange={(e) => {
+                                                            const newVal = e.target.value;
+                                                            const newFormData = {...formData, [k]: newVal};
+                                                            const fees = ['origine', 'exemple', 'version_bureau', 'orientation'].reduce((s, key) => s + (parseFloat(newFormData[key]) || 0), 0);
+                                                            const tva = Math.round(fees * 0.19);
+                                                            const exp = ['delimitation', 'inscri', 'mobilite', 'imprimer', 'poste', 'autre'].reduce((s, key) => s + (parseFloat(newFormData[key]) || 0), 0);
+                                                            newFormData.salaire = (fees + tva + exp).toString();
+                                                            newFormData.montant_partiel2 = exp.toString();
+                                                            setFormData(newFormData);
+                                                        }} style={{ width: '100%', padding: '0.6rem' }} />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {/* Partial Sum 2 Badge */}
+                                            <div className="glass" style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(255,193,7, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>مجموع المصاريف (Partiel 2):</span>
+                                                <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#ffc107' }}>{formatAmount(formData.montant_partiel2 || 0)} د.ت</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Block 5: Grand Total */}
+                                        <div className="glass" style={{ marginTop: '1rem', padding: '1.5rem', background: 'var(--primary)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 8px 32px rgba(var(--primary-rgb), 0.3)' }}>
+                                            <span style={{ fontSize: '1.2rem', fontWeight: 800 }}>المجموع الجملي المحتسب:</span>
+                                            <span style={{ fontSize: '2.5rem', fontWeight: 900 }}>{formatAmount(formData.salaire || 0)} د.ت</span>
                                         </div>
                                     </div>
                                 )}
@@ -554,83 +601,81 @@ export default function RecordDetail() {
                             <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '1rem' }}>
                                 <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color:'var(--primary)' }}>تفاصيل الأتعاب والمصاريف</h4>
                                 
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <h5 style={{ fontSize: '0.75rem', marginBottom: '0.5rem', opacity: 0.8 }}>الأجور (تخضع لـ VAT)</h5>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
-                                        {[
-                                            {k:'origine', l:'أصل'}, {k:'exemple', l:'نظائر'}, 
-                                            {k:'versionbureau', l:'نسخة مكتب'}, {k:'orientation', l:'التوجه'}
-                                        ].map(f => (
-                                            <div key={f.k}>
-                                                <label style={{ fontSize:'0.65rem', opacity:0.6 }}>{f.l}</label>
-                                                <input type="number" value={actionForm[f.k]} 
-                                                    onChange={e => {
-                                                        const val = e.target.value;
-                                                        const newForm = {...actionForm, [f.k]: val};
-                                                        const fees = ['origine', 'exemple', 'versionbureau', 'orientation'].reduce((s, k) => s + (parseFloat(newForm[k]) || 0), 0);
-                                                        const tva = Math.round(fees * 0.19);
-                                                        const expenses = ['inscri', 'delimitation', 'mobilite', 'imprimer', 'postal', 'autre'].reduce((s, k) => s + (parseFloat(newForm[k]) || 0), 0);
-                                                        newForm.TVA = tva.toString();
-                                                        newForm.salaire = (fees + tva + expenses).toString();
-                                                        setActionForm(newForm);
-                                                    }} 
-                                                    style={{ width:'100%', padding:'0.3rem', fontSize:'0.8rem' }} 
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <h5 style={{ fontSize: '0.75rem', marginBottom: '0.5rem', opacity: 0.8 }}>المصاريف</h5>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
-                                        {[
-                                            {k:'delimitation', l:'التسجيل'}, {k:'inscri', l:'الترسيم'}, {k:'mobilite', l:'التنقل'},
-                                            {k:'imprimer', l:'نسخ'}, {k:'postal', l:'البريد'}, {k:'autre', l:'المختلفات'}
-                                        ].map(f => (
-                                            <div key={f.k}>
-                                                <label style={{ fontSize:'0.65rem', opacity:0.6 }}>{f.l}</label>
-                                                <input type="number" value={actionForm[f.k]} 
-                                                    onChange={e => {
-                                                        const val = e.target.value;
-                                                        const newForm = {...actionForm, [f.k]: val};
-                                                        const fees = ['origine', 'exemple', 'versionbureau', 'orientation'].reduce((s, k) => s + (parseFloat(newForm[k]) || 0), 0);
-                                                        const tva = Math.round(fees * 0.19);
-                                                        const expenses = ['inscri', 'delimitation', 'mobilite', 'imprimer', 'postal', 'autre'].reduce((s, k) => s + (parseFloat(newForm[k]) || 0), 0);
-                                                        newForm.TVA = tva.toString();
-                                                        newForm.salaire = (fees + tva + expenses).toString();
-                                                        setActionForm(newForm);
-                                                    }} 
-                                                    style={{ width:'100%', padding:'0.3rem', fontSize:'0.8rem' }} 
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    {/* Sum 1 Block */}
-                                    <div className="glass" style={{ padding: '0.75rem', background: 'rgba(var(--primary-rgb), 0.05)', border: '1px solid rgba(var(--primary-rgb), 0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>مجموع الأجور (Partiel 1)</div>
-                                        <div style={{ fontWeight: 600 }}>{formatAmount(['origine', 'exemple', 'versionbureau', 'orientation'].reduce((s,k) => s + (parseFloat(actionForm[k]) || 0), 0))}</div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    {/* Fees Section */}
+                                    <div className="glass" style={{ padding: '1rem', background: 'rgba(var(--primary-rgb), 0.05)', borderRadius: '12px' }}>
+                                        <h5 style={{ fontSize: '0.8rem', marginBottom: '0.75rem', opacity: 0.8 }}>الأجور (تخضع لـ VAT)</h5>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                                            {[
+                                                {k:'origine', l:'أصل'}, {k:'exemple', l:'نظائر'}, 
+                                                {k:'versionbureau', l:'نسخة مكتب'}, {k:'orientation', l:'التوجه'}
+                                            ].map(f => (
+                                                <div key={f.k}>
+                                                    <label style={{ fontSize:'0.65rem', opacity:0.6 }}>{f.l}</label>
+                                                    <input type="number" value={actionForm[f.k]} 
+                                                        onChange={e => {
+                                                            const val = e.target.value;
+                                                            const newForm = {...actionForm, [f.k]: val};
+                                                            const fees = ['origine', 'exemple', 'versionbureau', 'orientation'].reduce((s, k) => s + (parseFloat(newForm[k]) || 0), 0);
+                                                            const tva = Math.round(fees * 0.19);
+                                                            const expenses = ['inscri', 'delimitation', 'mobilite', 'imprimer', 'postal', 'autre'].reduce((s, k) => s + (parseFloat(newForm[k]) || 0), 0);
+                                                            newForm.TVA = tva.toString();
+                                                            newForm.salaire = (fees + tva + expenses).toString();
+                                                            setActionForm(newForm);
+                                                        }} 
+                                                        style={{ width:'100%', padding:'0.3rem', fontSize:'0.8rem' }} 
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="glass" style={{ marginTop: '0.75rem', padding: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(var(--primary-rgb), 0.1)' }}>
+                                            <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>مجموع الأجور (Partiel 1)</span>
+                                            <strong style={{ fontSize: '0.9rem', color: 'var(--primary)' }}>{formatAmount(['origine', 'exemple', 'versionbureau', 'orientation'].reduce((s,k) => s + (parseFloat(actionForm[k]) || 0), 0))}</strong>
+                                        </div>
                                     </div>
 
-                                    {/* VAT Block */}
-                                    <div className="glass" style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>الأداء على القيمة المضافة (VAT 19%)</div>
-                                        <div style={{ fontWeight: 600 }}>{formatAmount(actionForm.TVA || 0)}</div>
+                                    {/* VAT Bridging */}
+                                    <div className="glass" style={{ padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--card-border)' }}>
+                                        <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>الأداء على القيمة المضافة (VAT 19%)</span>
+                                        <strong style={{ fontSize: '1rem', fontWeight: 700 }}>{formatAmount(actionForm.TVA || 0)}</strong>
                                     </div>
 
-                                    {/* Sum 2 Block */}
-                                    <div className="glass" style={{ padding: '0.75rem', background: 'rgba(255,193,7, 0.05)', border: '1px solid rgba(255,193,7, 0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>مجموع المصاريف (Partiel 2)</div>
-                                        <div style={{ fontWeight: 600 }}>{formatAmount(['delimitation', 'inscri', 'mobilite', 'imprimer', 'postal', 'autre'].reduce((s,k) => s + (parseFloat(actionForm[k]) || 0), 0))}</div>
+                                    {/* Expenses Section */}
+                                    <div className="glass" style={{ padding: '1rem', background: 'rgba(255,193,7, 0.03)', borderRadius: '12px' }}>
+                                        <h5 style={{ fontSize: '0.8rem', marginBottom: '0.75rem', opacity: 0.8 }}>المصاريف</h5>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+                                            {[
+                                                {k:'delimitation', l:'التسجيل'}, {k:'inscri', l:'الترسيم'}, {k:'mobilite', l:'التنقل'},
+                                                {k:'imprimer', l:'نسخ'}, {k:'postal', l:'البريد'}, {k:'autre', l:'المختلفات'}
+                                            ].map(f => (
+                                                <div key={f.k}>
+                                                    <label style={{ fontSize:'0.65rem', opacity:0.6 }}>{f.l}</label>
+                                                    <input type="number" value={actionForm[f.k]} 
+                                                        onChange={e => {
+                                                            const val = e.target.value;
+                                                            const newForm = {...actionForm, [f.k]: val};
+                                                            const fees = ['origine', 'exemple', 'versionbureau', 'orientation'].reduce((s, k) => s + (parseFloat(newForm[k]) || 0), 0);
+                                                            const tva = Math.round(fees * 0.19);
+                                                            const expenses = ['inscri', 'delimitation', 'mobilite', 'imprimer', 'postal', 'autre'].reduce((s, k) => s + (parseFloat(newForm[k]) || 0), 0);
+                                                            newForm.TVA = tva.toString();
+                                                            newForm.salaire = (fees + tva + expenses).toString();
+                                                            setActionForm(newForm);
+                                                        }} 
+                                                        style={{ width:'100%', padding:'0.3rem', fontSize:'0.8rem' }} 
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="glass" style={{ marginTop: '0.75rem', padding: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,193,7, 0.1)' }}>
+                                            <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>مجموع المصاريف (Partiel 2)</span>
+                                            <strong style={{ fontSize: '0.9rem', color: '#ffc107' }}>{formatAmount(['delimitation', 'inscri', 'mobilite', 'imprimer', 'postal', 'autre'].reduce((s,k) => s + (parseFloat(actionForm[k]) || 0), 0))}</strong>
+                                        </div>
                                     </div>
 
-                                    {/* Total Block */}
-                                    <div className="glass" style={{ padding: '1rem', background: 'var(--primary)', border: '1px solid var(--primary)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>المجموع الجملي والمحتسب:</span>
-                                        <span style={{ fontSize: '1.2rem', fontWeight: 800 }}>{formatAmount(actionForm.salaire || 0)} د.ت</span>
+                                    {/* Grand Total */}
+                                    <div className="glass" style={{ padding: '1rem', background: 'var(--primary)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '1rem', fontWeight: 600 }}>المجموع الجملي والمحتسب:</span>
+                                        <span style={{ fontSize: '1.6rem', fontWeight: 900 }}>{formatAmount(actionForm.salaire || 0)} د.ت</span>
                                     </div>
                                 </div>
                             </div>
