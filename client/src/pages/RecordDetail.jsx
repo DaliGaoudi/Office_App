@@ -374,7 +374,7 @@ export default function RecordDetail() {
 
                                         {/* Block 2: Fees (Sum 1) */}
                                         <div className="glass" style={{ padding: '1.5rem', background: 'rgba(var(--primary-rgb), 0.05)', border: '1px solid rgba(var(--primary-rgb), 0.1)' }}>
-                                            <h4 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--primary)', fontWeight: 600 }}>الأجور (تخضع لـ VAT)</h4>
+                                            <h4 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--primary)', fontWeight: 600 }}>الأجور</h4>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
                                                 {['origine', 'exemple', 'version_bureau', 'orientation'].map(k => (
                                                     <div key={k}>
@@ -604,7 +604,7 @@ export default function RecordDetail() {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                     {/* Fees Section */}
                                     <div className="glass" style={{ padding: '1rem', background: 'rgba(var(--primary-rgb), 0.05)', borderRadius: '12px' }}>
-                                        <h5 style={{ fontSize: '0.8rem', marginBottom: '0.75rem', opacity: 0.8 }}>الأجور (تخضع لـ VAT)</h5>
+                                        <h5 style={{ fontSize: '0.8rem', marginBottom: '0.75rem', opacity: 0.8 }}>الأجور</h5>
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
                                             {[
                                                 {k:'origine', l:'أصل'}, {k:'exemple', l:'نظائر'}, 
