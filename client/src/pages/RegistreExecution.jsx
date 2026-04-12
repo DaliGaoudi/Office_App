@@ -155,7 +155,7 @@ export default function RegistreExecution() {
                     <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{formatAmount(item.total_salaire)}</td>
                     <td>
                       {(() => {
-                        const s = STATUS_MAP[item.status] || STATUS_MAP.not_started;
+                        const s = STATUS_MAP[item.status] || STATUS_MAP.cancelled;
                         return <span className={`badge badge-${s.color}`}>{s.label}</span>;
                       })()}
                     </td>

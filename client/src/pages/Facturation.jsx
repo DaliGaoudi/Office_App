@@ -251,7 +251,7 @@ export default function Facturation({ type = 'general' }) {
                                         }
 
                                         if (c.key === 'status') {
-                                            const s = STATUS_MAP[item.status] || STATUS_MAP.not_started;
+                                            const s = STATUS_MAP[item.status] || STATUS_MAP.cancelled;
                                             return (
                                                 <td key={c.key}>
                                                     <span className={`badge badge-${s.color}`}>{s.label}</span>

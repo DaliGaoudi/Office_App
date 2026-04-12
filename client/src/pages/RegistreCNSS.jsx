@@ -135,7 +135,7 @@ export default function RegistreCNSS() {
                     <td>{item.num_cnss}</td>
                     <td>
                       {(() => {
-                        const s = STATUS_MAP[item.status] || STATUS_MAP.not_started;
+                        const s = STATUS_MAP[item.status] || STATUS_MAP.cancelled;
                         return <span className={`badge badge-${s.color}`}>{s.label}</span>;
                       })()}
                     </td>

@@ -18,7 +18,7 @@ export const formatAmount = (val) => {
 };
 
 export const STATUS_MAP = {
-  not_started: { label: 'لم يبدأ بعد', color: 'gray' },
+  cancelled: { label: 'ملغى', color: 'gray' },
   has_deposit: { label: 'تسبقة', color: 'blue' },
   waiting_payment: { label: 'في انتظار الخلاص', color: 'amber' },
   finished: { label: 'منتهي', color: 'green' }
