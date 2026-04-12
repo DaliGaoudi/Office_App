@@ -105,11 +105,47 @@ p {
 
 .sidebar {
   width: 260px;
-  height: 100%;
+  max-width: 260px;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   padding: 2rem 1rem;
   transition: all 0.3s ease;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+}
+
+/* Custom Scrollbar for Sidebar */
+.sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 240px;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout-container {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: 40vh; /* Allow it to be scrollable but not take over the whole screen */
+    border-left: none;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    padding: 1rem;
+  }
+  .sidebar h2 {
+    margin-bottom: 1rem !important;
+  }
 }
 
 .sidebar h2 {
@@ -151,6 +187,18 @@ p {
   flex: 1;
   padding: 2rem;
   overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding: 1rem;
+  }
+  h1 { font-size: 1.5rem; }
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
 }
 
 /* UI Elements */
