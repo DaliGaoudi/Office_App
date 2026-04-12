@@ -170,7 +170,8 @@ router.post('/', authenticate, async (req, res) => {
         const values = keys.map(k => finalRecord[k]);
         const placeholders = keys.map(() => '?').join(',');
 
-        let query = `INSERT INTO clients_record (${keys.join(',')}) VALUES (${placeholders})`;
+        const quotedKeys = keys.map(k => `"${k}"`);
+        let query = `INSERT INTO clients_record (${quotedKeys.join(',')}) VALUES (${placeholders})`;
         if (process.env.POSTGRES_URL) {
             query += ` RETURNING id_r`;
         }
