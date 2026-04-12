@@ -39,7 +39,7 @@ module.exports.refreshTVA = refreshTVA;
 // Get all records (clients_record) with advanced search
 router.get('/', authenticate, async (req, res) => {
     try {
-        const { page = 1, limit = 50, ref, nom_cl1, de_part, date_reg } = req.query;
+        const { page = 1, limit = 50, ref, nom_cl1, de_part, date_reg, date_inscri } = req.query;
         const offset = (page - 1) * limit;
 
         let query = `SELECT * FROM clients_record WHERE id_so = ?`;
@@ -61,6 +61,10 @@ router.get('/', authenticate, async (req, res) => {
             query += ` AND date_reg LIKE ?`;
             params.push(`%${date_reg}%`);
         }
+        if (date_inscri) {
+            query += ` AND date_inscri LIKE ?`;
+            params.push(`%${date_inscri}%`);
+        }
 
         query += ` ORDER BY id_r DESC LIMIT ? OFFSET ?`;
         params.push(parseInt(limit), parseInt(offset));
@@ -75,6 +79,7 @@ router.get('/', authenticate, async (req, res) => {
         if (nom_cl1) { countQuery += ` AND (nom_cl1 LIKE ? OR nom_cl2 LIKE ?)`; countParams.push(`%${nom_cl1}%`, `%${nom_cl1}%`); }
         if (de_part) { countQuery += ` AND de_part LIKE ?`; countParams.push(`%${de_part}%`); }
         if (date_reg) { countQuery += ` AND date_reg LIKE ?`; countParams.push(`%${date_reg}%`); }
+        if (date_inscri) { countQuery += ` AND date_inscri LIKE ?`; countParams.push(`%${date_inscri}%`); }
 
         const countRow = await db.get(countQuery, countParams);
         const count = parseInt(countRow.count);
@@ -245,7 +250,7 @@ router.get('/facturation/list', authenticate, async (req, res) => {
         const { ref, de_part, remarque, date_debut, date_fin, page = 1, limit = 50 } = req.query;
         const offset = (parseInt(page) - 1) * parseInt(limit);
 
-        let query = `SELECT id_r::text as id_r, ref, de_part, nom_cl1, nom_cl2, date_reg, remarque, salaire, "TVA" as tva, status,
+        let query = `SELECT id_r::text as id_r, ref, de_part, nom_cl1, nom_cl2, date_reg, date_inscri, remarque, salaire, "TVA" as tva, status,
                             origine, exemple, version_bureau, orientation, mobilite,
                             imprimer, inscri, delimitation, poste, autre, id_so::text as id_so
                      FROM clients_record c 
@@ -276,13 +281,13 @@ router.get('/facturation/list', authenticate, async (req, res) => {
             .map(row => {
                 const b = computeSalaireBreakdown(row);
                 const { 
-                    id_r, ref, de_part, nom_cl1, nom_cl2, date_reg, remarque, 
+                    id_r, ref, de_part, nom_cl1, nom_cl2, date_reg, date_inscri, remarque, 
                     origine, exemple, version_bureau, orientation, mobilite,
                     imprimer, inscri, delimitation, poste, autre 
                 } = row;
                 
                 return {
-                    id_r, ref, de_part, nom_cl1, nom_cl2, date_reg, remarque,
+                    id_r, ref, de_part, nom_cl1, nom_cl2, date_reg, date_inscri, remarque,
                     status: row.status || 'not_started',
                     id_o: id_r,
                     origine, exemple, version_bureau, orientation, mobilite,

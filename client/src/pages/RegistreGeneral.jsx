@@ -23,7 +23,7 @@ export default function RegistreGeneral() {
 
   // Search
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState({ ref: '', nom_cl1: '', de_part: '', date_reg: '' });
+  const [filters, setFilters] = useState({ ref: '', nom_cl1: '', de_part: '', date_inscri: '' });
   const [activeFilters, setActiveFilters] = useState({});   // committed on search click
 
   const fetchRecords = useCallback(async (pg = page, lim = limit, flt = activeFilters) => {
@@ -95,10 +95,10 @@ export default function RegistreGeneral() {
           <input type="text" placeholder="العدد الترتيبي" value={filters.ref} onChange={e => setFilters({ ...filters, ref: e.target.value })} />
           <input type="text" placeholder="طالب الخدمة"  value={filters.de_part} onChange={e => setFilters({ ...filters, de_part: e.target.value })} />
           <input type="text" placeholder="اسم الطالب"   value={filters.nom_cl1} onChange={e => setFilters({ ...filters, nom_cl1: e.target.value })} />
-          <input type="text" placeholder="تاريخ تبليغ المحضر (YYYY/MM/DD)" value={filters.date_reg} onChange={e => setFilters({ ...filters, date_reg: e.target.value })} />
+          <input type="text" placeholder="تاريخ تبليغ المحضر (YYYY/MM/DD)" value={filters.date_inscri} onChange={e => setFilters({ ...filters, date_inscri: e.target.value })} />
           <button type="submit" className="btn"><Search size={18} /> بحث</button>
           <button type="button" className="btn" style={{ background: 'rgba(255,255,255,0.08)' }}
-            onClick={() => { setFilters({ ref: '', nom_cl1: '', de_part: '', date_reg: '' }); setActiveFilters({}); setPage(1); }}>
+            onClick={() => { setFilters({ ref: '', nom_cl1: '', de_part: '', date_inscri: '' }); setActiveFilters({}); setPage(1); }}>
             مسح
           </button>
         </form>
@@ -133,7 +133,7 @@ export default function RegistreGeneral() {
                     <td>{item.de_part}</td>
                     <td>{item.nom_cl1}</td>
                     <td>{item.nom_cl2}</td>
-                    <td>{item.date_reg}</td>
+                    <td>{item.date_inscri}</td>
                     <td>{item.remarque}</td>
                     <td style={{ fontWeight: 700, color: '#a78bfa' }}>
                        {formatAmount(item.salaire)}

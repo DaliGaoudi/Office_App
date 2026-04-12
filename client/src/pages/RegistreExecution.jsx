@@ -112,7 +112,7 @@ export default function RegistreExecution() {
           <input type="text" placeholder="العدد الترتيبي"   value={filters.ref}        onChange={e => setFilters({ ...filters, ref: e.target.value })} />
           <input type="text" placeholder="طالب الخدمة"     value={filters.de_part}    onChange={e => setFilters({ ...filters, de_part: e.target.value })} />
           <input type="text" placeholder="اسم الطالب"      value={filters.nom_cl1}    onChange={e => setFilters({ ...filters, nom_cl1: e.target.value })} />
-          <input type="text" placeholder="تاريخ (YYYY/MM/DD)" value={filters.date_inscri} onChange={e => setFilters({ ...filters, date_inscri: e.target.value })} />
+          <input type="text" placeholder="تاريخ تبليغ المحضر (YYYY/MM/DD)" value={filters.date_inscri} onChange={e => setFilters({ ...filters, date_inscri: e.target.value })} />
           <button type="submit" className="btn"><Search size={18} /> بحث</button>
           <button type="button" className="btn" style={{ background: 'rgba(255,255,255,0.08)' }}
             onClick={() => { setFilters({ ref: '', nom_cl1: '', de_part: '', date_inscri: '' }); setActiveFilters({}); setPage(1); }}>
@@ -134,7 +134,7 @@ export default function RegistreExecution() {
                   <th>طالب الخدمة</th>
                   <th>الطالب</th>
                   <th>المطلوب</th>
-                  <th>تاريخ التسجيل</th>
+                  <th>تاريخ تبليغ المحضر</th>
                   <th>نوع المحضر</th>
                   <th>المبلغ الجملي</th>
                   <th>الحالة</th>
