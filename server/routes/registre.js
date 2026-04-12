@@ -42,7 +42,7 @@ router.get('/', authenticate, async (req, res) => {
         const { page = 1, limit = 50, ref, nom_cl1, de_part, date_reg, date_inscri } = req.query;
         const offset = (page - 1) * limit;
 
-        let query = `SELECT * FROM clients_record WHERE id_so = ?`;
+        let query = `SELECT * FROM clients_record WHERE id_so::text = ?`;
         let params = [req.user.id_so];
 
         if (ref) {
@@ -71,7 +71,7 @@ router.get('/', authenticate, async (req, res) => {
 
         const rows = await db.all(query, params);
         
-        let countQuery = `SELECT COUNT(*) as count FROM clients_record WHERE id_so = ?`;
+        let countQuery = `SELECT COUNT(*) as count FROM clients_record WHERE id_so::text = ?`;
         let countParams = [req.user.id_so];
         
         // Re-apply same filters for count
@@ -100,7 +100,7 @@ router.get('/', authenticate, async (req, res) => {
 router.get('/:id', authenticate, async (req, res) => {
     try {
         const { id } = req.params;
-        const row = await db.get(`SELECT * FROM clients_record WHERE id_r = ? AND id_so = ?`, [id, req.user.id_so]);
+        const row = await db.get(`SELECT * FROM clients_record WHERE id_r::text = ? AND id_so::text = ?`, [id, req.user.id_so]);
         res.json(row);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -200,7 +200,7 @@ router.put('/:id', authenticate, async (req, res) => {
         if (keys.length === 0) return res.json({ success: true });
 
         const setString = keys.map(k => `"${k}" = ?`).join(', ');
-        const query = `UPDATE clients_record SET ${setString} WHERE id_r = ? AND id_so = ?`;
+        const query = `UPDATE clients_record SET ${setString} WHERE id_r::text = ? AND id_so::text = ?`;
         
         values.push(id, req.user.id_so);
         
@@ -218,7 +218,7 @@ router.patch('/:id/status', authenticate, async (req, res) => {
         const { status } = req.body;
         if (!status) return res.status(400).json({ error: 'Status is required' });
 
-        await db.run(`UPDATE clients_record SET status = ? WHERE id_r = ? AND id_so = ?`, 
+        await db.run(`UPDATE clients_record SET status = ? WHERE id_r::text = ? AND id_so::text = ?`, 
             [status, id, req.user.id_so]);
         res.json({ success: true, status });
     } catch (err) {
@@ -328,8 +328,8 @@ router.get('/facturation/list', authenticate, async (req, res) => {
 router.delete('/:id', authenticate, async (req, res) => {
     try {
         const { id } = req.params;
-        await db.run('DELETE FROM "œuvre_type" WHERE id_o = ? AND id_so = ?', [id, req.user.id_so]);
-        await db.run('DELETE FROM clients_record WHERE id_r = ? AND id_so = ?', [id, req.user.id_so]);
+        await db.run('DELETE FROM "œuvre_type" WHERE id_o::text = ? AND id_so::text = ?', [id, req.user.id_so]);
+        await db.run('DELETE FROM clients_record WHERE id_r::text = ? AND id_so::text = ?', [id, req.user.id_so]);
         res.json({ success: true, deletedID: id });
     } catch (err) {
         res.status(500).json({ error: err.message });
