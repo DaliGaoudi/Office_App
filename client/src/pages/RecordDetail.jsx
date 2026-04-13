@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Printer, Save, Check, Plus, Trash2, FileText, Activity, Milestone, UploadCloud } from 'lucide-react';
+import { ArrowLeft, Printer, Save, Check, Plus, Trash2, FileText, Activity, Milestone, UploadCloud, Receipt } from 'lucide-react';
 import { formatAmount, STATUS_MAP } from '../utils/formatters';
 import API_BASE from '../config';
 import AutocompleteInput from '../components/AutocompleteInput';
+import BillModal from '../components/BillModal';
 
 const API = API_BASE;
 
@@ -18,6 +19,7 @@ export default function RecordDetail() {
     const [loading, setLoading] = useState(true);
     const [saved, setSaved] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [showBill, setShowBill] = useState(false);
     const [activeTab, setActiveTab] = useState('general');
 
     const [actions, setActions]       = useState([]);
@@ -350,6 +352,15 @@ export default function RecordDetail() {
                             ))}
                         </select>
                     </div>
+                    {!isNew && (
+                        <button
+                            className="btn"
+                            style={{ background: 'rgba(var(--primary-rgb),0.15)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
+                            onClick={() => setShowBill(true)}
+                        >
+                            <Receipt size={18} /> طباعة الفاتورة
+                        </button>
+                    )}
                     <button className="btn" onClick={() => window.print()}>
                         <Printer size={18} /> طباعة الملف
                     </button>
@@ -779,6 +790,15 @@ export default function RecordDetail() {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {/* ── Bill Modal ── */}
+            {showBill && (
+                <BillModal
+                    record={formData}
+                    actions={isExecution ? actions : []}
+                    onClose={() => setShowBill(false)}
+                />
             )}
 
             <style dangerouslySetInnerHTML={{__html: `

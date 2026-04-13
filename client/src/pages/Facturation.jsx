@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
-import { Search, Printer, FileText, ChevronDown, ChevronUp, CheckSquare, Square } from 'lucide-react';
+import { Search, Printer, FileText, ChevronDown, ChevronUp, CheckSquare, Square, Receipt } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import { formatAmount, STATUS_MAP } from '../utils/formatters';
 import API_BASE from '../config';
+import BillModal from '../components/BillModal';
 
 /* ─── config per register type ───────────────────────────────────────────── */
 const CONFIG = {
@@ -87,6 +88,35 @@ export default function Facturation({ type = 'general' }) {
   // Format: { [fileId]: [selectedActionId1, selectedActionId2, ...] }
   const [selectedActions, setSelectedActions] = useState({});
   const [expandedFiles, setExpandedFiles]     = useState({});
+
+  // Bill modal state
+  const [billRecord, setBillRecord] = useState(null);
+  const [billActions, setBillActions] = useState([]);
+
+  const openBill = async (item) => {
+    const token = localStorage.getItem('token');
+    // Fetch full record
+    const endpoint = isExecution ? 'execution' : 'registre';
+    try {
+      const res = await fetch(`${API_BASE}/${endpoint}/${item.id_r || item.id_o}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const full = await res.json();
+      setBillRecord(full);
+
+      if (isExecution) {
+        const actRes = await fetch(`${API_BASE}/execution/${item.id_r || item.id_o}/actions`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const acts = await actRes.json();
+        setBillActions(acts || []);
+      } else {
+        setBillActions([]);
+      }
+    } catch (e) {
+      console.error('Failed to fetch bill data:', e);
+    }
+  };
 
   const fetchData = useCallback(async (pg = 1, lim = limit, flt = activeFilters, dates = activeDates) => {
     setLoading(true);
@@ -221,6 +251,7 @@ export default function Facturation({ type = 'general' }) {
                         <th style={{ width: 40 }}>#</th>
                         {cfg.columns.map(c => <th key={c.key}>{c.label}</th>)}
                         {isExecution && <th className="no-print" style={{ width: 60 }}>التفاصيل</th>}
+                        <th className="no-print" style={{ width: 50 }}>فاتورة</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -273,6 +304,16 @@ export default function Facturation({ type = 'general' }) {
                                             </button>
                                         </td>
                                     )}
+                                    <td className="no-print">
+                                        <button
+                                            className="btn-icon"
+                                            title="طباعة الفاتورة"
+                                            style={{ color: 'var(--primary)' }}
+                                            onClick={() => openBill(item)}
+                                        >
+                                            <Receipt size={18} />
+                                        </button>
+                                    </td>
                                 </tr>
                                 
                                 {/* ── Linked Actions (Execution Sub-List) ── */}
@@ -349,6 +390,15 @@ export default function Facturation({ type = 'general' }) {
         .btn-icon { background: transparent; border: none; cursor: pointer; color: var(--text-main); opacity: 0.6; }
         .btn-icon:hover { opacity: 1; }
       `}} />
+
+      {/* ── Bill Modal ── */}
+      {billRecord && (
+        <BillModal
+          record={billRecord}
+          actions={isExecution ? billActions : []}
+          onClose={() => { setBillRecord(null); setBillActions([]); }}
+        />
+      )}
     </div>
   );
 }
