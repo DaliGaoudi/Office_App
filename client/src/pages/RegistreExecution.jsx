@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Filter, Edit, Printer, Trash2 } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Search, Plus, Filter, Edit, Printer, Trash2, UploadCloud } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Pagination from '../components/Pagination';
 import AutocompleteInput from '../components/AutocompleteInput';
@@ -25,6 +25,8 @@ export default function RegistreExecution() {
 
   const [showModal, setShowModal]   = useState(false);
   const [formData, setFormData]     = useState({ ref: '', de_part: '', nom_cl1: '', nom_cl2: '', date_inscri: '', remarque: '' });
+  const [isAILoading, setIsAILoading] = useState(false);
+  const fileInputRef = useRef(null);
 
   const fetchRecords = useCallback(async (pg = page, lim = limit, flt = activeFilters) => {
     setLoading(true);
@@ -91,6 +93,44 @@ export default function RegistreExecution() {
       console.error(e);
       alert("فشل الاتصال بالخادم");
     }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsAILoading(true);
+    const token = localStorage.getItem('token');
+    const fd = new FormData();
+    fd.append('file', file);
+
+    try {
+        const res = await fetch(`${API_BASE}/ai/extract`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: fd
+        });
+        const result = await res.json();
+        
+        if (result.success && result.data) {
+            const incoming = result.data;
+            const updated = { ...formData };
+            if (incoming.de_part) updated.de_part = incoming.de_part;
+            if (incoming.nom_cl1) updated.nom_cl1 = incoming.nom_cl1;
+            if (incoming.nom_cl2) updated.nom_cl2 = incoming.nom_cl2;
+            if (incoming.remarque) updated.remarque = incoming.remarque;
+            if (incoming.date_s) updated.date_inscri = incoming.date_s; // Map doc date
+            setFormData(updated);
+            alert("تم استخراج البيانات بنجاح! يرجى مراجعتها.");
+        } else {
+            alert("فشلت عملية الاستخراج: " + (result.error || ""));
+        }
+    } catch (e) {
+        console.error("Extraction error:", e);
+        alert("خطأ في الاتصال بخادم الذكاء الاصطناعي");
+    }
+    setIsAILoading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
@@ -195,7 +235,15 @@ export default function RegistreExecution() {
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div className="glass" style={{ padding: '2rem', width: 500, maxWidth: '90%', direction: 'rtl' }}>
-            <h3 style={{ marginBottom: '1.5rem', color: 'var(--primary)' }}>إضافة محضر تنفيذي</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ margin: 0, color: 'var(--primary)' }}>إضافة محضر تنفيذي</h3>
+              <div>
+                <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*,application/pdf" onChange={handleFileUpload} />
+                <button type="button" className="btn" style={{ background: 'var(--card-bg)', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={() => fileInputRef.current && fileInputRef.current.click()} disabled={isAILoading}>
+                  {isAILoading ? 'جاري القراءة...' : <><UploadCloud size={16} /> مسح ذكي</>}
+                </button>
+              </div>
+            </div>
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <input type="text" placeholder="العدد الترتيبي *"    value={formData.ref}        onChange={e => setFormData({ ...formData, ref: e.target.value })} required />
               <AutocompleteInput placeholder="طالب الخدمة"        value={formData.de_part}    onChange={e => setFormData({ ...formData, de_part: e.target.value })} />

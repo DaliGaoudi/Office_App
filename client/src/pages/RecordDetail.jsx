@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Printer, Save, Check, Plus, Trash2, FileText, Activity, Milestone } from 'lucide-react';
+import { ArrowLeft, Printer, Save, Check, Plus, Trash2, FileText, Activity, Milestone, UploadCloud } from 'lucide-react';
 import { formatAmount, STATUS_MAP } from '../utils/formatters';
 import API_BASE from '../config';
 import AutocompleteInput from '../components/AutocompleteInput';
@@ -20,11 +20,14 @@ export default function RecordDetail() {
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState('general');
 
-    // Actions list for execution type
     const [actions, setActions]       = useState([]);
     const [showActionModal, setShowActionModal] = useState(false);
     const [editingActionId, setEditingActionId] = useState(null);
     const [actionForm, setActionForm] = useState({ type_operation: '', date_r: '', remarques: '', origine: '0', exemple: '0', versionbureau: '0', mobilite: '0', orientation: '0', imprimer: '0', inscri: '0', delimitation: '0', postal: '0', autre: '0', TVA: '0', salaire: '0' });
+
+    // AI File Upload
+    const [isAILoading, setIsAILoading] = useState(false);
+    const fileInputRef = useRef(null);
 
     const fetchRecord = useCallback(async () => {
         if (isNew) {
@@ -189,6 +192,64 @@ export default function RecordDetail() {
         } catch (e) { console.error(e); }
     };
 
+    const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setIsAILoading(true);
+        const token = localStorage.getItem('token');
+        const fd = new FormData();
+        fd.append('file', file);
+
+        try {
+            const res = await fetch(`${API_BASE}/ai/extract`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }, // Note: No Content-Type for FormData
+                body: fd
+            });
+            const result = await res.json();
+            
+            if (result.success && result.data) {
+                const incoming = result.data;
+                // Merge safely. Convert numbers dynamically.
+                const updated = { ...formData };
+                if (incoming.de_part) updated.de_part = incoming.de_part;
+                if (incoming.nom_cl1) updated.nom_cl1 = incoming.nom_cl1;
+                if (incoming.nom_cl2) updated.nom_cl2 = incoming.nom_cl2;
+                if (incoming.remarque) updated.remarque = incoming.remarque;
+                if (incoming.cl1_adresse) updated.cl1_adresse = incoming.cl1_adresse;
+                if (incoming.cl2_adresse) updated.cl2_adresse = incoming.cl2_adresse;
+                if (incoming.tribunal) updated.tribunal = incoming.tribunal;
+                if (incoming.date_s) updated.date_s = incoming.date_s;
+                
+                // If origine is extracted
+                if (incoming.origine && !isNaN(incoming.origine)) {
+                    updated.origine = incoming.origine.toString();
+                    
+                    // Trigger financial recaculation
+                    const fees = parseFloat(updated.origine) + (parseFloat(updated.exemple)||0) + (parseFloat(updated.version_bureau)||0) + (parseFloat(updated.orientation)||0);
+                    const tva = Math.round(fees * 0.19);
+                    const exp = ['delimitation', 'inscri', 'mobilite', 'imprimer', 'poste', 'autre'].reduce((s, k) => s + (parseFloat(updated[k]) || 0), 0);
+                    updated.TVA = tva.toString();
+                    updated.salaire = (fees + tva + exp).toString();
+                    updated.montant_partiel1 = fees.toString();
+                    updated.montant_partiel2 = exp.toString();
+                }
+
+                setFormData(updated);
+                alert("تم استخراج البيانات بنجاح! يرجى مراجعتها.");
+            } else {
+                alert("فشلت عملية الاستخراج: " + (result.error || ""));
+            }
+        } catch (e) {
+            console.error("Extraction error:", e);
+            alert("خطأ في الاتصال بخادم الذكاء الاصطناعي");
+        }
+        setIsAILoading(false);
+        // Reset file input
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
     if (loading) return <div style={{padding:'4rem', textAlign:'center', opacity:0.5}}>جاري التحميل...</div>;
     if (!record && !isNew) return <div style={{padding:'4rem', textAlign:'center', color:'var(--error)'}}>الملف غير موجود</div>;
 
@@ -260,7 +321,23 @@ export default function RecordDetail() {
                         {isExecution ? 'ملف تنفيذ' : 'محضر'} #{record?.ref || id} {formData.remarque && <span style={{ opacity: 0.7, fontSize: '0.9em', marginRight: '0.5rem' }}>— {formData.remarque}</span>}
                     </h2>
                 </div>
-                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        style={{ display: 'none' }} 
+                        accept="image/*,application/pdf" 
+                        onChange={handleFileUpload} 
+                    />
+                    <button 
+                        className="btn" 
+                        style={{ background: 'var(--card-bg)', border: '1px solid var(--primary)', color: 'var(--primary)' }} 
+                        onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                        disabled={isAILoading}
+                    >
+                        {isAILoading ? 'جاري القراءة...' : <><UploadCloud size={18} /> مسح ذكي (الذكاء الاصطناعي)</>}
+                    </button>
+                    
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.4rem 1rem', borderRadius: '12px', border: '1px solid var(--card-border)' }}>
                         <Milestone size={16} />
                         <select 

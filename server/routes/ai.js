@@ -3,6 +3,10 @@ const router = express.Router();
 const { OpenAI } = require('openai');
 const db = require('../db');
 const authenticate = require('../middleware/auth');
+const multer = require('multer');
+const pdfParse = require('pdf-parse');
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB limit
 
 // Initialize OpenAI client for OpenRouter
 const openai = new OpenAI({
@@ -323,6 +327,80 @@ router.post('/chat', authenticate, async (req, res) => {
     } catch (err) {
         console.error("AI Assistant Error:", err);
         res.status(500).json({ error: "Erreur IA. Vérifiez la configuration OpenRouter." });
+    }
+});
+
+router.post('/extract', authenticate, upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: "Aucun fichier reçu." });
+        }
+
+        const file = req.file;
+        const mimeType = file.mimetype;
+        let extractionPrompt = `Tu es un assistant IA pour un huissier de justice (Bailiff Office) en Tunisie.
+Ton objectif est d'extraire les données du document fourni et de retourner STRICTEMENT un objet JSON (sans bloc de code Markdown \`\`\`json) correspondant EXACTEMENT à cette structure:
+{
+  "de_part": "Nom du demandeur / طالب الخدمة",
+  "nom_cl1": "Nom du premier client (ou le même que demandeur)",
+  "nom_cl2": "Nom du défendeur / المطلوب",
+  "remarque": "Type ou Titre de l'acte (ex: محضر تبليغ, عقلة, etc.)",
+  "cl1_adresse": "Adresse du demandeur",
+  "cl2_adresse": "Adresse du défendeur",
+  "tribunal": "Nom du tribunal s'il est mentionné",
+  "origine": "Acompte ou frais d'origine (nombre)",
+  "date_s": "Date du document (YYYY-MM-DD)"
+}
+Si un champ n'est pas trouvé, laisse-le vide (""). Si le document est en Arabe, extrais en Arabe.`;
+
+        let messages = [
+            { role: "system", content: extractionPrompt }
+        ];
+
+        // Handle PDF Text
+        if (mimeType === 'application/pdf') {
+            const pdfData = await pdfParse(file.buffer);
+            const text = pdfData.text;
+            messages.push({
+                role: "user",
+                content: `Voici le texte extrait du document:\n\n${text}`
+            });
+        } 
+        // Handle Images (JPEG, PNG, WEBP)
+        else if (mimeType.startsWith('image/')) {
+            const base64Image = file.buffer.toString('base64');
+            const dataUrl = \`data:\${mimeType};base64,\${base64Image}\`;
+            
+            messages.push({
+                role: "user",
+                content: [
+                    { type: "text", text: "Extrais les informations de cette image selon le format JSON demandé." },
+                    { type: "image_url", image_url: { url: dataUrl } }
+                ]
+            });
+        } else {
+            return res.status(400).json({ error: "Type de fichier non supporté. Envoyez un PDF ou une image." });
+        }
+
+        const response = await openai.chat.completions.create({
+            model: "openai/gpt-4o-mini", // Very capable for OCR and JSON parsing
+            messages: messages,
+            response_format: { type: "json_object" }
+        });
+
+        let jsonResult = response.choices[0].message.content;
+        
+        try {
+            const parsed = JSON.parse(jsonResult);
+            res.json({ success: true, data: parsed });
+        } catch (e) {
+            console.error("Failed to parse JSON cleanly:", jsonResult);
+            res.status(500).json({ error: "L'IA a retourné un format invalide." });
+        }
+
+    } catch (err) {
+        console.error("AI File Extraction Error:", err);
+        res.status(500).json({ error: err.message || "Erreur d'extraction IA." });
     }
 });
 
