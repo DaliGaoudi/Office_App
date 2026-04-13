@@ -182,8 +182,8 @@ router.get('/facturation/list', authenticate, async (req, res) => {
 router.delete('/:id', authenticate, async (req, res) => {
     try {
         const { id } = req.params;
-        await db.run('DELETE FROM cnss_oeuvre WHERE id_cn = ? AND id_so = ?', [id, req.user.id_so]);
-        await db.run('DELETE FROM cnss WHERE id_cn = ? AND id_so = ?', [id, req.user.id_so]);
+        await db.run('DELETE FROM cnss_oeuvre WHERE id_cn::text = ? AND id_so::text = ?', [id, req.user.id_so]);
+        await db.run('DELETE FROM cnss WHERE id_cn::text = ? AND id_so::text = ?', [id, req.user.id_so]);
         res.json({ success: true, deletedID: id });
     } catch (err) {
         res.status(500).json({ error: err.message });

@@ -18,6 +18,12 @@ app.use(morgan('dev'));
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', database: process.env.POSTGRES_URL ? 'postgres' : 'sqlite' }));
 
+// Prevent caching for API routes
+app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    next();
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/registre', registreRoutes);
