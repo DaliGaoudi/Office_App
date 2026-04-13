@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer, Save, Check, Plus, Trash2, FileText, Activity, Milestone } from 'lucide-react';
 import { formatAmount, STATUS_MAP } from '../utils/formatters';
 import API_BASE from '../config';
+import AutocompleteInput from '../components/AutocompleteInput';
 
 const API = API_BASE;
 
@@ -318,6 +319,14 @@ export default function RecordDetail() {
                                                     onChange={(e) => setFormData({...formData, [field.key]: e.target.value})}
                                                     className="glass"
                                                     style={{ width: '100%', padding: '0.6rem', minHeight: '100px', color: 'var(--text-main)', border: '1px solid var(--card-border)' }}
+                                                />
+                                            ) : (field.key === 'de_part' || field.key === 'nom_cl1' || field.key === 'nom_cl2') ? (
+                                                <AutocompleteInput 
+                                                    value={formData[field.key] || ''} 
+                                                    placeholder={field.placeholder}
+                                                    onChange={(e) => setFormData({...formData, [field.key]: e.target.value})}
+                                                    style={{ padding: '0.6rem', background: 'transparent', border: 'none', color: 'var(--text-main)' }}
+                                                    className="glass"
                                                 />
                                             ) : (
                                                 <input 

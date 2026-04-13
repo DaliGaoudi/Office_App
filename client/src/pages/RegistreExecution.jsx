@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Search, Plus, Filter, Edit, Printer, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Pagination from '../components/Pagination';
+import AutocompleteInput from '../components/AutocompleteInput';
 import { formatAmount, STATUS_MAP } from '../utils/formatters';
 
 import API_BASE from '../config';
@@ -110,10 +111,14 @@ export default function RegistreExecution() {
 
       {/* ── Filters ── */}
       {showFilters && (
-        <form onSubmit={handleSearch} className="search-wrapper glass" style={{ padding: '1rem', flexWrap: 'wrap', direction: 'rtl', marginBottom: '1rem' }}>
+        <form onSubmit={handleSearch} className="search-wrapper glass" style={{ padding: '1rem', flexWrap: 'wrap', direction: 'rtl', marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
           <input type="text" placeholder="العدد الترتيبي"   value={filters.ref}        onChange={e => setFilters({ ...filters, ref: e.target.value })} />
-          <input type="text" placeholder="طالب الخدمة"     value={filters.de_part}    onChange={e => setFilters({ ...filters, de_part: e.target.value })} />
-          <input type="text" placeholder="اسم الطالب"      value={filters.nom_cl1}    onChange={e => setFilters({ ...filters, nom_cl1: e.target.value })} />
+          <div style={{ flex: 1, minWidth: '150px' }}>
+            <AutocompleteInput placeholder="طالب الخدمة" value={filters.de_part} onChange={e => setFilters({ ...filters, de_part: e.target.value })} />
+          </div>
+          <div style={{ flex: 1, minWidth: '150px' }}>
+            <AutocompleteInput placeholder="اسم الطالب" value={filters.nom_cl1} onChange={e => setFilters({ ...filters, nom_cl1: e.target.value })} />
+          </div>
           <input type="text" placeholder="تاريخ تبليغ المحضر (YYYY/MM/DD)" value={filters.date_inscri} onChange={e => setFilters({ ...filters, date_inscri: e.target.value })} />
           <button type="submit" className="btn"><Search size={18} /> بحث</button>
           <button type="button" className="btn" style={{ background: 'rgba(255,255,255,0.08)' }}
@@ -155,7 +160,7 @@ export default function RegistreExecution() {
                     <td>{item.date_inscri}</td>
                     <td>{item.remarque}</td>
                     <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{formatAmount(item.total_salaire)}</td>
-                    <td>
+                    <td>المطلوب
                       {(() => {
                         const s = STATUS_MAP[item.status] || STATUS_MAP.cancelled;
                         return <span className={`badge badge-${s.color}`}>{s.label}</span>;
@@ -193,9 +198,9 @@ export default function RegistreExecution() {
             <h3 style={{ marginBottom: '1.5rem', color: 'var(--primary)' }}>إضافة محضر تنفيذي</h3>
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <input type="text" placeholder="العدد الترتيبي *"    value={formData.ref}        onChange={e => setFormData({ ...formData, ref: e.target.value })} required />
-              <input type="text" placeholder="طالب الخدمة"        value={formData.de_part}    onChange={e => setFormData({ ...formData, de_part: e.target.value })} />
-              <input type="text" placeholder="اسم الطالب"         value={formData.nom_cl1}    onChange={e => setFormData({ ...formData, nom_cl1: e.target.value })} />
-              <input type="text" placeholder="اسم المطلوب"        value={formData.nom_cl2}    onChange={e => setFormData({ ...formData, nom_cl2: e.target.value })} />
+              <AutocompleteInput placeholder="طالب الخدمة"        value={formData.de_part}    onChange={e => setFormData({ ...formData, de_part: e.target.value })} />
+              <AutocompleteInput placeholder="اسم الطالب"         value={formData.nom_cl1}    onChange={e => setFormData({ ...formData, nom_cl1: e.target.value })} />
+              <AutocompleteInput placeholder="اسم المطلوب"        value={formData.nom_cl2}    onChange={e => setFormData({ ...formData, nom_cl2: e.target.value })} />
               <input type="text" placeholder="تاريخ (YYYY/MM/DD)" value={formData.date_inscri} onChange={e => setFormData({ ...formData, date_inscri: e.target.value })} />
               <textarea className="glass" style={{ padding: '0.8rem', minHeight: 80, color: 'var(--text-main)', border: '1px solid var(--card-border)' }}
                 placeholder="نوع المحضر" value={formData.remarque} onChange={e => setFormData({ ...formData, remarque: e.target.value })} />

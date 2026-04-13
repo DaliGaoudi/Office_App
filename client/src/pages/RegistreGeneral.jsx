@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Search, Plus, Filter, Edit, Printer, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Pagination from '../components/Pagination';
+import AutocompleteInput from '../components/AutocompleteInput';
 import { formatAmount, STATUS_MAP } from '../utils/formatters';
 
 import API_BASE from '../config';
@@ -93,10 +94,14 @@ export default function RegistreGeneral() {
 
       {/* ── Search Filters ── */}
       {showFilters && (
-        <form onSubmit={handleSearch} className="search-wrapper glass" style={{ padding: '1rem', flexWrap: 'wrap', direction: 'rtl', marginBottom: '1rem' }}>
+        <form onSubmit={handleSearch} className="search-wrapper glass" style={{ padding: '1rem', flexWrap: 'wrap', direction: 'rtl', marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
           <input type="text" placeholder="العدد الترتيبي" value={filters.ref} onChange={e => setFilters({ ...filters, ref: e.target.value })} />
-          <input type="text" placeholder="طالب الخدمة"  value={filters.de_part} onChange={e => setFilters({ ...filters, de_part: e.target.value })} />
-          <input type="text" placeholder="اسم الطالب"   value={filters.nom_cl1} onChange={e => setFilters({ ...filters, nom_cl1: e.target.value })} />
+          <div style={{ flex: 1, minWidth: '150px' }}>
+            <AutocompleteInput placeholder="طالب الخدمة" value={filters.de_part} onChange={e => setFilters({ ...filters, de_part: e.target.value })} />
+          </div>
+          <div style={{ flex: 1, minWidth: '150px' }}>
+            <AutocompleteInput placeholder="اسم الطالب" value={filters.nom_cl1} onChange={e => setFilters({ ...filters, nom_cl1: e.target.value })} />
+          </div>
           <input type="text" placeholder="تاريخ تبليغ المحضر (YYYY/MM/DD)" value={filters.date_inscri} onChange={e => setFilters({ ...filters, date_inscri: e.target.value })} />
           <button type="submit" className="btn"><Search size={18} /> بحث</button>
           <button type="button" className="btn" style={{ background: 'rgba(255,255,255,0.08)' }}

@@ -5,8 +5,8 @@ const { createPool } = require('@vercel/postgres');
 async function go() {
     try {
         const pool = createPool({ connectionString: process.env.POSTGRES_URL });
-        const res = await pool.query('SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name = \'clients_record\'');
-        console.table(res.rows);
+        const res = await pool.query("DELETE FROM clients_record WHERE ref = 9545 AND de_part = 'hjfsdghjfsd'");
+        console.log("Deleted rows:", res.rowCount);
     } catch (e) {
         console.error(e);
     }

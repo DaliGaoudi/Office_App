@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Search, Plus, Filter, Edit, Printer, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Pagination from '../components/Pagination';
+import AutocompleteInput from '../components/AutocompleteInput';
 import { STATUS_MAP } from '../utils/formatters';
 
 import API_BASE from '../config';
@@ -99,8 +100,10 @@ export default function RegistreCNSS() {
 
       {/* ── Filters ── */}
       {showFilters && (
-        <form onSubmit={handleSearch} className="search-wrapper glass" style={{ padding: '1rem', flexWrap: 'wrap', direction: 'rtl', marginBottom: '1rem' }}>
-          <input type="text" placeholder="اسم الشركة"  value={filters.nom_ste}     onChange={e => setFilters({ ...filters, nom_ste: e.target.value })} />
+        <form onSubmit={handleSearch} className="search-wrapper glass" style={{ padding: '1rem', flexWrap: 'wrap', direction: 'rtl', marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
+          <div style={{ flex: 1, minWidth: '150px' }}>
+            <AutocompleteInput placeholder="اسم الشركة"  value={filters.nom_ste}     onChange={e => setFilters({ ...filters, nom_ste: e.target.value })} />
+          </div>
           <input type="text" placeholder="رقم CNSS"    value={filters.num_cnss}    onChange={e => setFilters({ ...filters, num_cnss: e.target.value })} />
           <input type="text" placeholder="رقم القضية"  value={filters.num_affaire} onChange={e => setFilters({ ...filters, num_affaire: e.target.value })} />
           <button type="submit" className="btn"><Search size={18} /> بحث</button>
@@ -173,7 +176,7 @@ export default function RegistreCNSS() {
             <h3 style={{ marginBottom: '1.5rem', color: 'var(--primary)' }}>إضافة ملف الضمان الاجتماعي</h3>
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <input type="text" placeholder="رقم القضية *"  value={formData.num_affaire} onChange={e => setFormData({ ...formData, num_affaire: e.target.value })} required />
-              <input type="text" placeholder="اسم الشركة *"  value={formData.nom_ste}     onChange={e => setFormData({ ...formData, nom_ste: e.target.value })} required />
+              <AutocompleteInput placeholder="اسم الشركة *"  value={formData.nom_ste}     onChange={e => setFormData({ ...formData, nom_ste: e.target.value })} required />
               <input type="text" placeholder="رقم CNSS"      value={formData.num_cnss}    onChange={e => setFormData({ ...formData, num_cnss: e.target.value })} />
               <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
                 <button type="submit" className="btn" style={{ flex: 1 }}>حفظ</button>
