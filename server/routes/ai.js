@@ -369,7 +369,7 @@ Si un champ n'est pas trouvé, laisse-le vide (""). Si le document est en Arabe,
         // Handle Images (JPEG, PNG, WEBP)
         else if (mimeType.startsWith('image/')) {
             const base64Image = file.buffer.toString('base64');
-            const dataUrl = \`data:\${mimeType};base64,\${base64Image}\`;
+            const dataUrl = `data:${mimeType};base64,${base64Image}`;
             
             messages.push({
                 role: "user",
