@@ -66,7 +66,7 @@ router.get('/', authenticate, async (req, res) => {
             params.push(`%${date_inscri}%`);
         }
 
-        query += ` ORDER BY ref ASC LIMIT ? OFFSET ?`;
+        query += ` ORDER BY ref DESC LIMIT ? OFFSET ?`;
         params.push(parseInt(limit), parseInt(offset));
 
         const rows = await db.all(query, params);
@@ -274,7 +274,7 @@ router.get('/facturation/list', authenticate, async (req, res) => {
             params.push(date_fin);
         }
 
-        query += ` ORDER BY ref ASC`;
+        query += ` ORDER BY ref DESC`;
 
         const rows = await db.all(query, params);
 

@@ -26,7 +26,7 @@ router.get('/', authenticate, async (req, res) => {
             params.push(`%${num_affaire}%`);
         }
 
-        query += ` ORDER BY num_affaire ASC LIMIT ? OFFSET ?`;
+        query += ` ORDER BY num_affaire DESC LIMIT ? OFFSET ?`;
         params.push(parseInt(limit), parseInt(offset));
 
         const rows = await db.all(query, params);
@@ -144,7 +144,7 @@ router.get('/facturation/list', authenticate, async (req, res) => {
         const query = `SELECT c.id_cn, c.nom_ste, c.num_affaire, c.num_cnss, c.status, 
                               COALESCE(SUM(CAST(o.montant AS ${castType})), 0) AS total_montant 
                        FROM cnss AS c LEFT JOIN cnss_oeuvre AS o ON o.id_cn::text = c.id_cn::text 
-                       WHERE ${condition} GROUP BY c.id_cn ORDER BY c.num_affaire ASC`;
+                       WHERE ${condition} GROUP BY c.id_cn ORDER BY c.num_affaire DESC`;
 
         const rows = await db.all(query, ps);
         const grandTotal = rows.reduce((sum, r) => sum + (parseFloat(r.total_montant) || 0), 0);

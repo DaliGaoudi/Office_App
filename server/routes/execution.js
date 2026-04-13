@@ -51,7 +51,7 @@ router.get('/', authenticate, async (req, res) => {
         
         const cRow = await db.get(countQuery, params);
         
-        query += ` ORDER BY c.ref ASC LIMIT ? OFFSET ?`;
+        query += ` ORDER BY c.ref DESC LIMIT ? OFFSET ?`;
         const rows = await db.all(query, [...params, l, offset]);
 
         res.json({ data: (rows || []), total: parseInt(cRow?.count || 0), page: parseInt(page) });
@@ -125,7 +125,7 @@ router.get('/facturation/list', authenticate, async (req, res) => {
             params.push(`%${de_part}%`);
         }
 
-        query += ` ORDER BY c.ref ASC`;
+        query += ` ORDER BY c.ref DESC`;
         const rows = await db.all(query, params);
 
         // Group actions by record
