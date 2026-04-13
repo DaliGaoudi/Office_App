@@ -8,18 +8,18 @@ export const formatAmount = (val) => {
   // to get Dinars before formatting (standard Tunisian display).
   const num = parseFloat(val) / 1000;
   if (isNaN(num)) return '0,000';
-
+  
   // Using fr-FR for the comma decimal separator
   return new Intl.NumberFormat('fr-FR', {
     minimumFractionDigits: 3,
     maximumFractionDigits: 3,
-    useGrouping: false
+    useGrouping: false 
   }).format(num);
 };
 
 export const STATUS_MAP = {
   cancelled: { label: 'ملغى', color: 'red' },
-  has_deposit: { label: 'تسبقة', color: 'blue' },
+  has_deposit: { label: 'في إنتظار التبليغ', color: 'blue' },
   waiting_payment: { label: 'في انتظار الخلاص', color: 'amber' },
   finished: { label: 'منتهي', color: 'green' }
 };
