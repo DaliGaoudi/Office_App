@@ -4,6 +4,12 @@ const { OpenAI } = require('openai');
 const db = require('../db');
 const authenticate = require('../middleware/auth');
 const multer = require('multer');
+
+// Polyfill browser APIs required by pdf-parse in serverless environments (Vercel)
+if (typeof global.DOMMatrix === 'undefined') { global.DOMMatrix = class DOMMatrix {}; }
+if (typeof global.ImageData === 'undefined') { global.ImageData = class ImageData {}; }
+if (typeof global.Path2D   === 'undefined') { global.Path2D   = class Path2D {};   }
+
 const pdfParse = require('pdf-parse');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB limit
