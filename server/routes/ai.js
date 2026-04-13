@@ -344,20 +344,39 @@ router.post('/extract', authenticate, upload.single('file'), async (req, res) =>
 
         const file = req.file;
         const mimeType = file.mimetype;
-        let extractionPrompt = `Tu es un assistant IA pour un huissier de justice (Bailiff Office) en Tunisie.
-Ton objectif est d'extraire les données du document fourni et de retourner STRICTEMENT un objet JSON (sans bloc de code Markdown \`\`\`json) correspondant EXACTEMENT à cette structure:
+        let extractionPrompt = `أنت مساعد ذكاء اصطناعي متخصص في قراءة محاضر المعدل المنفذ (huissier de justice) التونسية.
+
+## مهمتك:
+استخراج البيانات من الوثيقة المرفقة وإعادتها بصيغة JSON فقط — بدون أي شرح أو نص إضافي.
+
+## قواعد مهمة جدًا:
+1. **تجاهل تمامًا أي نص مكتوب باليد** (الخطوط الزرقاء/السوداء الملتوية). ركّز فقط على النص المطبوع أو المكتوب بالآلة.
+2. **لا تخترع بيانات** — إذا لم تجد قيمة واضحة، اترك الحقل فارغًا "".
+3. **اكتب الأسماء كما هي بالعربية** دون ترجمة.
+
+## دليل موقع كل حقل في الوثيقة:
+- **de_part** (طالب الخدمة): الجهة الطالبة — تظهر في عبارة "ويطلب من:" أو "بطلب من:". عادةً شركة أو جهة قدّمت الطلب.
+- **nom_cl1**: نفس طالب الخدمة في الغالب (اسم الجهة الطالبة الكامل).
+- **nom_cl2** (المطلوب): الجهة المستهدفة بالتبليغ — تظهر في عبارة "توجهت إلى:" أو "حللت مخاطبًا:".
+- **remarque**: نوع/عنوان المحضر — يظهر في أعلى الصفحة (مثل: محضر تبليغ مستندات تعقيب، محضر عقلة، محضر حجز...).
+- **cl1_adresse**: عنوان الطالب إذا ذُكر.
+- **cl2_adresse**: عنوان المطلوب إذا ذُكر (عادةً بعد "توجهت إلى:").
+- **tribunal**: اسم المحكمة المذكورة في الوثيقة.
+- **date_s**: تاريخ تحرير المحضر — يظهر في عبارة "في اليوم..." أو في نهاية الوثيقة. الصيغة المطلوبة: YYYY-MM-DD.
+- **origine**: إجمالي الأتعاب أو المجموع — يظهر في الجدول المالي في أسفل الصفحة في خانة "المجموع" أو "أصل المحضر". أعطني الرقم فقط بدون وحدات.
+
+## صيغة الإجابة المطلوبة (JSON فقط):
 {
-  "de_part": "Nom du demandeur / طالب الخدمة",
-  "nom_cl1": "Nom du premier client (ou le même que demandeur)",
-  "nom_cl2": "Nom du défendeur / المطلوب",
-  "remarque": "Type ou Titre de l'acte (ex: محضر تبليغ, عقلة, etc.)",
-  "cl1_adresse": "Adresse du demandeur",
-  "cl2_adresse": "Adresse du défendeur",
-  "tribunal": "Nom du tribunal s'il est mentionné",
-  "origine": "Acompte ou frais d'origine (nombre)",
-  "date_s": "Date du document (YYYY-MM-DD)"
-}
-Si un champ n'est pas trouvé, laisse-le vide (""). Si le document est en Arabe, extrais en Arabe.`;
+  "de_part": "",
+  "nom_cl1": "",
+  "nom_cl2": "",
+  "remarque": "",
+  "cl1_adresse": "",
+  "cl2_adresse": "",
+  "tribunal": "",
+  "date_s": "",
+  "origine": ""
+}`;
 
         let messages = [
             { role: "system", content: extractionPrompt }
