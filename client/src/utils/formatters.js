@@ -19,7 +19,7 @@ export const formatAmount = (val) => {
 
 export const STATUS_MAP = {
   cancelled: { label: 'ملغى', color: 'red' },
-  has_deposit: { label: 'في إنتظار التبليغ', color: 'blue' },
+  has_deposit: { label: 'في إنتظار التبليغ', color: 'pink' },
   waiting_payment: { label: 'في انتظار الخلاص', color: 'amber' },
   finished: { label: 'منتهي', color: 'green' }
 };

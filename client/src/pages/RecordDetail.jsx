@@ -314,7 +314,7 @@ export default function RecordDetail() {
         <div className="animate-fade" dir="rtl">
             <div className="topbar no-print" style={{ marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <button className="btn" style={{ background: 'rgba(255,255,255,0.1)' }} onClick={() => navigate(-1)}>
+                    <button className="btn" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', color: 'var(--text-main)' }} onClick={() => navigate(-1)}>
                         <ArrowLeft size={18} /> رجوع
                     </button>
                     <h2 style={{color: 'var(--primary)', margin: 0}}>
@@ -346,7 +346,7 @@ export default function RecordDetail() {
                             style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '0.9rem', cursor: 'pointer', outline: 'none' }}
                         >
                             {Object.entries(STATUS_MAP).map(([key, info]) => (
-                                <option key={key} value={key} style={{ background: '#1a1a1a' }}>{info.label}</option>
+                                <option key={key} value={key} style={{ background: 'var(--card-bg)', color: 'var(--text-main)' }}>{info.label}</option>
                             ))}
                         </select>
                     </div>
