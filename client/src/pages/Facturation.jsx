@@ -91,7 +91,7 @@ export default function Facturation({ type = 'general' }) {
   const fetchData = useCallback(async (pg = 1, lim = limit, flt = activeFilters, dates = activeDates) => {
     setLoading(true);
     const token = localStorage.getItem('token');
-    const params = new URLSearchParams({ page: pg, limit: lim, ...flt });
+    const params = new URLSearchParams({ page: pg, limit: lim, ...flt, _t: Date.now() });
     if (dates.dateDebut) params.set('date_debut', dates.dateDebut);
     if (dates.dateFin)   params.set('date_fin',   dates.dateFin);
 
