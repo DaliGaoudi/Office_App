@@ -232,6 +232,11 @@ export default function Facturation({ type = 'general' }) {
     setExpandedFiles({ ...expandedFiles, [fileId]: !expandedFiles[fileId] });
   };
 
+  // Index of the first visually-selected row (for inline bar placement)
+  const firstSelectedIdx = !isExecution && selectedRows.length > 0
+    ? data.findIndex(item => selectedRows.includes(toKey(item)))
+    : -1;
+
   return (
     <div className="animate-fade" dir="rtl">
       <div className="topbar no-print" style={{ marginBottom: '1rem' }}>
@@ -375,7 +380,54 @@ export default function Facturation({ type = 'general' }) {
                                         </button>
                                     </td>
                                 </tr>
-                                
+
+                                {/* ── Inline selection action bar — appears below the first selected row ── */}
+                                {!isExecution && idx === firstSelectedIdx && (
+                                  <tr className="no-print" style={{ background: 'transparent' }}>
+                                    <td colSpan={20} style={{ padding: '0 0 4px 0', border: 'none' }}>
+                                      <div style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.75rem',
+                                        background: 'var(--card-bg)',
+                                        border: '1px solid var(--primary)',
+                                        borderRadius: '12px',
+                                        padding: '0.45rem 1rem',
+                                        boxShadow: '0 4px 18px rgba(0,0,0,0.35), 0 0 0 1px rgba(var(--primary-rgb),0.15)',
+                                        backdropFilter: 'blur(10px)',
+                                        animation: 'slideIn 0.18s ease',
+                                        marginRight: '0.5rem'
+                                      }}>
+                                        <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--primary)', whiteSpace: 'nowrap' }}>
+                                          {selectedRows.length} ملف{selectedRows.length > 1 ? 'ات' : ''} محدد{selectedRows.length > 1 ? 'ة' : ''}
+                                        </span>
+                                        <div style={{ width: 1, height: 20, background: 'var(--card-border)', flexShrink: 0 }} />
+                                        <button
+                                          onClick={openMultiBill}
+                                          style={{
+                                            display: 'flex', alignItems: 'center', gap: '0.35rem',
+                                            padding: '0.35rem 0.9rem', border: 'none', borderRadius: '8px',
+                                            background: 'var(--primary)', color: 'white',
+                                            fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer',
+                                            fontFamily: 'inherit', whiteSpace: 'nowrap'
+                                          }}
+                                        >
+                                          <Receipt size={15} /> فاتورة مجمعة
+                                        </button>
+                                        <button
+                                          onClick={() => setSelectedRows([])}
+                                          style={{
+                                            background: 'transparent', border: '1px solid var(--card-border)',
+                                            borderRadius: '8px', padding: '0.35rem 0.7rem',
+                                            color: 'var(--text-muted)', cursor: 'pointer',
+                                            fontSize: '0.82rem', fontFamily: 'inherit', whiteSpace: 'nowrap'
+                                          }}
+                                        >
+                                          إلغاء التحديد
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+
                                 {/* ── Linked Actions (Execution Sub-List) ── */}
                                 {isExecution && isExpanded && (
                                     <tr className="no-print">
@@ -434,52 +486,10 @@ export default function Facturation({ type = 'general' }) {
         )}
       </div>
 
-      {/* ── Floating multi-select action bar (general only) ── */}
-      {!isExecution && selectedRows.length > 0 && (
-        <div style={{
-          position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)',
-          zIndex: 900, display: 'flex', alignItems: 'center', gap: '1rem',
-          background: 'var(--card-bg)', border: '1px solid var(--primary)',
-          borderRadius: '16px', padding: '0.75rem 1.5rem',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(var(--primary-rgb),0.2)',
-          backdropFilter: 'blur(12px)',
-          animation: 'slideUp 0.2s ease'
-        }}>
-          <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--primary)' }}>
-            ✅ {selectedRows.length} ملف{selectedRows.length > 1 ? 'ات' : ''} محدد{selectedRows.length > 1 ? 'ة' : ''}
-          </span>
-          <div style={{ width: 1, height: 24, background: 'var(--card-border)' }} />
-          <button
-            onClick={openMultiBill}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '0.4rem',
-              padding: '0.5rem 1.2rem', border: 'none', borderRadius: '10px',
-              background: 'var(--primary)', color: 'white',
-              fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
-              fontFamily: 'inherit',
-              boxShadow: '0 4px 14px rgba(var(--primary-rgb),0.35)'
-            }}
-          >
-            📄 فاتورة مجمعة
-          </button>
-          <button
-            onClick={() => setSelectedRows([])}
-            style={{
-              background: 'transparent', border: '1px solid var(--card-border)',
-              borderRadius: '10px', padding: '0.5rem 0.9rem',
-              color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.85rem',
-              fontFamily: 'inherit'
-            }}
-          >
-            إلغاء التحديد
-          </button>
-        </div>
-      )}
-
       <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateX(-50%) translateY(12px); }
-          to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(-6px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
         @media print {
             .no-print, .sidebar { display: none !important; }

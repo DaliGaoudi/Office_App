@@ -222,7 +222,7 @@ export default function BillModal({ record, actions = [], records = [], onClose 
             background: 'rgba(var(--primary-rgb),0.06)'
           }}>
             <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary)' }}>
-              📄 قائمة مصاريف وأجور محاضر{isMulti ? ` (مجمعة — ${records.length} ملفات)` : ''}
+              قائمة مصاريف وأجور محاضر{isMulti ? ` (مجمعة — ${records.length} ملفات)` : ''}
             </span>
             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
               <button
