@@ -232,9 +232,9 @@ export default function Facturation({ type = 'general' }) {
     setExpandedFiles({ ...expandedFiles, [fileId]: !expandedFiles[fileId] });
   };
 
-  // Index of the first visually-selected row (for inline bar placement)
-  const firstSelectedIdx = !isExecution && selectedRows.length > 0
-    ? data.findIndex(item => selectedRows.includes(toKey(item)))
+  // Index of the last visually-selected row (for inline bar placement)
+  const lastSelectedIdx = !isExecution && selectedRows.length > 0
+    ? data.reduce((last, item, i) => selectedRows.includes(toKey(item)) ? i : last, -1)
     : -1;
 
   return (
@@ -382,7 +382,7 @@ export default function Facturation({ type = 'general' }) {
                                 </tr>
 
                                 {/* ── Inline selection action bar — appears below the first selected row ── */}
-                                {!isExecution && idx === firstSelectedIdx && (
+                                {!isExecution && idx === lastSelectedIdx && (
                                   <tr className="no-print" style={{ background: 'transparent' }}>
                                     <td colSpan={20} style={{ padding: '0 0 4px 0', border: 'none' }}>
                                       <div style={{
