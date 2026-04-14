@@ -88,24 +88,24 @@ export default function Facturation({ type = 'general' }) {
   const [selectedActions, setSelectedActions] = useState({});
   const [expandedFiles, setExpandedFiles]     = useState({});
 
-  // Multi-row selection for general register bill
-  const [selectedRows, setSelectedRows] = useState(new Set());
+  // Multi-row selection for general register bill (plain array — React-safe)
+  const [selectedRows, setSelectedRows] = useState([]);
 
-  const toggleRow = (id) => {
-    setSelectedRows(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+  const toKey = (item) => String(item.id_o || item.id_r || '');
+
+  const toggleRow = (key) => {
+    setSelectedRows(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
   };
 
-  const allSelected = data.length > 0 && data.every(item => selectedRows.has(item.id_o || item.id_r));
+  const allSelected = data.length > 0 && data.every(item => selectedRows.includes(toKey(item)));
 
   const toggleAll = () => {
     if (allSelected) {
-      setSelectedRows(new Set());
+      setSelectedRows([]);
     } else {
-      setSelectedRows(new Set(data.map(item => item.id_o || item.id_r)));
+      setSelectedRows(data.map(toKey).filter(Boolean));
     }
   };
 
@@ -142,7 +142,7 @@ export default function Facturation({ type = 'general' }) {
 
   // Multi-record bill (general only) — uses data already in state, no extra fetch
   const openMultiBill = () => {
-    const selected = data.filter(item => selectedRows.has(item.id_o || item.id_r));
+    const selected = data.filter(item => selectedRows.includes(toKey(item)));
     if (selected.length === 0) return;
     setBillRecords(selected);
     setBillRecord(null);
@@ -187,7 +187,7 @@ export default function Facturation({ type = 'general' }) {
     setPage(1); setActiveFilters({}); setActiveDates({ dateDebut: '', dateFin: '' }); 
     setFilters({}); setDateDebut(''); setDateFin(''); 
     setSelectedActions({}); setExpandedFiles({});
-    setSelectedRows(new Set());
+    setSelectedRows([]);
   }, [type]);
 
   // Recalculate dynamic totals for execution based on selections
@@ -313,7 +313,7 @@ export default function Facturation({ type = 'general' }) {
                                 <tr style={{ 
                                   background: isExpanded 
                                     ? 'rgba(var(--primary-rgb), 0.05)' 
-                                    : (!isExecution && selectedRows.has(fileId)) 
+                                    : (!isExecution && selectedRows.includes(toKey(item))) 
                                       ? 'rgba(var(--primary-rgb), 0.08)' 
                                       : 'transparent',
                                   transition: 'background 0.15s'
@@ -322,8 +322,8 @@ export default function Facturation({ type = 'general' }) {
                                       <td className="no-print" style={{ textAlign: 'center' }}>
                                         <input
                                           type="checkbox"
-                                          checked={selectedRows.has(fileId)}
-                                          onChange={() => toggleRow(fileId)}
+                                          checked={selectedRows.includes(toKey(item))}
+                                          onChange={() => toggleRow(toKey(item))}
                                           style={{ cursor: 'pointer', width: 16, height: 16 }}
                                         />
                                       </td>
@@ -435,7 +435,7 @@ export default function Facturation({ type = 'general' }) {
       </div>
 
       {/* ── Floating multi-select action bar (general only) ── */}
-      {!isExecution && selectedRows.size > 0 && (
+      {!isExecution && selectedRows.length > 0 && (
         <div style={{
           position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)',
           zIndex: 900, display: 'flex', alignItems: 'center', gap: '1rem',
@@ -446,7 +446,7 @@ export default function Facturation({ type = 'general' }) {
           animation: 'slideUp 0.2s ease'
         }}>
           <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--primary)' }}>
-            ✅ {selectedRows.size} ملف{selectedRows.size > 1 ? 'ات' : ''} محدد{selectedRows.size > 1 ? 'ة' : ''}
+            ✅ {selectedRows.length} ملف{selectedRows.length > 1 ? 'ات' : ''} محدد{selectedRows.length > 1 ? 'ة' : ''}
           </span>
           <div style={{ width: 1, height: 24, background: 'var(--card-border)' }} />
           <button
@@ -463,7 +463,7 @@ export default function Facturation({ type = 'general' }) {
             📄 فاتورة مجمعة
           </button>
           <button
-            onClick={() => setSelectedRows(new Set())}
+            onClick={() => setSelectedRows([])}
             style={{
               background: 'transparent', border: '1px solid var(--card-border)',
               borderRadius: '10px', padding: '0.5rem 0.9rem',
