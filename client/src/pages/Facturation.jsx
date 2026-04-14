@@ -85,17 +85,38 @@ export default function Facturation({ type = 'general' }) {
   const [activeDates, setActiveDates]     = useState({ dateDebut: '', dateFin: '' });
 
   // Execution-specific: Selected actions per file
-  // Format: { [fileId]: [selectedActionId1, selectedActionId2, ...] }
   const [selectedActions, setSelectedActions] = useState({});
   const [expandedFiles, setExpandedFiles]     = useState({});
 
-  // Bill modal state
-  const [billRecord, setBillRecord] = useState(null);
-  const [billActions, setBillActions] = useState([]);
+  // Multi-row selection for general register bill
+  const [selectedRows, setSelectedRows] = useState(new Set());
 
+  const toggleRow = (id) => {
+    setSelectedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const allSelected = data.length > 0 && data.every(item => selectedRows.has(item.id_o || item.id_r));
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(data.map(item => item.id_o || item.id_r)));
+    }
+  };
+
+  // Bill modal state
+  const [billRecord, setBillRecord]   = useState(null);
+  const [billActions, setBillActions] = useState([]);
+  const [billRecords, setBillRecords] = useState([]); // for multi-record bill
+
+  // Single-record bill (existing behaviour)
   const openBill = async (item) => {
     const token = localStorage.getItem('token');
-    // Fetch full record
     const endpoint = isExecution ? 'execution' : 'registre';
     try {
       const res = await fetch(`${API_BASE}/${endpoint}/${item.id_r || item.id_o}`, {
@@ -103,6 +124,7 @@ export default function Facturation({ type = 'general' }) {
       });
       const full = await res.json();
       setBillRecord(full);
+      setBillRecords([]);
 
       if (isExecution) {
         const actRes = await fetch(`${API_BASE}/execution/${item.id_r || item.id_o}/actions`, {
@@ -116,6 +138,15 @@ export default function Facturation({ type = 'general' }) {
     } catch (e) {
       console.error('Failed to fetch bill data:', e);
     }
+  };
+
+  // Multi-record bill (general only) — uses data already in state, no extra fetch
+  const openMultiBill = () => {
+    const selected = data.filter(item => selectedRows.has(item.id_o || item.id_r));
+    if (selected.length === 0) return;
+    setBillRecords(selected);
+    setBillRecord(null);
+    setBillActions([]);
   };
 
   const fetchData = useCallback(async (pg = 1, lim = limit, flt = activeFilters, dates = activeDates) => {
@@ -156,6 +187,7 @@ export default function Facturation({ type = 'general' }) {
     setPage(1); setActiveFilters({}); setActiveDates({ dateDebut: '', dateFin: '' }); 
     setFilters({}); setDateDebut(''); setDateFin(''); 
     setSelectedActions({}); setExpandedFiles({});
+    setSelectedRows(new Set());
   }, [type]);
 
   // Recalculate dynamic totals for execution based on selections
@@ -248,6 +280,17 @@ export default function Facturation({ type = 'general' }) {
             <table style={{ borderCollapse: 'collapse', width: '100%' }}>
                 <thead>
                     <tr>
+                        {!isExecution && (
+                          <th className="no-print" style={{ width: 38, textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={allSelected}
+                              onChange={toggleAll}
+                              style={{ cursor: 'pointer', width: 16, height: 16 }}
+                              title="تحديد الكل"
+                            />
+                          </th>
+                        )}
                         <th style={{ width: 40 }}>#</th>
                         {cfg.columns.map(c => <th key={c.key}>{c.label}</th>)}
                         {isExecution && <th className="no-print" style={{ width: 60 }}>التفاصيل</th>}
@@ -267,7 +310,24 @@ export default function Facturation({ type = 'general' }) {
 
                         return (
                             <Fragment key={fileId}>
-                                <tr style={{ background: isExpanded ? 'rgba(var(--primary-rgb), 0.05)' : 'transparent' }}>
+                                <tr style={{ 
+                                  background: isExpanded 
+                                    ? 'rgba(var(--primary-rgb), 0.05)' 
+                                    : (!isExecution && selectedRows.has(fileId)) 
+                                      ? 'rgba(var(--primary-rgb), 0.08)' 
+                                      : 'transparent',
+                                  transition: 'background 0.15s'
+                                }}>
+                                    {!isExecution && (
+                                      <td className="no-print" style={{ textAlign: 'center' }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={selectedRows.has(fileId)}
+                                          onChange={() => toggleRow(fileId)}
+                                          style={{ cursor: 'pointer', width: 16, height: 16 }}
+                                        />
+                                      </td>
+                                    )}
                                     <td>{(page - 1) * limit + idx + 1}</td>
                                     {cfg.columns.map(c => {
                                         let val = item[c.key];
@@ -374,7 +434,53 @@ export default function Facturation({ type = 'general' }) {
         )}
       </div>
 
+      {/* ── Floating multi-select action bar (general only) ── */}
+      {!isExecution && selectedRows.size > 0 && (
+        <div style={{
+          position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 900, display: 'flex', alignItems: 'center', gap: '1rem',
+          background: 'var(--card-bg)', border: '1px solid var(--primary)',
+          borderRadius: '16px', padding: '0.75rem 1.5rem',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(var(--primary-rgb),0.2)',
+          backdropFilter: 'blur(12px)',
+          animation: 'slideUp 0.2s ease'
+        }}>
+          <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--primary)' }}>
+            ✅ {selectedRows.size} ملف{selectedRows.size > 1 ? 'ات' : ''} محدد{selectedRows.size > 1 ? 'ة' : ''}
+          </span>
+          <div style={{ width: 1, height: 24, background: 'var(--card-border)' }} />
+          <button
+            onClick={openMultiBill}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.4rem',
+              padding: '0.5rem 1.2rem', border: 'none', borderRadius: '10px',
+              background: 'var(--primary)', color: 'white',
+              fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
+              fontFamily: 'inherit',
+              boxShadow: '0 4px 14px rgba(var(--primary-rgb),0.35)'
+            }}
+          >
+            📄 فاتورة مجمعة
+          </button>
+          <button
+            onClick={() => setSelectedRows(new Set())}
+            style={{
+              background: 'transparent', border: '1px solid var(--card-border)',
+              borderRadius: '10px', padding: '0.5rem 0.9rem',
+              color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.85rem',
+              fontFamily: 'inherit'
+            }}
+          >
+            إلغاء التحديد
+          </button>
+        </div>
+      )}
+
       <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+          to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
         @media print {
             .no-print, .sidebar { display: none !important; }
             body { background: white !important; color: black !important; }
@@ -391,7 +497,7 @@ export default function Facturation({ type = 'general' }) {
         .btn-icon:hover { opacity: 1; }
       `}} />
 
-      {/* ── Bill Modal ── */}
+      {/* ── Single-record Bill Modal ── */}
       {billRecord && (
         <BillModal
           record={billRecord}
@@ -399,7 +505,14 @@ export default function Facturation({ type = 'general' }) {
           onClose={() => { setBillRecord(null); setBillActions([]); }}
         />
       )}
+
+      {/* ── Multi-record Bill Modal ── */}
+      {billRecords.length > 0 && (
+        <BillModal
+          records={billRecords}
+          onClose={() => setBillRecords([])}
+        />
+      )}
     </div>
   );
 }
-

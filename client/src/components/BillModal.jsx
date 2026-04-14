@@ -46,21 +46,40 @@ function todayArabic() {
  * BillModal
  *
  * Props:
- *  - record  : the record object (from /registre/:id or /execution/:id)
+ *  - record  : the main record object (for header: client name, address, reference)
  *  - actions : array of execution actions (for execution records) — optional
+ *  - records : array of facturation row items for multi-record general bills — optional
+ *             when provided with 2+ items, each becomes one bill row using pre-computed amounts
  *  - onClose : callback to close the modal
  */
-export default function BillModal({ record, actions = [], onClose }) {
+export default function BillModal({ record, actions = [], records = [], onClose }) {
   const printRef = useRef(null);
 
-  if (!record) return null;
+  // For multi-record mode, derive the header record from the first item
+  const headerRecord = records.length > 0 ? records[0] : record;
 
-  const isExecution = Boolean(actions && actions.length > 0);
+  if (!headerRecord) return null;
+
+  const isMulti     = records.length > 0;
+  const isExecution = !isMulti && Boolean(actions && actions.length > 0);
 
   /* ── Build table rows ───────────────────────────────────────── */
   let rows = [];
 
-  if (isExecution) {
+  if (isMulti) {
+    // Multi-record general bill — use pre-computed amounts already in millimes
+    rows = records.map((r, idx) => ({
+      idx:       idx + 1,
+      ref:       r.ref || '—',
+      operation: r.remarque || '—',
+      target:    r.nom_cl2 || '—',
+      date:      fmtDate(r.date_inscri),
+      fees:      r.base_fare     || 0,
+      tva:       r.tva           || 0,
+      expenses:  r.expenses      || 0,
+      total:     r.calculated_total || 0,
+    }));
+  } else if (isExecution) {
     // Each action is a row — field names match œuvre_type table columns
     rows = actions.map((act, idx) => {
       const fees     = ['origine','exemple','versionbureau','orientation']
@@ -110,6 +129,7 @@ export default function BillModal({ record, actions = [], onClose }) {
       total,
     }];
   }
+
 
   /* ── Column totals ─────────────────────────────────────────── */
   const totalFees     = rows.reduce((s, r) => s + r.fees,     0);
@@ -202,7 +222,7 @@ export default function BillModal({ record, actions = [], onClose }) {
             background: 'rgba(var(--primary-rgb),0.06)'
           }}>
             <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary)' }}>
-              📄 قائمة مصاريف وأجور محاضر
+              📄 قائمة مصاريف وأجور محاضر{isMulti ? ` (مجمعة — ${records.length} ملفات)` : ''}
             </span>
             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
               <button
@@ -279,15 +299,15 @@ export default function BillModal({ record, actions = [], onClose }) {
                   <tbody>
                     <tr>
                       <td style={{ fontWeight: 700, width: '110px', paddingBottom: '4px', whiteSpace: 'nowrap' }}>الحريف :</td>
-                      <td style={{ paddingBottom: '4px' }}>{record.de_part || record.nom_cl1 || '—'}</td>
+                      <td style={{ paddingBottom: '4px' }}>{headerRecord.de_part || headerRecord.nom_cl1 || '—'}</td>
                     </tr>
                     <tr>
                       <td style={{ fontWeight: 700, paddingBottom: '4px' }}>العنوان :</td>
-                      <td style={{ paddingBottom: '4px' }}>{record.cl1_adresse || '—'}</td>
+                      <td style={{ paddingBottom: '4px' }}>{headerRecord.cl1_adresse || '—'}</td>
                     </tr>
                     <tr>
                       <td style={{ fontWeight: 700 }}>المرجع :</td>
-                      <td>{record.remarque || record.nom_cl2 || '—'}</td>
+                      <td>{isMulti ? `ملفات متعددة (${records.length})` : (headerRecord.remarque || headerRecord.nom_cl2 || '—')}</td>
                     </tr>
                   </tbody>
                 </table>
