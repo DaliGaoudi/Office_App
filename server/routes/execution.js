@@ -76,9 +76,14 @@ router.post('/', authenticate, async (req, res) => {
             RETURNING id_r
         `;
         const clientResult = await db.run(insertClientQuery, [
-            ref || '', de_part || '', nom_cl1 || '', nom_cl2 || '', 
-            date_inscri || new Date().toISOString().split('T')[0], 
-            remarque || '', id_so, id_user
+            ref ? parseInt(ref) : null,   // ref is INTEGER in PG — never pass ''
+            de_part   || null,
+            nom_cl1   || null,
+            nom_cl2   || null,
+            date_inscri || new Date().toISOString().split('T')[0],
+            remarque  || null,
+            parseInt(id_so)  || null,
+            parseInt(id_user) || null
         ]);
 
         const newId = clientResult.lastID;
