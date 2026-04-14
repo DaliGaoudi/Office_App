@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, Plus, Filter, Edit, Printer, Trash2, UploadCloud } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Search, Plus, Filter, Edit, Printer, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Pagination from '../components/Pagination';
 import AutocompleteInput from '../components/AutocompleteInput';
@@ -22,11 +22,6 @@ export default function RegistreExecution() {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters]       = useState({ ref: '', nom_cl1: '', de_part: '', date_inscri: '' });
   const [activeFilters, setActiveFilters] = useState({});
-
-  const [showModal, setShowModal]   = useState(false);
-  const [formData, setFormData]     = useState({ ref: '', de_part: '', nom_cl1: '', nom_cl2: '', date_inscri: '', remarque: '' });
-  const [isAILoading, setIsAILoading] = useState(false);
-  const fileInputRef = useRef(null);
 
   const fetchRecords = useCallback(async (pg = page, lim = limit, flt = activeFilters) => {
     setLoading(true);
@@ -70,68 +65,6 @@ export default function RegistreExecution() {
     }
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    const token = localStorage.getItem('token');
-    try {
-      const res = await fetch(API, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      const json = await res.json();
-      if (json.success && json.id) {
-        setShowModal(false);
-        // Clear form
-        setFormData({ ref: '', de_part: '', nom_cl1: '', nom_cl2: '', date_inscri: '', remarque: '' });
-        // Take user to the new record page instead of just refreshing
-        navigate(`/record/execution/${json.id}`);
-      } else {
-        alert("حدث خطأ في الحفظ");
-      }
-    } catch (e) {
-      console.error(e);
-      alert("فشل الاتصال بالخادم");
-    }
-  };
-
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setIsAILoading(true);
-    const token = localStorage.getItem('token');
-    const fd = new FormData();
-    fd.append('file', file);
-
-    try {
-        const res = await fetch(`${API_BASE}/ai/extract`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
-            body: fd
-        });
-        const result = await res.json();
-        
-        if (result.success && result.data) {
-            const incoming = result.data;
-            const updated = { ...formData };
-            if (incoming.de_part) updated.de_part = incoming.de_part;
-            if (incoming.nom_cl1) updated.nom_cl1 = incoming.nom_cl1;
-            if (incoming.nom_cl2) updated.nom_cl2 = incoming.nom_cl2;
-            if (incoming.remarque) updated.remarque = incoming.remarque;
-            if (incoming.date_s) updated.date_inscri = incoming.date_s; // Map doc date
-            setFormData(updated);
-            alert("تم استخراج البيانات بنجاح! يرجى مراجعتها.");
-        } else {
-            alert("فشلت عملية الاستخراج: " + (result.error || ""));
-        }
-    } catch (e) {
-        console.error("Extraction error:", e);
-        alert("خطأ في الاتصال بخادم الذكاء الاصطناعي");
-    }
-    setIsAILoading(false);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
 
   return (
     <div className="animate-fade">
@@ -143,8 +76,8 @@ export default function RegistreExecution() {
             <Filter size={18} /> بحث
           </button>
           <button className="btn" onClick={() => window.print()}><Printer size={18} /> طباعة</button>
-          <button className="btn" onClick={() => { setFormData({ ref: '', de_part: '', nom_cl1: '', nom_cl2: '', date_inscri: '', remarque: '' }); setShowModal(true); }}>
-            <Plus size={18} /> إضافة
+          <button className="btn" onClick={() => navigate('/record/execution/new')}>
+            <Plus size={18} /> إضافة محضر
           </button>
         </div>
       </div>
@@ -200,7 +133,7 @@ export default function RegistreExecution() {
                     <td>{item.date_inscri}</td>
                     <td>{item.remarque}</td>
                     <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{formatAmount(item.total_salaire)}</td>
-                    <td>المطلوب
+                    <td>
                       {(() => {
                         const s = STATUS_MAP[item.status] || STATUS_MAP.cancelled;
                         return <span className={`badge badge-${s.color}`}>{s.label}</span>;
@@ -230,36 +163,6 @@ export default function RegistreExecution() {
           </>
         )}
       </div>
-
-      {/* ── Add Modal ── */}
-      {showModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="glass" style={{ padding: '2rem', width: 500, maxWidth: '90%', direction: 'rtl' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: 0, color: 'var(--primary)' }}>إضافة محضر تنفيذي</h3>
-              <div>
-                <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*,application/pdf" onChange={handleFileUpload} />
-                <button type="button" className="btn" style={{ background: 'var(--card-bg)', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={() => fileInputRef.current && fileInputRef.current.click()} disabled={isAILoading}>
-                  {isAILoading ? 'جاري القراءة...' : <><UploadCloud size={16} /> مسح ذكي</>}
-                </button>
-              </div>
-            </div>
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <input type="text" placeholder="العدد الترتيبي *"    value={formData.ref}        onChange={e => setFormData({ ...formData, ref: e.target.value })} required />
-              <AutocompleteInput placeholder="طالب الخدمة"        value={formData.de_part}    onChange={e => setFormData({ ...formData, de_part: e.target.value })} />
-              <AutocompleteInput placeholder="اسم الطالب"         value={formData.nom_cl1}    onChange={e => setFormData({ ...formData, nom_cl1: e.target.value })} />
-              <AutocompleteInput placeholder="اسم المطلوب"        value={formData.nom_cl2}    onChange={e => setFormData({ ...formData, nom_cl2: e.target.value })} />
-              <input type="text" placeholder="تاريخ (YYYY/MM/DD)" value={formData.date_inscri} onChange={e => setFormData({ ...formData, date_inscri: e.target.value })} />
-              <textarea className="glass" style={{ padding: '0.8rem', minHeight: 80, color: 'var(--text-main)', border: '1px solid var(--card-border)' }}
-                placeholder="نوع المحضر" value={formData.remarque} onChange={e => setFormData({ ...formData, remarque: e.target.value })} />
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                <button type="submit" className="btn" style={{ flex: 1 }}>حفظ</button>
-                <button type="button" className="btn" style={{ flex: 1, background: 'rgba(255,255,255,0.1)' }} onClick={() => setShowModal(false)}>إلغاء</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
