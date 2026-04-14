@@ -87,6 +87,7 @@ router.post('/', authenticate, async (req, res) => {
         const insertExecQuery = `
             INSERT INTO "œuvre_type" (id_o, type_operation, date_r, id_so, id_user)
             VALUES (?, ?, ?, ?, ?)
+            RETURNING id_o
         `;
         await db.run(insertExecQuery, [
             newId, remarque || 'فتح ملف تنفيذ', 

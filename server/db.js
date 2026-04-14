@@ -52,14 +52,14 @@ const db = {
         // Ensure INSERTs provide returning clauses if they aren't there
         if (pgText.toLowerCase().trim().startsWith('insert') && !pgText.toLowerCase().includes('returning')) {
             // common id columns used in this project
-            pgText += " RETURNING id_r, id_cn, id, id_even, id_tel";
+            pgText += " RETURNING id_r, id_cn, id, id_even, id_tel, id_o";
         }
         
         const result = await p.query(pgText, params);
         const lr = result.rows[0];
         
         return { 
-            lastID: lr ? (lr.id_r || lr.id_cn || lr.id || lr.id_even || lr.id_tel || null) : null,
+            lastID: lr ? (lr.id_r || lr.id_cn || lr.id || lr.id_even || lr.id_tel || lr.id_o || null) : null,
             changes: result.rowCount 
         };
     }
