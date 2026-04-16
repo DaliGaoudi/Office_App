@@ -28,13 +28,13 @@ const CONFIG = {
     ],
   },
   execution: {
-    label: 'دفتر التنفيذ', api: 'execution', dateField: 'date_inscri',
+    label: 'دفتر التنفيذ', api: 'execution', dateField: 'date_reg',
     columns: [
       { key: 'ref',         label: 'الملف' },
       { key: 'de_part',     label: 'طالب الخدمة' },
       { key: 'nom_cl1',     label: 'الطالب' },
       { key: 'nom_cl2',     label: 'المطلوب' },
-      { key: 'date_inscri', label: 'تاريخ تبليغ المحضر' },
+
       { key: 'base_fare',   label: 'الأجور', isAmount: true },
       { key: 'tva',         label: 'أداء 19%', isAmount: true },
       { key: 'expenses',    label: 'المصاريف', isAmount: true },

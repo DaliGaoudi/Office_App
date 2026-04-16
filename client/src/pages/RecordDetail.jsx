@@ -12,6 +12,7 @@ export default function RecordDetail() {
     const { type, id } = useParams();
     const navigate = useNavigate();
     const isNew = id === 'new';
+    const isExecution = type === 'execution';
     const today = new Date().toISOString().split('T')[0];
     
     const [record, setRecord] = useState(null);
@@ -35,7 +36,7 @@ export default function RecordDetail() {
         if (isNew) {
             const initialState = {
                 date_reg: today,
-                date_inscri: today,
+                date_inscri: isExecution ? '' : today,
                 date_echeance: '', // Will be calculated
                 status: 'has_deposit',
                 acompte: '0',
@@ -255,7 +256,7 @@ export default function RecordDetail() {
     if (loading) return <div style={{padding:'4rem', textAlign:'center', opacity:0.5}}>جاري التحميل...</div>;
     if (!record && !isNew) return <div style={{padding:'4rem', textAlign:'center', color:'var(--error)'}}>الملف غير موجود</div>;
 
-    const isExecution = type === 'execution';
+
 
     const tabConfig = [
         { id: 'general', label: 'المعلومات العامة' },
@@ -270,7 +271,7 @@ export default function RecordDetail() {
             { key: 'remarque', label: 'نوع المحضر' },
             { key: 'date_reg', label: 'تاريخ طلب الخدمة', type: 'date' },
             { key: 'date_echeance', label: 'تاريخ آخر أجل لالتبليغ', type: 'date', readonly: true },
-            { key: 'date_inscri', label: 'تاريخ تبليغ المحضر', type: 'date' },
+            ...(!isExecution ? [{ key: 'date_inscri', label: 'تاريخ تبليغ المحضر', type: 'date' }] : []),
             { key: 'de_part', label: 'طالب الخدمة' },
             { key: 'service_petitioner_contact', label: 'بيانات الاتصال' },
             ...(isExecution ? [
