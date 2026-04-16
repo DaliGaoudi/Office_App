@@ -64,7 +64,7 @@ router.get('/', authenticate, async (req, res) => {
 // Create new Execution Record (Base create)
 router.post('/', authenticate, async (req, res) => {
     try {
-        const { ref, de_part, nom_cl1, nom_cl2, date_inscri, remarque } = req.body;
+        const { ref, de_part, nom_cl1, nom_cl2, date_reg, remarque } = req.body;
         const id_so = req.user.id_so;
         const id_user = req.user.id;
 
