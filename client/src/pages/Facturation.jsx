@@ -358,7 +358,7 @@ export default function Facturation({ type = 'general' }) {
 
                                          return (
                                              <td key={c.key} style={c.isAmount ? { fontWeight: 700, color: c.isTotal ? 'var(--primary)' : 'inherit', textAlign: 'left' } : {}}>
-                                                 {c.isAmount ? formatAmount(val) : (val || '—')}
+                                                 {c.isAmount ? formatAmount(val) : (val && val !== '0' ? val : '—')}
                                              </td>
                                          );
                                     })}

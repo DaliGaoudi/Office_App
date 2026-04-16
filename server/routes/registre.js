@@ -256,7 +256,7 @@ router.get('/facturation/list', authenticate, async (req, res) => {
                             imprimer, inscri, delimitation, poste, autre, id_so::text as id_so
                      FROM clients_record c 
                      WHERE id_so::text = ? 
-                     AND NOT EXISTS (SELECT 1 FROM "œuvre_type" o WHERE o.id_o::text = c.id_r::text)`;
+                     AND c.is_execution = FALSE`;
         let params = [req.user.id_so];
         console.log(`Facturation params:`, params);
 

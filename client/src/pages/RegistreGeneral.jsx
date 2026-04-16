@@ -140,7 +140,7 @@ export default function RegistreGeneral() {
                     <td>{item.de_part}</td>
                     <td>{item.nom_cl1}</td>
                     <td>{item.nom_cl2}</td>
-                    <td>{item.date_inscri}</td>
+                    <td>{item.date_inscri && item.date_inscri !== '0' ? item.date_inscri : '-'}</td>
                     <td>{item.remarque}</td>
                     <td style={{ fontWeight: 700, color: '#a78bfa' }}>
                        {formatAmount(item.salaire)}

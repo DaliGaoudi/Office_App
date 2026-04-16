@@ -34,9 +34,9 @@ router.get('/', authenticate, async (req, res) => {
                        (SELECT COALESCE(SUM(CAST(NULLIF(o2.salaire, '') AS NUMERIC)), 0) 
                         FROM "œuvre_type" o2 
                         WHERE o2.id_o::text = c.id_r::text) as total_salaire
-                       FROM clients_record c 
+                        FROM clients_record c 
                        WHERE c.id_so::text = ? 
-                       AND EXISTS (SELECT 1 FROM "œuvre_type" o WHERE o.id_o::text = c.id_r::text)`;
+                       AND c.is_execution = TRUE`;
         let params = [req.user.id_so];
 
         if (search) {
@@ -46,7 +46,7 @@ router.get('/', authenticate, async (req, res) => {
 
         const countQuery = `SELECT COUNT(c.id_r) as count FROM clients_record c 
                             WHERE c.id_so::text = ? 
-                            AND EXISTS (SELECT 1 FROM "œuvre_type" o WHERE o.id_o::text = c.id_r::text)
+                            AND c.is_execution = TRUE
                             ${search ? 'AND (c.ref::text LIKE ? OR c.nom_cl1 LIKE ? OR c.de_part LIKE ?)' : ''}`;
         
         const cRow = await db.get(countQuery, params);
@@ -71,8 +71,8 @@ router.post('/', authenticate, async (req, res) => {
         // 1. Create the base record in clients_record
         // We use a simplified insert similar to registre.js but tailored for execution start
         const insertClientQuery = `
-            INSERT INTO clients_record (ref, de_part, nom_cl1, nom_cl2, date_reg, remarque, id_so, id_user, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'has_deposit')
+            INSERT INTO clients_record (ref, de_part, nom_cl1, nom_cl2, date_reg, remarque, id_so, id_user, status, is_execution)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'has_deposit', TRUE)
             RETURNING id_r
         `;
         const clientResult = await db.run(insertClientQuery, [
@@ -80,7 +80,7 @@ router.post('/', authenticate, async (req, res) => {
             de_part   || null,
             nom_cl1   || null,
             nom_cl2   || null,
-            date_inscri || new Date().toISOString().split('T')[0],
+            date_reg || new Date().toISOString().split('T')[0],
             remarque  || null,
             parseInt(id_so)  || null,
             parseInt(id_user) || null
@@ -88,17 +88,7 @@ router.post('/', authenticate, async (req, res) => {
 
         const newId = clientResult.lastID;
 
-        // 2. Create the initial execution entry in œuvre_type to "mark" it as an execution file
-        const insertExecQuery = `
-            INSERT INTO "œuvre_type" (id_o, type_operation, date_r, id_so, id_user)
-            VALUES (?, ?, ?, ?, ?)
-            RETURNING id_o
-        `;
-        await db.run(insertExecQuery, [
-            newId, remarque || 'فتح ملف تنفيذ', 
-            date_inscri || new Date().toISOString().split('T')[0],
-            id_so, id_user
-        ]);
+
 
         res.json({ success: true, id: newId });
     } catch (err) {
@@ -118,8 +108,9 @@ router.get('/facturation/list', authenticate, async (req, res) => {
         let query = `SELECT c.id_r::text as id_r, c.ref, c.de_part, c.nom_cl1, c.nom_cl2, c.date_reg, c.remarque, c.salaire, c."TVA" as tva, c.status,
                        o.id as action_id, o.type_operation, o.salaire as action_salaire, o."TVA" as action_tva
                       FROM clients_record c 
-                      INNER JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
-                      WHERE c.id_so::text = ?`;
+                      LEFT JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
+                      WHERE c.id_so::text = ? 
+                      AND c.is_execution = TRUE`;
         let params = [req.user.id_so];
 
         if (ref) {
