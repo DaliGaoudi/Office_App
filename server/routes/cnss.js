@@ -69,6 +69,7 @@ router.post('/', authenticate, async (req, res) => {
         const record = req.body;
         record.id_user = req.user.id;
         record.id_so = req.user.id_so;
+        if (!record.status) record.status = 'has_deposit';
         
         const keys = Object.keys(record);
         const values = Object.values(record);

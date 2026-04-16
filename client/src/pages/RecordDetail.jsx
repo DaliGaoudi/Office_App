@@ -37,7 +37,7 @@ export default function RecordDetail() {
                 date_reg: today,
                 date_inscri: today,
                 date_echeance: '', // Will be calculated
-                status: 'not_started',
+                status: 'has_deposit',
                 acompte: '0',
                 origine: '0', exemple: '0', version_bureau: '0', orientation: '0', mobilite: '0',
                 imprimer: '0', inscri: '0', delimitation: '0', poste: '0', autre: '0',
@@ -450,8 +450,8 @@ export default function RecordDetail() {
                                                             newFormData.montant_partiel2 = exp.toString();
                                                         }
 
-                                                        // Auto-transition not_started -> has_deposit if acompte is added
-                                                        if (field.key === 'acompte' && parseFloat(newVal) > 0 && (formData.status === 'not_started' || !formData.status)) {
+                                                        // Auto-transition to has_deposit if acompte is added (now default, but kept for robustness)
+                                                        if (field.key === 'acompte' && parseFloat(newVal) > 0 && (!formData.status || formData.status === 'not_started')) {
                                                             newFormData.status = 'has_deposit';
                                                         }
                                                         setFormData(newFormData);

@@ -155,7 +155,7 @@ router.post('/', authenticate, async (req, res) => {
                 if (col === 'id_user') finalRecord[col] = req.user.id;
                 else if (col === 'id_so') finalRecord[col] = req.user.id_so;
                 else if (col === 'date_ajout') finalRecord[col] = new Date().toLocaleString('fr-FR');
-                else if (col === 'status') finalRecord[col] = (parseFloat(req.body.acompte) > 0) ? 'has_deposit' : 'not_started';
+                else if (col === 'status') finalRecord[col] = 'has_deposit';
                 else if (['id_r'].includes(col)) {
                     // handled by Postgres
                 } else if (['nom_cl1', 'nom_cl2', 'de_part', 'date_reg', 'remarque', 'date_s', 'nombre', 'tribunal', 'resultat', 'service_petitioner_name', 'service_petitioner_contact', 'date_echeance'].includes(col)) {

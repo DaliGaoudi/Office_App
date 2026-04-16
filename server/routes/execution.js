@@ -72,7 +72,7 @@ router.post('/', authenticate, async (req, res) => {
         // We use a simplified insert similar to registre.js but tailored for execution start
         const insertClientQuery = `
             INSERT INTO clients_record (ref, de_part, nom_cl1, nom_cl2, date_reg, remarque, id_so, id_user, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'not_started')
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'has_deposit')
             RETURNING id_r
         `;
         const clientResult = await db.run(insertClientQuery, [
