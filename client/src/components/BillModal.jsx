@@ -150,15 +150,74 @@ export default function BillModal({ record, actions = [], records = [], onClose 
         <meta charset='utf-8'>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&display=swap');
-          body { font-family: 'Cairo', 'Amiri', Arial, sans-serif; direction: rtl; }
-          table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-          th, td { border: 1px solid #555; padding: 5px; text-align: center; vertical-align: middle; }
-          .bill-header { text-align: center; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px; }
-          .bill-meta td { border: none !important; }
+          @page {
+            size: A4;
+            margin: 2.5cm 2cm 2.5cm 2cm;
+          }
+          body { 
+            font-family: 'Cairo', 'Amiri', Arial, sans-serif; 
+            direction: rtl; 
+            font-size: 12pt;
+            line-height: 1.5;
+          }
+          .bill-header { 
+            text-align: center; 
+            border-bottom: 3px double #000; 
+            padding-bottom: 15px; 
+            margin-bottom: 25px; 
+          }
+          .bill-header div { font-weight: bold; }
+          .bill-meta table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+          .bill-meta td { border: none !important; padding: 5px; font-size: 12pt; }
+          .data-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px; 
+          }
+          .data-table th { 
+            background: #f0f0f0; 
+            border: 1px solid #000; 
+            padding: 8px; 
+            text-align: center; 
+            font-weight: bold; 
+            font-size: 11pt; 
+          }
+          .data-table td { 
+            border: 1px solid #000; 
+            padding: 8px; 
+            text-align: center; 
+            vertical-align: middle; 
+            font-size: 11pt;
+          }
+          .amount-words { 
+            margin-top: 25px; 
+            border: 1px solid #000; 
+            padding: 15px; 
+            font-size: 12pt; 
+            font-weight: bold; 
+            text-align: center; 
+            background: #fdfdfd; 
+          }
+          .signature { 
+            text-align: center; 
+            margin-top: 50px; 
+            font-size: 14pt; 
+            font-weight: bold; 
+          }
+          .bill-footer { 
+            margin-top: 60px; 
+            border-top: 2px solid #000; 
+            padding-top: 15px; 
+            text-align: center; 
+            font-size: 10pt; 
+            color: #333;
+          }
         </style>
       </head>
       <body lang="ar-TN">
-        ${content}
+        <div style="width: 100%;">
+          ${content}
+        </div>
       </body>
       </html>
     `;
