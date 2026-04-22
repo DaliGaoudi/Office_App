@@ -197,13 +197,13 @@ export default function BillModal({ record, actions = [], records = [], onClose 
           .bill-meta table { width: 100%; border-collapse: collapse; }
           .bill-meta td { padding: 3px 6px; font-size: 11pt; }
           .bill-meta td:first-child { font-weight: 700; width: 120px; }
-          .data-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10.5pt; }
-          .data-table th { background: #f0f0f0; border: 1px solid #444; padding: 10px 8px; text-align: center; font-weight: 700; font-size: 10pt; white-space: nowrap; }
-          .data-table td { border: 1px solid #444; padding: 10px 8px; text-align: center; vertical-align: middle; }
+          .data-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9.5pt; table-layout: auto; }
+          .data-table th { background: #f0f0f0; border: 1px solid #444; padding: 6px 4px; text-align: center; font-weight: 700; font-size: 9pt; white-space: nowrap; }
+          .data-table td { border: 1px solid #444; padding: 6px 4px; text-align: center; vertical-align: middle; word-break: break-word; }
           .data-table tr:nth-child(even) { background: #fafafa; }
           .data-table tfoot td { font-weight: 700; background: #e0e0e0; }
-          .amount-words { margin-top: 20px; border: 1px solid #333; padding: 12px 16px; font-size: 12pt; font-weight: 600; text-align: center; background: #f9f9f9; border-radius: 6px; }
-          .signature { text-align: center; margin-top: 35px; font-size: 14pt; font-weight: 700; }
+          .amount-words { margin-top: 15px; border: 1px solid #333; padding: 10px 14px; font-size: 11pt; font-weight: 600; text-align: center; background: #f9f9f9; border-radius: 6px; }
+          .signature { text-align: center; margin-top: 30px; font-size: 13pt; font-weight: 700; }
           .bill-footer { position: fixed; bottom: 8mm; left: 15mm; right: 15mm; border-top: 2px solid #000; padding-top: 6px; text-align: center; font-size: 8pt; }
           @media print {
             @page { size: A4; margin: 0; }
@@ -348,7 +348,7 @@ export default function BillModal({ record, actions = [], records = [], onClose 
                     </tr>
                     <tr>
                       <td style={{ fontWeight: 700, paddingBottom: '4px' }}>العنوان :</td>
-                      <td style={{ paddingBottom: '4px' }}>{headerRecord.cl1_adresse || '—'}</td>
+                      <td style={{ paddingBottom: '4px' }}>{(headerRecord.cl1_adresse === '0' || !headerRecord.cl1_adresse) ? '' : headerRecord.cl1_adresse}</td>
                     </tr>
                     <tr>
                       <td style={{ fontWeight: 700 }}>المرجع :</td>
@@ -361,21 +361,21 @@ export default function BillModal({ record, actions = [], records = [], onClose 
               {/* ── Data table ── */}
               <table className="data-table" style={{
                 width: '100%', borderCollapse: 'collapse',
-                marginTop: '12px', fontSize: '10.5pt'
+                marginTop: '12px', fontSize: '9.5pt'
               }}>
                 <thead>
                   <tr>
                     {[
-                      'العدد رتبي', 
-                      ...(isExecution ? [] : ['عدد التضمين']),
+                      ' رتبي', 
+                      ...(isExecution ? [] : ['تضمين']),
                       'نوع العملية',
                       'المتوجه إليه', 'تاريخ المحضر',
-                      'الأجور', 'TVA', 'المصاريف', 'المجموع (د.ت)'
+                      'الأجور', 'TVA', 'المصاريف', 'المجموع'
                     ].map(h => (
                       <th key={h} style={{
                         background: '#f0f0f0', border: '1px solid #444',
-                        padding: '10px 8px', textAlign: 'center',
-                        fontWeight: 700, fontSize: '10pt', whiteSpace: 'nowrap'
+                        padding: '6px 4px', textAlign: 'center',
+                        fontWeight: 700, fontSize: '9pt', whiteSpace: 'nowrap'
                       }}>{h}</th>
                     ))}
                   </tr>
@@ -398,15 +398,15 @@ export default function BillModal({ record, actions = [], records = [], onClose 
                 <tfoot>
                   <tr>
                     <td colSpan={isExecution ? 4 : 5} style={{ 
-                      border: '1px solid #444', padding: '10px 8px', 
+                      border: '1px solid #444', padding: '6px 4px', 
                       fontWeight: 700, background: '#e0e0e0', textAlign: 'center' 
                     }}>
                       المجموع العام :
                     </td>
-                    <td style={{ border: '1px solid #444', padding: '10px 8px', fontWeight: 700, background: '#e0e0e0' }}>{billFormat(totalFees)}</td>
-                    <td style={{ border: '1px solid #444', padding: '10px 8px', fontWeight: 700, background: '#e0e0e0' }}>{billFormat(totalTva)}</td>
-                    <td style={{ border: '1px solid #444', padding: '10px 8px', fontWeight: 700, background: '#e0e0e0' }}>{billFormat(totalExpenses)}</td>
-                    <td style={{ border: '1px solid #444', padding: '10px 8px', fontWeight: 800, background: '#d5d5d5' }}>{billFormat(grandTotal)}</td>
+                    <td style={{ border: '1px solid #444', padding: '6px 4px', fontWeight: 700, background: '#e0e0e0' }}>{billFormat(totalFees)}</td>
+                    <td style={{ border: '1px solid #444', padding: '6px 4px', fontWeight: 700, background: '#e0e0e0' }}>{billFormat(totalTva)}</td>
+                    <td style={{ border: '1px solid #444', padding: '6px 4px', fontWeight: 700, background: '#e0e0e0' }}>{billFormat(totalExpenses)}</td>
+                    <td style={{ border: '1px solid #444', padding: '6px 4px', fontWeight: 800, background: '#d5d5d5' }}>{billFormat(grandTotal)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -447,7 +447,7 @@ export default function BillModal({ record, actions = [], records = [], onClose 
 /* ─── shared cell style ─────────────────────────────────────── */
 const tdStyle = {
   border: '1px solid #444',
-  padding: '10px 8px',
+  padding: '6px 4px',
   textAlign: 'center',
   verticalAlign: 'middle'
 };
