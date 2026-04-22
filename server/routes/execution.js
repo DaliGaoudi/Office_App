@@ -15,7 +15,7 @@ function computeActionSalaire(row) {
     
     const rate = 19; // Assume 19% or get from row if stored
     const tva = Math.round(fees * rate / 100);
-    const expenses = ['delimitation','inscri','mobilite','imprimer','poste','autre']
+    const expenses = ['delimitation','inscri','mobilite','imprimer','postal','autre']
         .reduce((s, k) => s + (parseInt(row[k]) || 0), 0);
         
     const calculated = fees + tva + expenses;
@@ -106,7 +106,9 @@ router.get('/facturation/list', authenticate, async (req, res) => {
         const l = parseInt(limit);
 
         let query = `SELECT c.id_r::text as id_r, c.ref, c.de_part, c.nom_cl1, c.nom_cl2, c.date_reg, c.remarque, c.salaire, c."TVA" as tva, c.status,
-                       o.id as action_id, o.type_operation, o.salaire as action_salaire, o."TVA" as action_tva
+                       o.id as action_id, o.type_operation, o.salaire as action_salaire, o."TVA" as action_tva,
+                       o.origine, o.exemple, o.versionbureau, o.orientation,
+                       o.delimitation, o.inscri, o.mobilite, o.imprimer, o.postal, o.autre
                       FROM clients_record c 
                       LEFT JOIN "œuvre_type" o ON c.id_r::text = o.id_o::text 
                       WHERE c.id_so::text = ? 
@@ -142,19 +144,21 @@ router.get('/facturation/list', authenticate, async (req, res) => {
                     actions: []
                 });
             }
-            const s = parseFloat(row.action_salaire) || 0;
-            const t = parseFloat(row.action_tva) || 0;
-            const tt = s + t;
+            const s   = parseFloat(row.action_salaire) || 0;
+            const t   = parseFloat(row.action_tva) || 0;
+            const fees = ['origine','exemple','versionbureau','orientation']
+                .reduce((sum, k) => sum + (parseFloat(row[k]) || 0), 0);
+            const expenses = ['delimitation','inscri','mobilite','imprimer','postal','autre']
+                .reduce((sum, k) => sum + (parseFloat(row[k]) || 0), 0);
 
             groupedMap.get(row.id_r).actions.push({
                 id: row.action_id,
                 type: row.type_operation,
                 salaire: s,
                 tva: t,
-                total: tt,
-                // Add base/tva/expenses aliases for frontend
-                base: s,
-                expenses: 0, 
+                total: s, // 'salaire' is already the grand total from DB
+                base: fees,
+                expenses: expenses,
             });
         });
 

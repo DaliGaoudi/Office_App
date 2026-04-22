@@ -262,7 +262,7 @@ export default function RecordDetail() {
         { id: 'general', label: 'المعلومات العامة' },
         { id: 'client1', label: 'الطالب' },
         { id: 'client2', label: 'المطلوب' },
-        { id: 'financials', label: 'الأجور والمصاريف' }
+        ...(!isExecution ? [{ id: 'financials', label: 'الأجور والمصاريف' }] : [])
     ];
 
     const fieldGroups = {
@@ -553,7 +553,7 @@ export default function RecordDetail() {
                             </div>
                             
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem', gap: '1rem' }}>
-                                {activeTab !== 'financials' ? (
+                                {tabConfig.findIndex(t => t.id === activeTab) < tabConfig.length - 1 ? (
                                     <button type="button" className="btn" style={{ background: 'rgba(255,255,255,0.05)' }} 
                                         onClick={() => {
                                             const idx = tabConfig.findIndex(t => t.id === activeTab);
