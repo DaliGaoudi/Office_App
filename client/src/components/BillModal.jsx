@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { X, Printer } from 'lucide-react';
+import { X, Printer, FileText } from 'lucide-react';
 import { numberToArabicWords } from '../utils/numberToArabicWords';
 
 /* ─── helpers ──────────────────────────────────────────────── */
@@ -141,6 +141,39 @@ export default function BillModal({ record, actions = [], records = [], onClose 
   const amountWords = numberToArabicWords(grandTotal);
 
   /* ── Print handler ─────────────────────────────────────────── */
+  const handleExportWord = () => {
+    const content = printRef.current.innerHTML;
+    // Word handles HTML best when wrapped in basic Word-XML style headers
+    const header = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&display=swap');
+          body { font-family: 'Cairo', 'Amiri', Arial, sans-serif; direction: rtl; }
+          table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+          th, td { border: 1px solid #555; padding: 5px; text-align: center; vertical-align: middle; }
+          .bill-header { text-align: center; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px; }
+          .bill-meta td { border: none !important; }
+        </style>
+      </head>
+      <body lang="ar-TN">
+        ${content}
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff', header], { type: 'application/msword' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `فاتورة_${headerRecord.ref || 'ملف'}.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handlePrint = () => {
     const content = printRef.current.innerHTML;
     const win = window.open('', '_blank', 'width=900,height=700');
@@ -236,7 +269,19 @@ export default function BillModal({ record, actions = [], records = [], onClose 
                   fontFamily: 'inherit'
                 }}
               >
-                <Printer size={17} /> طباعة الفاتورة
+                <Printer size={17} /> طباعة
+              </button>
+              <button
+                onClick={handleExportWord}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.4rem',
+                  padding: '0.5rem 1.2rem', border: '1px solid var(--primary)', borderRadius: '10px',
+                  background: 'transparent', color: 'var(--primary)',
+                  fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer',
+                  fontFamily: 'inherit'
+                }}
+              >
+                <FileText size={17} /> Word
               </button>
               <button
                 onClick={onClose}
@@ -321,7 +366,9 @@ export default function BillModal({ record, actions = [], records = [], onClose 
                 <thead>
                   <tr>
                     {[
-                      'العدد الرتبي', 'عدد التضمين', 'نوع العملية',
+                      'العدد الرتبي', 
+                      ...(isExecution ? [] : ['عدد التضمين']),
+                      'نوع العملية',
                       'المتوجه إليه', 'تاريخ المحضر',
                       'مجموع الأجور', 'أ ق م', 'مجموع المصاريف', 'أجرة المحضر بالدينار'
                     ].map(h => (
@@ -337,7 +384,7 @@ export default function BillModal({ record, actions = [], records = [], onClose 
                   {rows.map((row, i) => (
                     <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#f7f7f7' }}>
                       <td style={tdStyle}>{row.idx}</td>
-                      <td style={tdStyle}>{row.ref}</td>
+                      {!isExecution && <td style={tdStyle}>{row.ref}</td>}
                       <td style={{ ...tdStyle, textAlign: 'right' }}>{row.operation}</td>
                       <td style={{ ...tdStyle, textAlign: 'right' }}>{row.target}</td>
                       <td style={tdStyle}>{row.date}</td>
@@ -350,7 +397,7 @@ export default function BillModal({ record, actions = [], records = [], onClose 
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={5} style={{ ...tdStyle, fontWeight: 700, background: '#d0d0d0', textAlign: 'center' }}>
+                    <td colSpan={isExecution ? 4 : 5} style={{ ...tdStyle, fontWeight: 700, background: '#d0d0d0', textAlign: 'center' }}>
                       المجموع :
                     </td>
                     <td style={{ ...tdStyle, fontWeight: 700, background: '#d0d0d0' }}>{billFormat(totalFees)}</td>
