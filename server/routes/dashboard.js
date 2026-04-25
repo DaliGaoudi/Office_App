@@ -14,8 +14,8 @@ router.get('/stats', authenticate, async (req, res) => {
 
         // 1. Metrics & Counts
         const activeCount = await db.get(`SELECT COUNT(*) as count FROM clients_record WHERE id_so::text = ? AND status != 'finished'`, [id_so]);
-        const dueToday = await db.get(`SELECT COUNT(*) as count FROM evenement WHERE id_so::text = ? AND start = ?`, [id_so, today]);
-        const dueWeek = await db.get(`SELECT COUNT(*) as count FROM evenement WHERE id_so::text = ? AND start >= ? AND start <= ?`, [id_so, today, nextWeekStr]);
+        const dueToday = await db.get(`SELECT COUNT(*) as count FROM evenement WHERE id_so::text = ? AND debut_date = ?`, [id_so, today]);
+        const dueWeek = await db.get(`SELECT COUNT(*) as count FROM evenement WHERE id_so::text = ? AND debut_date >= ? AND debut_date <= ?`, [id_so, today, nextWeekStr]);
         const completedMonth = await db.get(`SELECT COUNT(*) as count FROM clients_record WHERE id_so::text = ? AND status = 'finished' AND date_reg >= ?`, [id_so, firstOfMonth]);
 
         // 2. Recent Cases (Top 10)
@@ -30,9 +30,10 @@ router.get('/stats', authenticate, async (req, res) => {
 
         // 3. Upcoming Deadlines (Today + Week)
         const deadlines = await db.all(`
-            SELECT * FROM evenement 
-            WHERE id_so::text = ? AND start >= ? AND start <= ?
-            ORDER BY start ASC, time_even ASC 
+            SELECT id_even, sujet as title, debut_date as start, show_time as time_even, location as tribunal_even, description 
+            FROM evenement 
+            WHERE id_so::text = ? AND debut_date >= ? AND debut_date <= ?
+            ORDER BY debut_date ASC, show_time ASC 
             LIMIT 15
         `, [id_so, today, nextWeekStr]);
 
@@ -52,7 +53,7 @@ router.get('/stats', authenticate, async (req, res) => {
             (SELECT 'case' as type, id_r as id, nom_cl1 as title, date_reg as date, 'محضر جديد' as action 
              FROM clients_record WHERE id_so::text = ? ORDER BY id_r DESC LIMIT 5)
             UNION ALL
-            (SELECT 'event' as type, id_even as id, title, start as date, 'موعد جديد' as action 
+            (SELECT 'event' as type, id_even as id, sujet as title, debut_date as date, 'موعد جديد' as action 
              FROM evenement WHERE id_so::text = ? ORDER BY id_even DESC LIMIT 5)
             ORDER BY date DESC
             LIMIT 10

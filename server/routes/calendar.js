@@ -7,7 +7,7 @@ const authenticate = require('../middleware/auth');
 // Get events from calendar
 router.get('/', authenticate, async (req, res) => {
     try {
-        const rows = await db.all(`SELECT * FROM evenement WHERE id_so = ? ORDER BY id_even DESC LIMIT 200`, [req.user.id_so]);
+        const rows = await db.all(`SELECT id_even, sujet as title, debut_date as start, show_time as time_even, location as tribunal_even, description FROM evenement WHERE id_so = ? ORDER BY id_even DESC LIMIT 200`, [req.user.id_so]);
         res.json({ data: rows });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -22,7 +22,7 @@ router.post('/', authenticate, async (req, res) => {
         const id_so = req.user.id_so;
         
         const query = `
-            INSERT INTO evenement (title, start, time_even, description, tribunal_even, id_user, id_so)
+            INSERT INTO evenement (sujet, debut_date, show_time, description, location, id_user, id_so)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             RETURNING id_even
         `;
@@ -43,7 +43,7 @@ router.put('/:id', authenticate, async (req, res) => {
 
         const query = `
             UPDATE evenement 
-            SET title = ?, start = ?, time_even = ?, description = ?, tribunal_even = ?
+            SET sujet = ?, debut_date = ?, show_time = ?, description = ?, location = ?
             WHERE id_even = ? AND id_so = ?
         `;
         
