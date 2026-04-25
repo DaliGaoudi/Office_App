@@ -67,6 +67,19 @@ router.get('/stats', authenticate, async (req, res) => {
             WHERE id_so::text = ? AND date_reg >= ?
         `, [id_so, firstOfMonth]);
 
+        // 7. Calendar Deadlines
+        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+        const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 2, 0).toISOString().split('T')[0]; // Next month end just to be safe
+        const calendarDeadlines = await db.all(`
+            SELECT id_r, ref, nom_cl1, date_echeance
+            FROM clients_record
+            WHERE id_so::text = ? 
+            AND status != 'finished'
+            AND date_echeance IS NOT NULL
+            AND date_echeance != ''
+            AND date_echeance >= ? AND date_echeance <= ?
+        `, [id_so, startOfMonth, endOfMonth]);
+
         res.json({
             metrics: {
                 activeCount: parseInt(activeCount?.count || 0),
@@ -78,6 +91,7 @@ router.get('/stats', authenticate, async (req, res) => {
             deadlines: deadlines || [],
             tasksQueue: tasksQueue || [],
             timeline: activity || [],
+            calendarDeadlines: calendarDeadlines || [],
             payments: {
                 expected: parseFloat(payments?.total_expected || 0),
                 collected: parseFloat(payments?.total_collected || 0)

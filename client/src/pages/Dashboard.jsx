@@ -5,6 +5,7 @@ import {
   Users, 
   CalendarDays, 
   ChevronRight, 
+  ChevronLeft,
   Clock, 
   Activity,
   Plus,
@@ -19,6 +20,96 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import API_BASE from '../config';
+
+const MiniCalendar = ({ deadlines }) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  
+  const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+  const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
+  
+  const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+
+  const monthNames = ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+  const dayNames = ["ح", "ن", "ث", "ر", "خ", "ج", "س"];
+
+  const deadlinesByDate = {};
+  deadlines?.forEach(dl => {
+    if (!dl.date_echeance) return;
+    const dateStr = dl.date_echeance.split('T')[0];
+    if (!deadlinesByDate[dateStr]) deadlinesByDate[dateStr] = [];
+    deadlinesByDate[dateStr].push(dl);
+  });
+
+  const renderDays = () => {
+    const days = [];
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      days.push(<div key={`empty-${i}`} style={{ padding: '0.5rem' }}></div>);
+    }
+    
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const dayDeadlines = deadlinesByDate[dateStr] || [];
+      const isToday = dateStr === new Date().toISOString().split('T')[0];
+      
+      days.push(
+        <div 
+          key={d} 
+          style={{ 
+            padding: '0.4rem', 
+            borderRadius: '8px',
+            background: isToday ? 'var(--primary-light, rgba(23, 118, 210, 0.1))' : 'transparent',
+            border: isToday ? '1px solid var(--primary)' : '1px solid transparent',
+            cursor: dayDeadlines.length > 0 ? 'pointer' : 'default',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            position: 'relative'
+          }}
+          title={dayDeadlines.map(dl => `#${dl.ref} - ${dl.nom_cl1}`).join('\n')}
+        >
+          <span style={{ fontSize: '0.85rem', fontWeight: isToday || dayDeadlines.length > 0 ? 'bold' : 'normal' }}>{d}</span>
+          {dayDeadlines.length > 0 && (
+            <div style={{ 
+              width: '6px', 
+              height: '6px', 
+              borderRadius: '50%', 
+              background: 'var(--status-error, #ef4444)',
+              marginTop: '2px'
+            }}></div>
+          )}
+        </div>
+      );
+    }
+    return days;
+  };
+
+  return (
+    <div style={{ padding: '0.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <button onClick={prevMonth} className="btn-icon" style={{ padding: '0.3rem' }}><ChevronRight size={16}/></button>
+        <strong style={{ fontSize: '0.95rem' }}>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</strong>
+        <button onClick={nextMonth} className="btn-icon" style={{ padding: '0.3rem' }}><ChevronLeft size={16}/></button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.25rem', textAlign: 'center' }}>
+        {dayNames.map(day => <div key={day} style={{ fontSize: '0.75rem', color: 'var(--text-soft)', fontWeight: 'bold', paddingBottom: '0.5rem' }}>{day}</div>)}
+        {renderDays()}
+      </div>
+      
+      {/* Legend */}
+      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', justifyContent: 'center', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--status-error, #ef4444)' }}></div>
+          أجل قريب
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+          <div style={{ width: '12px', height: '12px', borderRadius: '4px', background: 'var(--primary-light, rgba(23, 118, 210, 0.1))', border: '1px solid var(--primary)' }}></div>
+          اليوم
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
@@ -241,6 +332,14 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* New: Calendar Widget */}
+          <div className="glass" style={{ padding: '1.5rem' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+              <CalendarDays size={20} style={{ color: 'var(--accent-gold)' }} /> رزنامة الآجال
+            </h3>
+            <MiniCalendar deadlines={data?.calendarDeadlines} />
           </div>
 
           {/* 6. Payments Summary */}
