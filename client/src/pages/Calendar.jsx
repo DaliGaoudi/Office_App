@@ -205,7 +205,7 @@ export default function Calendar() {
             
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
               <div className="form-group">
-                <label>عنوان الجلسة / الموعد</label>
+                <label>الموضوع</label>
                 <input 
                   type="text" 
                   value={formData.title} 
@@ -236,7 +236,7 @@ export default function Calendar() {
               </div>
 
               <div className="form-group">
-                <label>المحكمة / المكان</label>
+                <label>المكان</label>
                 <div style={{ position: 'relative' }}>
                   <MapPinned size={16} style={{ position: 'right', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                   <input 
