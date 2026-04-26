@@ -58,7 +58,7 @@ export default function AIAssistant() {
     return (
       <div 
         className="fab animate-fade" 
-        style={{ bottom: '2rem', left: '2rem', zIndex: 1000 }}
+        style={{ bottom: '2rem', left: '2rem', right: 'auto', zIndex: 1000 }}
         onClick={() => setIsOpen(true)}
       >
         <Bot size={28} />
@@ -73,6 +73,7 @@ export default function AIAssistant() {
         position: 'fixed',
         bottom: '2rem',
         left: '2.5rem',
+        right: 'auto',
         background: 'var(--surface)',
         width: isMinimized ? '200px' : '400px',
         height: isMinimized ? '60px' : '600px',
