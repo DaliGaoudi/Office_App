@@ -112,7 +112,7 @@ export default function RegistreGeneral() {
       )}
 
       {/* ── Table ── */}
-      <div className="glass table-container print-area" style={{ direction: 'rtl' }}>
+      <div className="glass table-container responsive-table print-area" style={{ direction: 'rtl' }}>
         {loading ? (
           <p style={{ padding: '2rem', textAlign: 'center', opacity: 0.6 }}>جاري التحميل…</p>
         ) : (
@@ -136,22 +136,22 @@ export default function RegistreGeneral() {
                   <tr><td colSpan={8} style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>لا توجد نتائج</td></tr>
                 ) : data.map(item => (
                   <tr key={item.id_r}>
-                    <td>{item.ref}</td>
-                    <td>{item.de_part}</td>
-                    <td>{item.nom_cl1}</td>
-                    <td>{item.nom_cl2}</td>
-                    <td>{item.date_inscri && item.date_inscri !== '0' ? item.date_inscri : '-'}</td>
-                    <td>{item.remarque}</td>
-                    <td style={{ fontWeight: 700, color: '#a78bfa' }}>
+                    <td data-label="العدد الترتيبي">{item.ref}</td>
+                    <td data-label="طالب الخدمة">{item.de_part}</td>
+                    <td data-label="الطالب">{item.nom_cl1}</td>
+                    <td data-label="المطلوب">{item.nom_cl2}</td>
+                    <td data-label="تاريخ تبليغ المحضر">{item.date_inscri && item.date_inscri !== '0' ? item.date_inscri : '-'}</td>
+                    <td data-label="نوع المحضر">{item.remarque}</td>
+                    <td data-label="المبلغ (د.ت)" style={{ fontWeight: 700, color: '#a78bfa' }}>
                        {formatAmount(item.salaire)}
                     </td>
-                    <td>
+                    <td data-label="الحالة">
                       {(() => {
                         const s = STATUS_MAP[item.status] || STATUS_MAP.cancelled;
                         return <span className={`badge badge-${s.color}`}>{s.label}</span>;
                       })()}
                     </td>
-                    <td className="no-print" style={{ display: 'flex', gap: '0.5rem' }}>
+                    <td data-label="عمل" className="no-print" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                       <button onClick={() => navigate(`/record/registre/${item.id_r}`)}
                         title="تعديل"
                         style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer' }}>

@@ -102,7 +102,7 @@ export default function RegistreExecution() {
       )}
 
       {/* ── Table ── */}
-      <div className="glass table-container print-area" style={{ direction: 'rtl' }}>
+      <div className="glass table-container responsive-table print-area" style={{ direction: 'rtl' }}>
         {loading ? (
           <p style={{ padding: '2rem', textAlign: 'center', opacity: 0.6 }}>جاري التحميل…</p>
         ) : (
@@ -126,20 +126,20 @@ export default function RegistreExecution() {
                   <tr><td colSpan={8} style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>لا توجد نتائج</td></tr>
                 ) : data.map(item => (
                   <tr key={item.id_o}>
-                    <td>{item.ref}</td>
-                    <td>{item.de_part}</td>
-                    <td>{item.nom_cl1}</td>
-                    <td>{item.nom_cl2}</td>
+                    <td data-label="العدد الترتيبي">{item.ref}</td>
+                    <td data-label="طالب الخدمة">{item.de_part}</td>
+                    <td data-label="الطالب">{item.nom_cl1}</td>
+                    <td data-label="المطلوب">{item.nom_cl2}</td>
 
-                    <td>{item.remarque}</td>
-                    <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{formatAmount(item.total_salaire)}</td>
-                    <td>
+                    <td data-label="نوع المحضر">{item.remarque}</td>
+                    <td data-label="المبلغ الجملي" style={{ fontWeight: 700, color: 'var(--primary)' }}>{formatAmount(item.total_salaire)}</td>
+                    <td data-label="الحالة">
                       {(() => {
                         const s = STATUS_MAP[item.status] || STATUS_MAP.cancelled;
                         return <span className={`badge badge-${s.color}`}>{s.label}</span>;
                       })()}
                     </td>
-                    <td className="no-print" style={{ display: 'flex', gap: '0.5rem' }}>
+                    <td data-label="عمل" className="no-print" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                       <button onClick={() => navigate(`/record/execution/${item.id_o}`)}
                         title="تعديل"
                         style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer' }}>

@@ -268,7 +268,7 @@ export default function Facturation({ type = 'general' }) {
       </form>
 
       {/* ── Results Container ── */}
-      <div className="glass table-container">
+      <div className="glass table-container responsive-table">
         <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(var(--primary-rgb), 0.02)' }}>
             <div style={{ display: 'flex', gap: '2rem' }}>
                 <div className="summary-item"><label>عدد الملفات:</label> <strong>{count}</strong></div>
@@ -324,7 +324,7 @@ export default function Facturation({ type = 'general' }) {
                                   transition: 'background 0.15s'
                                 }}>
                                     {!isExecution && (
-                                      <td className="no-print" style={{ textAlign: 'center' }}>
+                                      <td data-label="تحديد" className="no-print" style={{ textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                                         <input
                                           type="checkbox"
                                           checked={selectedRows.includes(toKey(item))}
@@ -333,7 +333,7 @@ export default function Facturation({ type = 'general' }) {
                                         />
                                       </td>
                                     )}
-                                    <td>{(page - 1) * limit + idx + 1}</td>
+                                    <td data-label="#">{(page - 1) * limit + idx + 1}</td>
                                     {cfg.columns.map(c => {
                                         let val = item[c.key];
                                         
@@ -350,26 +350,26 @@ export default function Facturation({ type = 'general' }) {
                                         if (c.key === 'status') {
                                             const s = STATUS_MAP[item.status] || STATUS_MAP.cancelled;
                                             return (
-                                                <td key={c.key}>
+                                                <td key={c.key} data-label={c.label}>
                                                     <span className={`badge badge-${s.color}`}>{s.label}</span>
                                                 </td>
                                             );
                                          }
 
                                          return (
-                                             <td key={c.key} style={c.isAmount ? { fontWeight: 700, color: c.isTotal ? 'var(--primary)' : 'inherit', textAlign: 'left' } : {}}>
+                                             <td key={c.key} data-label={c.label} style={c.isAmount ? { fontWeight: 700, color: c.isTotal ? 'var(--primary)' : 'inherit', textAlign: 'left' } : {}}>
                                                  {c.isAmount ? formatAmount(val) : (val && val !== '0' ? val : '—')}
                                              </td>
                                          );
                                     })}
                                     {isExecution && (
-                                        <td className="no-print">
+                                        <td data-label="التفاصيل" className="no-print" style={{ display: 'flex', justifyContent: 'flex-end' }}>
                                             <button className="btn-icon" onClick={() => toggleExpand(fileId)}>
                                                 {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                                             </button>
                                         </td>
                                     )}
-                                    <td className="no-print">
+                                    <td data-label="فاتورة" className="no-print" style={{ display: 'flex', justifyContent: 'flex-end' }}>
                                         <button
                                             className="btn-icon"
                                             title="طباعة الفاتورة"
