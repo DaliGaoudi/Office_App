@@ -123,29 +123,42 @@ p {
   width: 5px;
 }
 
-@media (max-width: 1024px) {
-  .sidebar {
-    width: 240px;
-  }
-}
-
 @media (max-width: 768px) {
   .layout-container {
     flex-direction: column;
   }
   .sidebar {
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-    max-height: 40vh; /* Allow it to be scrollable but not take over the whole screen */
-    border-left: none;
-    border-bottom: 1px solid var(--border);
-    position: relative;
-    padding: 1rem;
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    width: 280px;
+    max-width: 80vw;
+    z-index: 2000;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--sidebar-bg);
+    border-left: 1px solid var(--border);
+    padding: 2rem 1rem;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.2);
+  }
+  .sidebar.open {
+    transform: translateX(0);
   }
   .sidebar h2 {
-    margin-bottom: 1rem !important;
+    margin-bottom: 1.5rem !important;
   }
+}
+
+.mobile-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1999;
 }
 
 .sidebar h2 {
@@ -193,10 +206,8 @@ p {
   .main-content {
     padding: 1rem;
   }
-  h1 { font-size: 1.5rem; }
+  h1 { font-size: 1.25rem; }
   .topbar {
-    flex-direction: column;
-    align-items: flex-start;
     gap: 1rem;
   }
 }
@@ -268,11 +279,26 @@ input:focus {
   animation: fadeIn 0.4s ease forwards;
 }
 
+/* Dashboard Specific Layout */
+.dashboard-main-grid {
+  display: grid;
+  grid-template-columns: 2.5fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-main-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
 /* Tables */
 .table-container {
   width: 100%;
   overflow-x: auto;
   border-radius: 12px;
+  -webkit-overflow-scrolling: touch;
 }
 
 table {
@@ -560,6 +586,16 @@ tr:hover {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
   border-color: #ef4444;
+}
+
+.mobile-menu-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: flex;
+  }
 }
 
 /* Floating Action Button */

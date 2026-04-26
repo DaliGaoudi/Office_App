@@ -240,7 +240,7 @@ export default function Dashboard() {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1fr', gap: '2rem' }}>
+      <div className="dashboard-main-grid">
         
         {/* ── Left Column: Cases & Tasks ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -434,7 +434,8 @@ export default function Dashboard() {
           justifyContent: 'flex-start' /* RTL Slide from left */
         }} onClick={() => setSelectedCase(null)}>
           <div className="animate-fade" style={{
-            width: '450px',
+            width: '100%',
+            maxWidth: '450px',
             height: '100vh',
             background: 'var(--surface)',
             borderRight: '1px solid var(--border)',

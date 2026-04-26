@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, NavLink } from 'react-router-dom';
-import { Shield, BookOpen, Users, CalendarDays, LogOut, FileText, Receipt, Settings as SettingsIcon, Sun, Moon } from 'lucide-react';
+import { Shield, BookOpen, Users, CalendarDays, LogOut, FileText, Receipt, Settings as SettingsIcon, Sun, Moon, Menu } from 'lucide-react';
 import './index.css';
 
 import logo from './assets/logo.png';
@@ -16,80 +16,88 @@ const useTheme = () => useContext(ThemeContext);
 
 // --- Layout & Components --- //
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, closeMenu }) => {
   const { logout } = useAuth();
+  
+  const handleLinkClick = () => {
+    if (closeMenu) closeMenu();
+  };
+
   return (
-    <div className="sidebar glass-panel">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', padding: '0 1rem' }}>
-        <img src={logo} alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-        <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>مكتب الأستاذ مراد القعودي</h2>
+    <>
+      {isOpen && <div className="mobile-overlay animate-fade" onClick={closeMenu}></div>}
+      <div className={`sidebar glass-panel ${isOpen ? 'open' : ''}`}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', padding: '0 1rem' }}>
+          <img src={logo} alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+          <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>مكتب الأستاذ مراد القعودي</h2>
+        </div>
+        <ul className="nav-links">
+          <li>
+            <NavLink to="/" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
+              <FileText size={20} /> لوحة القيادة
+            </NavLink>
+          </li>
+
+          {/* ── Registres ── */}
+          <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>السجلات</li>
+          <li>
+            <NavLink to="/general" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
+              <BookOpen size={18} /> الدفتر العام
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/execution" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
+              <BookOpen size={18} /> دفتر التنفيذ
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/cnss" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
+              <BookOpen size={18} /> ملفات الضمان الاجتماعي
+            </NavLink>
+          </li>
+
+          {/* ── Facturation ── */}
+          <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>الفوترة</li>
+          <li>
+            <NavLink to="/facturation/general" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
+              <Receipt size={18} /> الفوترة العامة
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/facturation/execution" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
+              <Receipt size={18} /> فوترة التنفيذ
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/facturation/cnss" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
+              <Receipt size={18} /> فوترة الضمان الاجتماعي
+            </NavLink>
+          </li>
+
+          {/* ── Autres ── */}
+          <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>إضافات</li>
+          <li>
+            <NavLink to="/telephone" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
+              <Users size={18} /> دليل الهاتف
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/calendar" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
+              <CalendarDays size={18} /> التقويم
+            </NavLink>
+          </li>
+        </ul>
+        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <NavLink to="/settings" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}
+            style={{ fontSize: '0.85rem' }}>
+            <SettingsIcon size={17} /> الإعدادات
+          </NavLink>
+          <button className="btn" style={{ width: '100%', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' }} onClick={logout}>
+            <LogOut size={20} /> تسجيل الخروج
+          </button>
+        </div>
       </div>
-      <ul className="nav-links">
-        <li>
-          <NavLink to="/" className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-            <FileText size={20} /> لوحة القيادة
-          </NavLink>
-        </li>
-
-        {/* ── Registres ── */}
-        <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>السجلات</li>
-        <li>
-          <NavLink to="/general" className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-            <BookOpen size={18} /> الدفتر العام
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/execution" className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-            <BookOpen size={18} /> دفتر التنفيذ
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/cnss" className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-            <BookOpen size={18} /> ملفات الضمان الاجتماعي
-          </NavLink>
-        </li>
-
-        {/* ── Facturation ── */}
-        <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>الفوترة</li>
-        <li>
-          <NavLink to="/facturation/general" className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-            <Receipt size={18} /> الفوترة العامة
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/facturation/execution" className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-            <Receipt size={18} /> فوترة التنفيذ
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/facturation/cnss" className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-            <Receipt size={18} /> فوترة الضمان الاجتماعي
-          </NavLink>
-        </li>
-
-        {/* ── Autres ── */}
-        <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>إضافات</li>
-        <li>
-          <NavLink to="/telephone" className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-            <Users size={18} /> دليل الهاتف
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/calendar" className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-            <CalendarDays size={18} /> التقويم
-          </NavLink>
-        </li>
-      </ul>
-      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <NavLink to="/settings" className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}
-          style={{ fontSize: '0.85rem' }}>
-          <SettingsIcon size={17} /> الإعدادات
-        </NavLink>
-        <button className="btn" style={{ width: '100%', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' }} onClick={logout}>
-          <LogOut size={20} /> تسجيل الخروج
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -98,13 +106,17 @@ import AIAssistant from './components/AIAssistant';
 const Layout = ({ children }) => {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <div className="layout-container animate-fade">
-      <Sidebar />
+      <Sidebar isOpen={isMobileMenuOpen} closeMenu={() => setIsMobileMenuOpen(false)} />
       <div className="main-content">
         <div className="topbar">
-          <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <button className="btn-icon mobile-menu-btn" onClick={() => setIsMobileMenuOpen(true)}>
+              <Menu size={24} />
+            </button>
             <h1>مرحباً، {user?.username}</h1>
           </div>
           <div className="profile-section">
