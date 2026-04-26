@@ -275,33 +275,33 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="table-container responsive-table">
+            <div className="table-container">
               <table>
                 <thead>
                   <tr>
                     <th>المرجع</th>
                     <th>الطالب</th>
-                    <th>المطلوب ضده</th>
+                    <th className="hide-on-mobile">المطلوب ضده</th>
                     <th>الحالة</th>
-                    <th>تاريخ الأجل</th>
+                    <th className="hide-on-mobile">تاريخ الأجل</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredCases.map(c => (
                     <tr key={c.id_r} onClick={() => setSelectedCase(c)} style={{ cursor: 'pointer' }}>
-                      <td data-label="المرجع" style={{ fontWeight: '600' }}>#{c.ref}</td>
-                      <td data-label="الطالب">{c.nom_cl1}</td>
-                      <td data-label="المطلوب ضده">{c.de_part}</td>
-                      <td data-label="الحالة">
+                      <td style={{ fontWeight: '600' }}>#{c.ref}</td>
+                      <td>{c.nom_cl1}</td>
+                      <td className="hide-on-mobile">{c.de_part}</td>
+                      <td>
                         <span className={`badge badge-${c.status === 'finished' ? 'green' : c.status === 'not_started' ? 'red' : 'amber'}`}>
                           {c.status === 'finished' ? 'مكتمل' : c.status === 'not_started' ? 'جديد' : 'قيد الإنجاز'}
                         </span>
                       </td>
-                      <td data-label="تاريخ الأجل" style={{ color: new Date(c.date_echeance) < new Date() ? 'var(--primary)' : 'inherit' }}>
+                      <td className="hide-on-mobile" style={{ color: new Date(c.date_echeance) < new Date() ? 'var(--primary)' : 'inherit' }}>
                         {c.date_echeance ? new Date(c.date_echeance).toLocaleDateString('fr-FR') : '--'}
                       </td>
-                      <td data-label="عمل"><ChevronRight size={18} style={{ opacity: 0.3 }} /></td>
+                      <td><ChevronRight size={18} style={{ opacity: 0.3 }} /></td>
                     </tr>
                   ))}
                 </tbody>

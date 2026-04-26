@@ -115,7 +115,7 @@ export default function RegistreCNSS() {
       )}
 
       {/* ── Table ── */}
-      <div className="glass table-container responsive-table print-area" style={{ direction: 'rtl' }}>
+      <div className="glass table-container print-area" style={{ direction: 'rtl' }}>
         {loading ? (
           <p style={{ padding: '2rem', textAlign: 'center', opacity: 0.6 }}>جاري التحميل…</p>
         ) : (
@@ -125,8 +125,8 @@ export default function RegistreCNSS() {
                 <tr>
                   <th>رقم القضية</th>
                   <th>اسم الشركة</th>
-                  <th>رقم CNSS</th>
-                  <th>الحالة</th>
+                  <th className="hide-on-mobile">رقم CNSS</th>
+                  <th className="hide-on-mobile">الحالة</th>
                   <th className="no-print">عمل</th>
                 </tr>
               </thead>
@@ -135,16 +135,16 @@ export default function RegistreCNSS() {
                   <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>لا توجد نتائج</td></tr>
                 ) : data.map(item => (
                   <tr key={item.id_cn}>
-                    <td data-label="رقم القضية">{item.num_affaire}</td>
-                    <td data-label="اسم الشركة">{item.nom_ste}</td>
-                    <td data-label="رقم CNSS">{item.num_cnss}</td>
-                    <td data-label="الحالة">
+                    <td>{item.num_affaire}</td>
+                    <td>{item.nom_ste}</td>
+                    <td className="hide-on-mobile">{item.num_cnss}</td>
+                    <td className="hide-on-mobile">
                       {(() => {
                         const s = STATUS_MAP[item.status] || STATUS_MAP.cancelled;
                         return <span className={`badge badge-${s.color}`}>{s.label}</span>;
                       })()}
                     </td>
-                    <td data-label="عمل" className="no-print" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                    <td className="no-print" style={{ display: 'flex', gap: '0.5rem' }}>
                       <button onClick={() => navigate(`/record/cnss/${item.id_cn}`)}
                         title="تعديل"
                         style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer' }}>

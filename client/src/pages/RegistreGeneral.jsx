@@ -112,7 +112,7 @@ export default function RegistreGeneral() {
       )}
 
       {/* ── Table ── */}
-      <div className="glass table-container responsive-table print-area" style={{ direction: 'rtl' }}>
+      <div className="glass table-container print-area" style={{ direction: 'rtl' }}>
         {loading ? (
           <p style={{ padding: '2rem', textAlign: 'center', opacity: 0.6 }}>جاري التحميل…</p>
         ) : (
@@ -121,12 +121,12 @@ export default function RegistreGeneral() {
               <thead>
                 <tr>
                   <th>العدد الترتيبي</th>
-                  <th>طالب الخدمة</th>
+                  <th className="hide-on-mobile">طالب الخدمة</th>
                   <th>الطالب</th>
-                  <th>المطلوب</th>
-                  <th>تاريخ تبليغ المحضر</th>
-                  <th>نوع المحضر</th>
-                  <th style={{ color: '#a78bfa' }}>المبلغ (د.ت)</th>
+                  <th className="hide-on-mobile">المطلوب</th>
+                  <th className="hide-on-mobile">تاريخ تبليغ المحضر</th>
+                  <th className="hide-on-mobile">نوع المحضر</th>
+                  <th className="hide-on-mobile" style={{ color: '#a78bfa' }}>المبلغ (د.ت)</th>
                   <th>الحالة</th>
                   <th className="no-print">عمل</th>
                 </tr>
@@ -136,22 +136,22 @@ export default function RegistreGeneral() {
                   <tr><td colSpan={8} style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>لا توجد نتائج</td></tr>
                 ) : data.map(item => (
                   <tr key={item.id_r}>
-                    <td data-label="العدد الترتيبي">{item.ref}</td>
-                    <td data-label="طالب الخدمة">{item.de_part}</td>
-                    <td data-label="الطالب">{item.nom_cl1}</td>
-                    <td data-label="المطلوب">{item.nom_cl2}</td>
-                    <td data-label="تاريخ تبليغ المحضر">{item.date_inscri && item.date_inscri !== '0' ? item.date_inscri : '-'}</td>
-                    <td data-label="نوع المحضر">{item.remarque}</td>
-                    <td data-label="المبلغ (د.ت)" style={{ fontWeight: 700, color: '#a78bfa' }}>
+                    <td>{item.ref}</td>
+                    <td className="hide-on-mobile">{item.de_part}</td>
+                    <td>{item.nom_cl1}</td>
+                    <td className="hide-on-mobile">{item.nom_cl2}</td>
+                    <td className="hide-on-mobile">{item.date_inscri && item.date_inscri !== '0' ? item.date_inscri : '-'}</td>
+                    <td className="hide-on-mobile">{item.remarque}</td>
+                    <td className="hide-on-mobile" style={{ fontWeight: 700, color: '#a78bfa' }}>
                        {formatAmount(item.salaire)}
                     </td>
-                    <td data-label="الحالة">
+                    <td>
                       {(() => {
                         const s = STATUS_MAP[item.status] || STATUS_MAP.cancelled;
                         return <span className={`badge badge-${s.color}`}>{s.label}</span>;
                       })()}
                     </td>
-                    <td data-label="عمل" className="no-print" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                    <td className="no-print" style={{ display: 'flex', gap: '0.5rem' }}>
                       <button onClick={() => navigate(`/record/registre/${item.id_r}`)}
                         title="تعديل"
                         style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer' }}>

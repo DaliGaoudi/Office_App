@@ -11,16 +11,16 @@ const CONFIG = {
     label: 'الدفتر العام', api: 'registre', dateField: 'date_reg',
     columns: [
       { key: 'ref',      label: 'العدد' },
-      { key: 'de_part',  label: 'طالب الخدمة' },
+      { key: 'de_part',  label: 'طالب الخدمة', hideOnMobile: true },
       { key: 'nom_cl1',  label: 'الطالب' },
-      { key: 'nom_cl2',  label: 'المطلوب' },
-      { key: 'date_reg', label: 'تاريخ الطلب' },
-      { key: 'date_inscri', label: 'تاريخ تبليغ المحضر' },
-      { key: 'base_fare', label: 'الأجور', isAmount: true },
-      { key: 'tva',       label: 'أداء 19%', isAmount: true },
-      { key: 'expenses',  label: 'المصاريف', isAmount: true },
+      { key: 'nom_cl2',  label: 'المطلوب', hideOnMobile: true },
+      { key: 'date_reg', label: 'تاريخ الطلب', hideOnMobile: true },
+      { key: 'date_inscri', label: 'تاريخ تبليغ المحضر', hideOnMobile: true },
+      { key: 'base_fare', label: 'الأجور', isAmount: true, hideOnMobile: true },
+      { key: 'tva',       label: 'أداء 19%', isAmount: true, hideOnMobile: true },
+      { key: 'expenses',  label: 'المصاريف', isAmount: true, hideOnMobile: true },
       { key: 'calculated_total', label: 'الجملة', isAmount: true, isTotal: true },
-      { key: 'status',    label: 'الحالة' },
+      { key: 'status',    label: 'الحالة', hideOnMobile: true },
     ],
     searchFields: [
       { key: 'ref', placeholder: 'العدد' },
@@ -31,15 +31,15 @@ const CONFIG = {
     label: 'دفتر التنفيذ', api: 'execution', dateField: 'date_reg',
     columns: [
       { key: 'ref',         label: 'الملف' },
-      { key: 'de_part',     label: 'طالب الخدمة' },
+      { key: 'de_part',     label: 'طالب الخدمة', hideOnMobile: true },
       { key: 'nom_cl1',     label: 'الطالب' },
-      { key: 'nom_cl2',     label: 'المطلوب' },
+      { key: 'nom_cl2',     label: 'المطلوب', hideOnMobile: true },
 
-      { key: 'base_fare',   label: 'الأجور', isAmount: true },
-      { key: 'tva',         label: 'أداء 19%', isAmount: true },
-      { key: 'expenses',    label: 'المصاريف', isAmount: true },
+      { key: 'base_fare',   label: 'الأجور', isAmount: true, hideOnMobile: true },
+      { key: 'tva',         label: 'أداء 19%', isAmount: true, hideOnMobile: true },
+      { key: 'expenses',    label: 'المصاريف', isAmount: true, hideOnMobile: true },
       { key: 'calculated_total', label: 'الجملة', isAmount: true, isTotal: true },
-      { key: 'status',      label: 'الحالة' },
+      { key: 'status',      label: 'الحالة', hideOnMobile: true },
     ],
     searchFields: [
       { key: 'ref', placeholder: 'الملف' },
@@ -52,7 +52,7 @@ const CONFIG = {
       { key: 'num_affaire',   label: 'رقم القضية' },
       { key: 'nom_ste',       label: 'الشركة' },
       { key: 'total_montant', label: 'المبلغ (د.ت)', isAmount: true },
-      { key: 'status',        label: 'الحالة' },
+      { key: 'status',        label: 'الحالة', hideOnMobile: true },
     ],
     searchFields: [
       { key: 'nom_ste', placeholder: 'اسم الشركة' },
@@ -268,7 +268,7 @@ export default function Facturation({ type = 'general' }) {
       </form>
 
       {/* ── Results Container ── */}
-      <div className="glass table-container responsive-table">
+      <div className="glass table-container print-area">
         <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(var(--primary-rgb), 0.02)' }}>
             <div style={{ display: 'flex', gap: '2rem' }}>
                 <div className="summary-item"><label>عدد الملفات:</label> <strong>{count}</strong></div>
@@ -297,7 +297,7 @@ export default function Facturation({ type = 'general' }) {
                           </th>
                         )}
                         <th style={{ width: 40 }}>#</th>
-                        {cfg.columns.map(c => <th key={c.key}>{c.label}</th>)}
+                        {cfg.columns.map(c => <th key={c.key} className={c.hideOnMobile ? 'hide-on-mobile' : ''}>{c.label}</th>)}
                         {isExecution && <th className="no-print" style={{ width: 60 }}>التفاصيل</th>}
                         <th className="no-print" style={{ width: 50 }}>فاتورة</th>
                     </tr>
@@ -324,7 +324,7 @@ export default function Facturation({ type = 'general' }) {
                                   transition: 'background 0.15s'
                                 }}>
                                     {!isExecution && (
-                                      <td data-label="تحديد" className="no-print" style={{ textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                      <td className="no-print" style={{ textAlign: 'center' }}>
                                         <input
                                           type="checkbox"
                                           checked={selectedRows.includes(toKey(item))}
@@ -333,7 +333,7 @@ export default function Facturation({ type = 'general' }) {
                                         />
                                       </td>
                                     )}
-                                    <td data-label="#">{(page - 1) * limit + idx + 1}</td>
+                                    <td>{(page - 1) * limit + idx + 1}</td>
                                     {cfg.columns.map(c => {
                                         let val = item[c.key];
                                         
@@ -350,26 +350,26 @@ export default function Facturation({ type = 'general' }) {
                                         if (c.key === 'status') {
                                             const s = STATUS_MAP[item.status] || STATUS_MAP.cancelled;
                                             return (
-                                                <td key={c.key} data-label={c.label}>
+                                                <td key={c.key} className={c.hideOnMobile ? 'hide-on-mobile' : ''}>
                                                     <span className={`badge badge-${s.color}`}>{s.label}</span>
                                                 </td>
                                             );
                                          }
 
                                          return (
-                                             <td key={c.key} data-label={c.label} style={c.isAmount ? { fontWeight: 700, color: c.isTotal ? 'var(--primary)' : 'inherit', textAlign: 'left' } : {}}>
+                                             <td key={c.key} className={c.hideOnMobile ? 'hide-on-mobile' : ''} style={c.isAmount ? { fontWeight: 700, color: c.isTotal ? 'var(--primary)' : 'inherit', textAlign: 'left' } : {}}>
                                                  {c.isAmount ? formatAmount(val) : (val && val !== '0' ? val : '—')}
                                              </td>
                                          );
                                     })}
                                     {isExecution && (
-                                        <td data-label="التفاصيل" className="no-print" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                        <td className="no-print">
                                             <button className="btn-icon" onClick={() => toggleExpand(fileId)}>
                                                 {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                                             </button>
                                         </td>
                                     )}
-                                    <td data-label="فاتورة" className="no-print" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                    <td className="no-print">
                                         <button
                                             className="btn-icon"
                                             title="طباعة الفاتورة"
