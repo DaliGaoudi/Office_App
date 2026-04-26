@@ -23,6 +23,7 @@ import API_BASE from '../config';
 
 const MiniCalendar = ({ deadlines }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDateStr, setSelectedDateStr] = useState(null);
   
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
@@ -58,8 +59,9 @@ const MiniCalendar = ({ deadlines }) => {
           style={{ 
             padding: '0.4rem', 
             borderRadius: '8px',
-            background: isToday ? 'var(--primary-light, rgba(23, 118, 210, 0.1))' : 'transparent',
-            border: isToday ? '1px solid var(--primary)' : '1px solid transparent',
+            background: selectedDateStr === dateStr ? 'var(--primary)' : isToday ? 'var(--primary-light, rgba(23, 118, 210, 0.1))' : 'transparent',
+            border: isToday && selectedDateStr !== dateStr ? '1px solid var(--primary)' : '1px solid transparent',
+            color: selectedDateStr === dateStr ? '#fff' : 'inherit',
             cursor: dayDeadlines.length > 0 ? 'pointer' : 'default',
             display: 'flex',
             flexDirection: 'column',
@@ -67,6 +69,11 @@ const MiniCalendar = ({ deadlines }) => {
             position: 'relative'
           }}
           title={dayDeadlines.map(dl => `#${dl.ref} - ${dl.nom_cl1}`).join('\n')}
+          onClick={() => {
+            if (dayDeadlines.length > 0) {
+              setSelectedDateStr(selectedDateStr === dateStr ? null : dateStr);
+            }
+          }}
         >
           <span style={{ fontSize: '0.85rem', fontWeight: isToday || dayDeadlines.length > 0 ? 'bold' : 'normal' }}>{d}</span>
           {dayDeadlines.length > 0 && (
@@ -74,7 +81,7 @@ const MiniCalendar = ({ deadlines }) => {
               width: '6px', 
               height: '6px', 
               borderRadius: '50%', 
-              background: 'var(--status-error, #ef4444)',
+              background: selectedDateStr === dateStr ? '#fff' : 'var(--status-error, #ef4444)',
               marginTop: '2px'
             }}></div>
           )}
@@ -107,6 +114,28 @@ const MiniCalendar = ({ deadlines }) => {
           اليوم
         </div>
       </div>
+
+      {/* Selected Date Details */}
+      {selectedDateStr && deadlinesByDate[selectedDateStr] && (
+        <div className="animate-fade" style={{ marginTop: '1rem', padding: '1rem', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <h4 style={{ fontSize: '0.85rem', color: 'var(--primary)', margin: 0 }}>
+              ملفات يوم {new Date(selectedDateStr).toLocaleDateString('fr-FR')}
+            </h4>
+            <button className="btn-icon" onClick={() => setSelectedDateStr(null)} style={{ padding: '0.2rem' }}><X size={14} /></button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto' }}>
+            {deadlinesByDate[selectedDateStr].map(dl => (
+              <div key={dl.id_r} style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border)' }}>
+                <div>
+                  <span style={{ fontWeight: 'bold', color: 'var(--text-main)', marginRight: '0.3rem' }}>#{dl.ref}</span>
+                  <span style={{ color: 'var(--text-soft)' }}>{dl.nom_cl1}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
