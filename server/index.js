@@ -34,6 +34,7 @@ app.use('/api/calendar', calendarRoutes);
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/suggestions', require('./routes/suggestions'));
+app.use('/api/users', require('./routes/users'));
 
 // Settings — after update, flush TVA cache in registre
 app.use('/api/settings', (req, res, next) => {

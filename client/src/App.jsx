@@ -17,7 +17,7 @@ const useTheme = () => useContext(ThemeContext);
 // --- Layout & Components --- //
 
 const Sidebar = ({ isOpen, closeMenu }) => {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   
   const handleLinkClick = () => {
     if (closeMenu) closeMenu();
@@ -92,6 +92,12 @@ const Sidebar = ({ isOpen, closeMenu }) => {
             style={{ fontSize: '0.85rem' }}>
             <SettingsIcon size={17} /> الإعدادات
           </NavLink>
+          {(user?.role === 'admin' || user?.role === 'superadmin') && (
+            <NavLink to="/users" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}
+              style={{ fontSize: '0.85rem' }}>
+              <Users size={17} /> المستخدمون
+            </NavLink>
+          )}
           <button className="btn" style={{ width: '100%', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' }} onClick={logout}>
             <LogOut size={20} /> تسجيل الخروج
           </button>
@@ -194,6 +200,7 @@ import Calendar from './pages/Calendar';
 import RecordDetail from './pages/RecordDetail';
 import Facturation from './pages/Facturation';
 import Settings from './pages/Settings';
+import Users from './pages/Users';
 
 function App() {
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user')) || null);
@@ -243,6 +250,9 @@ function App() {
                 <Route path="/facturation/execution" element={<Facturation type="execution" />} />
                 <Route path="/facturation/cnss"      element={<Facturation type="cnss" />} />
                 <Route path="/settings"              element={<Settings />} />
+                {(user?.role === 'admin' || user?.role === 'superadmin') && (
+                  <Route path="/users" element={<Users />} />
+                )}
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
             </Layout>
