@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, NavLink } from 'react-router-dom';
-import { Shield, BookOpen, Users, CalendarDays, LogOut, FileText, Receipt, Settings as SettingsIcon, Sun, Moon, Menu } from 'lucide-react';
+import { Shield, BookOpen, Users as UsersIcon, CalendarDays, LogOut, FileText, Receipt, Settings as SettingsIcon, Sun, Moon, Menu } from 'lucide-react';
 import './index.css';
 
 import logo from './assets/logo.png';
@@ -78,7 +78,7 @@ const Sidebar = ({ isOpen, closeMenu }) => {
           <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>إضافات</li>
           <li>
             <NavLink to="/telephone" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-              <Users size={18} /> دليل الهاتف
+              <UsersIcon size={18} /> دليل الهاتف
             </NavLink>
           </li>
           <li>
@@ -95,7 +95,7 @@ const Sidebar = ({ isOpen, closeMenu }) => {
           {(user?.role === 'admin' || user?.role === 'superadmin') && (
             <NavLink to="/users" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}
               style={{ fontSize: '0.85rem' }}>
-              <Users size={17} /> المستخدمون
+              <UsersIcon size={17} /> المستخدمون
             </NavLink>
           )}
           <button className="btn" style={{ width: '100%', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' }} onClick={logout}>
