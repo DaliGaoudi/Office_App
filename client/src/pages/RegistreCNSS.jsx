@@ -19,7 +19,7 @@ export default function RegistreCNSS() {
   const [total, setTotal]           = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
-  const [showFilters, setShowFilters] = useState(false);
+
   const [filters, setFilters]       = useState({ nom_ste: '', num_cnss: '', num_affaire: '' });
   const [activeFilters, setActiveFilters] = useState({});
 
@@ -108,9 +108,6 @@ export default function RegistreCNSS() {
       <div className="topbar" style={{ marginBottom: '1rem' }}>
         <h2 style={{ color: 'var(--primary)' }}>ملفات الضمان الاجتماعي</h2>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="btn" style={{ background: 'var(--card-bg)' }} onClick={() => setShowFilters(!showFilters)}>
-            <Filter size={18} /> بحث
-          </button>
           <button className="btn" onClick={() => window.print()}><Printer size={18} /> طباعة</button>
           <button className="btn" onClick={() => { setFormData({ nom_ste: '', num_cnss: '', num_affaire: '' }); setShowModal(true); }}>
             <Plus size={18} /> إضافة
@@ -119,7 +116,6 @@ export default function RegistreCNSS() {
       </div>
 
       {/* ── Filters ── */}
-      {showFilters && (
         <form onSubmit={handleSearch} className="search-wrapper glass" style={{ padding: '1rem', flexWrap: 'wrap', direction: 'rtl', marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
           <div style={{ flex: 1, minWidth: '150px' }}>
             <AutocompleteInput placeholder="اسم الشركة"  value={filters.nom_ste}     onChange={e => setFilters({ ...filters, nom_ste: e.target.value })} />
@@ -132,7 +128,6 @@ export default function RegistreCNSS() {
             مسح
           </button>
         </form>
-      )}
 
       {/* ── Table ── */}
       <div className="glass table-container print-area" style={{ direction: 'rtl' }}>

@@ -19,7 +19,7 @@ export default function RegistreExecution() {
   const [total, setTotal]           = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
-  const [showFilters, setShowFilters] = useState(false);
+
   const [filters, setFilters]       = useState({ ref: '', nom_cl1: '', de_part: '' });
   const [activeFilters, setActiveFilters] = useState({});
 
@@ -92,9 +92,6 @@ export default function RegistreExecution() {
       <div className="topbar" style={{ marginBottom: '1rem' }}>
         <h2 style={{ color: 'var(--primary)' }}>دفتر التنفيذ</h2>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="btn" style={{ background: 'var(--card-bg)' }} onClick={() => setShowFilters(!showFilters)}>
-            <Filter size={18} /> بحث
-          </button>
           <button className="btn" onClick={() => window.print()}><Printer size={18} /> طباعة</button>
           <button className="btn" onClick={() => navigate('/record/execution/new')}>
             <Plus size={18} /> إضافة محضر
@@ -103,7 +100,6 @@ export default function RegistreExecution() {
       </div>
 
       {/* ── Filters ── */}
-      {showFilters && (
         <form onSubmit={handleSearch} className="search-wrapper glass" style={{ padding: '1rem', flexWrap: 'wrap', direction: 'rtl', marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
           <input type="text" placeholder="العدد الترتيبي"   value={filters.ref}        onChange={e => setFilters({ ...filters, ref: e.target.value })} />
           <div style={{ flex: 1, minWidth: '150px' }}>
@@ -119,7 +115,6 @@ export default function RegistreExecution() {
             مسح
           </button>
         </form>
-      )}
 
       {/* ── Table ── */}
       <div className="glass table-container print-area" style={{ direction: 'rtl' }}>

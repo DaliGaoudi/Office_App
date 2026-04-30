@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, NavLink } from 'react-router-dom';
-import { Shield, BookOpen, Users as UsersIcon, CalendarDays, LogOut, FileText, Receipt, Settings as SettingsIcon, Sun, Moon, Menu } from 'lucide-react';
+import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate } from 'react-router-dom';
+import { Shield, BookOpen, Users as UsersIcon, CalendarDays, LogOut, FileText, Receipt, Settings as SettingsIcon, Sun, Moon, Menu, Search } from 'lucide-react';
 import './index.css';
 
 import logo from './assets/logo.png';
@@ -18,9 +18,20 @@ const useTheme = () => useContext(ThemeContext);
 
 const Sidebar = ({ isOpen, closeMenu }) => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [globalSearch, setGlobalSearch] = useState('');
   
   const handleLinkClick = () => {
     if (closeMenu) closeMenu();
+  };
+
+  const handleGlobalSearch = (e) => {
+    e.preventDefault();
+    if (globalSearch.trim()) {
+      navigate(`/general?ref=${encodeURIComponent(globalSearch.trim())}`);
+      setGlobalSearch('');
+      if (closeMenu) closeMenu();
+    }
   };
 
   return (
@@ -31,6 +42,22 @@ const Sidebar = ({ isOpen, closeMenu }) => {
           <img src={logo} alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
           <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>مكتب الأستاذ مراد القعودي</h2>
         </div>
+        
+        <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
+          <form onSubmit={handleGlobalSearch} style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>
+            <input 
+              type="text" 
+              placeholder="بحث بالعدد الترتيبي..." 
+              value={globalSearch}
+              onChange={(e) => setGlobalSearch(e.target.value)}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '0.85rem', width: '100%', outline: 'none' }}
+            />
+            <button type="submit" style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}>
+              <Search size={16} />
+            </button>
+          </form>
+        </div>
+
         <ul className="nav-links">
           <li>
             <NavLink to="/" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>

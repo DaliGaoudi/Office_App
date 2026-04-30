@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Search, Plus, Filter, Edit, Printer, Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Pagination from '../components/Pagination';
 import AutocompleteInput from '../components/AutocompleteInput';
 import { formatAmount, STATUS_MAP } from '../utils/formatters';
@@ -23,9 +23,20 @@ export default function RegistreGeneral() {
   const [totalPages, setTotalPages] = useState(1);
 
   // Search
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState({ ref: '', nom_cl1: '', de_part: '' });
-  const [activeFilters, setActiveFilters] = useState({});   // committed on search click
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlRef = searchParams.get('ref') || '';
+  
+  const [filters, setFilters] = useState({ ref: urlRef, nom_cl1: '', de_part: '' });
+  const [activeFilters, setActiveFilters] = useState({ ref: urlRef });   // committed on search click
+
+  useEffect(() => {
+    if (searchParams.has('ref')) {
+      const newRef = searchParams.get('ref');
+      setFilters(prev => ({ ...prev, ref: newRef }));
+      setActiveFilters(prev => ({ ...prev, ref: newRef }));
+      setPage(1);
+    }
+  }, [searchParams]);
 
   const fetchRecords = useCallback(async (pg = page, lim = limit, flt = activeFilters) => {
     setLoading(true);
@@ -100,9 +111,6 @@ export default function RegistreGeneral() {
       <div className="topbar" style={{ marginBottom: '1rem' }}>
         <h2 style={{ color: 'var(--primary)' }}>الدفتر العام</h2>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="btn" style={{ background: 'var(--card-bg)' }} onClick={() => setShowFilters(!showFilters)}>
-            <Filter size={18} /> بحث
-          </button>
           <button className="btn" onClick={() => window.print()}>
             <Printer size={18} /> طباعة
           </button>
@@ -113,7 +121,6 @@ export default function RegistreGeneral() {
       </div>
 
       {/* ── Search Filters ── */}
-      {showFilters && (
         <form onSubmit={handleSearch} className="search-wrapper glass" style={{ padding: '1rem', flexWrap: 'wrap', direction: 'rtl', marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
           <input type="text" placeholder="العدد الترتيبي" value={filters.ref} onChange={e => setFilters({ ...filters, ref: e.target.value })} />
           <div style={{ flex: 1, minWidth: '150px' }}>
@@ -125,11 +132,10 @@ export default function RegistreGeneral() {
 
           <button type="submit" className="btn"><Search size={18} /> بحث</button>
           <button type="button" className="btn" style={{ background: 'rgba(255,255,255,0.08)' }}
-            onClick={() => { setFilters({ ref: '', nom_cl1: '', de_part: '' }); setActiveFilters({}); setPage(1); }}>
+            onClick={() => { setFilters({ ref: '', nom_cl1: '', de_part: '' }); setActiveFilters({}); setPage(1); setSearchParams({}); }}>
             مسح
           </button>
         </form>
-      )}
 
       {/* ── Table ── */}
       <div className="glass table-container print-area" style={{ direction: 'rtl' }}>
