@@ -49,6 +49,26 @@ export default function RegistreGeneral() {
     setActiveFilters({ ...filters });
   };
 
+  const handleStatusChange = async (id, newStatus) => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API}/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        setData(prev => prev.map(item => item.id_r === id ? { ...item, status: newStatus } : item));
+      } else {
+        const err = await res.json();
+        alert('حدث خطأ: ' + (err.error || 'فشل التحديث'));
+      }
+    } catch (e) {
+      console.error(e);
+      alert('خطأ في الاتصال بالخادم');
+    }
+  };
+
   const handleDelete = async (id) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا الملف؟')) return;
     const token = localStorage.getItem('token');
@@ -145,10 +165,22 @@ export default function RegistreGeneral() {
                     <td className="hide-on-mobile" style={{ fontWeight: 700, color: '#a78bfa' }}>
                        {formatAmount(item.salaire)}
                     </td>
-                    <td>
+                    <td onClick={(e) => e.stopPropagation()}>
                       {(() => {
                         const s = STATUS_MAP[item.status] || STATUS_MAP.cancelled;
-                        return <span className={`badge badge-${s.color}`}>{s.label}</span>;
+                        return (
+                          <div className={`badge badge-${s.color}`} style={{ padding: 0, overflow: 'hidden' }}>
+                            <select 
+                                value={item.status || 'not_started'} 
+                                onChange={(e) => handleStatusChange(item.id_r, e.target.value)}
+                                style={{ background: 'transparent', border: 'none', color: 'inherit', fontSize: 'inherit', cursor: 'pointer', outline: 'none', padding: '0.4rem 0.8rem', width: '100%', fontFamily: 'inherit', appearance: 'none', textAlign: 'center' }}
+                            >
+                                {Object.entries(STATUS_MAP).map(([key, info]) => (
+                                    <option key={key} value={key} style={{ color: '#000' }}>{info.label}</option>
+                                ))}
+                            </select>
+                          </div>
+                        );
                       })()}
                     </td>
                     <td className="no-print" style={{ display: 'flex', gap: '0.5rem' }}>

@@ -219,6 +219,18 @@ router.put('/:id', authenticate, async (req, res) => {
     }
 });
 
+// Update Status
+router.patch('/:id/status', authenticate, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        await db.run('UPDATE clients_record SET status = ? WHERE id_r::text = ? AND id_so::text = ?', [status, id, req.user.id_so]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ── Action (Stage) Management ──────────────────────────────────────────────
 
 // Actions for Record (Moved up for priority)
