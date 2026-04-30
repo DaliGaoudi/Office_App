@@ -671,44 +671,44 @@ export default function RecordDetail() {
 
             {/* ── Add Action Modal ── */}
             {showActionModal && (
-                <div className="modal-overlay no-print" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <div className="glass card animate-scale" style={{ width: 600, padding:'2rem', maxHeight: '90vh', overflowY: 'auto' }}>
-                        <h3 style={{ color: 'var(--primary)', marginBottom: '1.5rem' }}>
+                <div className="modal-overlay no-print" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding: '1rem' }}>
+                    <div className="glass card animate-scale" style={{ width: 700, maxWidth: '100%', padding:'2rem', maxHeight: '95vh', overflowY: 'auto', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
+                        <h3 style={{ color: 'var(--primary)', marginBottom: '1.5rem', textAlign: 'center', fontSize: '1.3rem' }}>
                             {editingActionId ? 'تعديل مرحلة التنفيذ' : 'إضافة مرحلة تنفيذ جديدة'}
                         </h3>
-                        <form onSubmit={handleSaveAction} style={{ display:'flex', flexDirection:'column', gap:'1.2rem' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <form onSubmit={handleSaveAction} style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
                                 <div>
-                                    <label style={{ display:'block', marginBottom:'0.3rem', fontSize:'0.8rem', opacity:0.7 }}>نوع العملية</label>
-                                    <input type="text" placeholder="مثال: تبليغ، عقلة..." value={actionForm.type_operation} onChange={e => setActionForm({...actionForm, type_operation: e.target.value})} required style={{ width:'100%' }} />
+                                    <label style={{ display:'block', marginBottom:'0.4rem', fontSize:'0.85rem', opacity:0.8, fontWeight: 500 }}>نوع العملية</label>
+                                    <input type="text" placeholder="مثال: تبليغ، عقلة..." value={actionForm.type_operation} onChange={e => setActionForm({...actionForm, type_operation: e.target.value})} required style={{ width:'100%', padding: '0.6rem', borderRadius: '8px' }} />
                                 </div>
                                 <div>
-                                    <label style={{ display:'block', marginBottom:'0.3rem', fontSize:'0.8rem', opacity:0.7 }}>التاريخ</label>
-                                    <input type="text" placeholder="YYYY/MM/DD" value={actionForm.date_r} onChange={e => setActionForm({...actionForm, date_r: e.target.value})} style={{ width:'100%' }} />
+                                    <label style={{ display:'block', marginBottom:'0.4rem', fontSize:'0.85rem', opacity:0.8, fontWeight: 500 }}>التاريخ</label>
+                                    <input type="text" placeholder="YYYY/MM/DD" value={actionForm.date_r} onChange={e => setActionForm({...actionForm, date_r: e.target.value})} style={{ width:'100%', padding: '0.6rem', borderRadius: '8px' }} />
                                 </div>
                             </div>
                             
                             <div>
-                                <label style={{ display:'block', marginBottom:'0.3rem', fontSize:'0.8rem', opacity:0.7 }}>ملاحظات</label>
-                                <textarea className="glass" style={{ width:'100%', height: 80, padding:'0.6rem', color:'var(--text-main)', border:'1px solid var(--card-border)' }}
+                                <label style={{ display:'block', marginBottom:'0.4rem', fontSize:'0.85rem', opacity:0.8, fontWeight: 500 }}>ملاحظات</label>
+                                <textarea className="glass" style={{ width:'100%', height: 80, padding:'0.8rem', color:'var(--text-main)', border:'1px solid var(--card-border)', borderRadius: '8px', resize: 'vertical' }}
                                     value={actionForm.remarques} onChange={e => setActionForm({...actionForm, remarques: e.target.value})} />
                             </div>
 
                             {/* Financial breakdown for Action */}
-                            <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '1rem' }}>
-                                <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color:'var(--primary)' }}>تفاصيل الأتعاب والمصاريف</h4>
+                            <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '1.5rem' }}>
+                                <h4 style={{ fontSize: '1rem', marginBottom: '1.2rem', color:'var(--primary)' }}>تفاصيل الأتعاب والمصاريف</h4>
                                 
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
                                     {/* Fees Section */}
-                                    <div className="glass" style={{ padding: '1rem', background: 'rgba(var(--primary-rgb), 0.05)', borderRadius: '12px' }}>
-                                        <h5 style={{ fontSize: '0.8rem', marginBottom: '0.75rem', opacity: 0.8 }}>الأجور</h5>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                                    <div className="glass" style={{ padding: '1.2rem', background: 'rgba(var(--primary-rgb), 0.05)', borderRadius: '12px' }}>
+                                        <h5 style={{ fontSize: '0.9rem', marginBottom: '1rem', opacity: 0.9 }}>الأجور</h5>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '0.8rem' }}>
                                             {[
                                                 {k:'origine', l:'أصل'}, {k:'exemple', l:'نظائر'}, 
                                                 {k:'versionbureau', l:'نسخة مكتب'}, {k:'orientation', l:'التوجه'}
                                             ].map(f => (
                                                 <div key={f.k}>
-                                                    <label style={{ fontSize:'0.65rem', opacity:0.6 }}>{f.l}</label>
+                                                    <label style={{ fontSize:'0.75rem', opacity:0.7, display: 'block', marginBottom: '0.3rem' }}>{f.l}</label>
                                                     <input type="number" value={actionForm[f.k]} 
                                                         onChange={e => {
                                                             const val = e.target.value;
@@ -722,33 +722,33 @@ export default function RecordDetail() {
                                                             newForm.montantpartiel2 = expenses.toString();
                                                             setActionForm(newForm);
                                                         }} 
-                                                        style={{ width:'100%', padding:'0.3rem', fontSize:'0.8rem' }} 
+                                                        style={{ width:'100%', padding:'0.5rem', fontSize:'0.9rem', borderRadius: '6px' }} 
                                                     />
                                                 </div>
                                             ))}
                                         </div>
-                                        <div className="glass" style={{ marginTop: '0.75rem', padding: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(var(--primary-rgb), 0.1)' }}>
-                                            <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>مجموع الأجور (Partiel 1)</span>
-                                            <strong style={{ fontSize: '0.9rem', color: 'var(--primary)' }}>{formatAmount(['origine', 'exemple', 'versionbureau', 'orientation'].reduce((s,k) => s + (parseFloat(actionForm[k]) || 0), 0))}</strong>
+                                        <div className="glass" style={{ marginTop: '1rem', padding: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(var(--primary-rgb), 0.1)', borderRadius: '8px' }}>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>مجموع الأجور (Partiel 1)</span>
+                                            <strong style={{ fontSize: '1rem', color: 'var(--primary)' }}>{formatAmount(['origine', 'exemple', 'versionbureau', 'orientation'].reduce((s,k) => s + (parseFloat(actionForm[k]) || 0), 0))}</strong>
                                         </div>
                                     </div>
 
                                     {/* VAT Bridging */}
-                                    <div className="glass" style={{ padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--card-border)' }}>
-                                        <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>الأداء على القيمة المضافة (VAT 19%)</span>
-                                        <strong style={{ fontSize: '1rem', fontWeight: 700 }}>{formatAmount(actionForm.TVA || 0)}</strong>
+                                    <div className="glass" style={{ padding: '0.8rem 1.2rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--card-border)' }}>
+                                        <span style={{ fontSize: '0.85rem', opacity: 0.8 }}>الأداء على القيمة المضافة (VAT 19%)</span>
+                                        <strong style={{ fontSize: '1.1rem', fontWeight: 700 }}>{formatAmount(actionForm.TVA || 0)}</strong>
                                     </div>
 
                                     {/* Expenses Section */}
-                                    <div className="glass" style={{ padding: '1rem', background: 'rgba(255,193,7, 0.03)', borderRadius: '12px' }}>
-                                        <h5 style={{ fontSize: '0.8rem', marginBottom: '0.75rem', opacity: 0.8 }}>المصاريف</h5>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+                                    <div className="glass" style={{ padding: '1.2rem', background: 'rgba(255,193,7, 0.03)', borderRadius: '12px' }}>
+                                        <h5 style={{ fontSize: '0.9rem', marginBottom: '1rem', opacity: 0.9 }}>المصاريف</h5>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '0.8rem' }}>
                                             {[
                                                 {k:'delimitation', l:'التسجيل'}, {k:'inscri', l:'الترسيم'}, {k:'mobilite', l:'التنقل'},
                                                 {k:'imprimer', l:'نسخ'}, {k:'postal', l:'البريد'}, {k:'autre', l:'المختلفات'}
                                             ].map(f => (
                                                 <div key={f.k}>
-                                                    <label style={{ fontSize:'0.65rem', opacity:0.6 }}>{f.l}</label>
+                                                    <label style={{ fontSize:'0.75rem', opacity:0.7, display: 'block', marginBottom: '0.3rem' }}>{f.l}</label>
                                                     <input type="number" value={actionForm[f.k]} 
                                                         onChange={e => {
                                                             const val = e.target.value;
@@ -762,30 +762,30 @@ export default function RecordDetail() {
                                                             newForm.montantpartiel2 = expenses.toString();
                                                             setActionForm(newForm);
                                                         }} 
-                                                        style={{ width:'100%', padding:'0.3rem', fontSize:'0.8rem' }} 
+                                                        style={{ width:'100%', padding:'0.5rem', fontSize:'0.9rem', borderRadius: '6px' }} 
                                                     />
                                                 </div>
                                             ))}
                                         </div>
-                                        <div className="glass" style={{ marginTop: '0.75rem', padding: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,193,7, 0.1)' }}>
-                                            <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>مجموع المصاريف (Partiel 2)</span>
-                                            <strong style={{ fontSize: '0.9rem', color: '#ffc107' }}>{formatAmount(['delimitation', 'inscri', 'mobilite', 'imprimer', 'postal', 'autre'].reduce((s,k) => s + (parseFloat(actionForm[k]) || 0), 0))}</strong>
+                                        <div className="glass" style={{ marginTop: '1rem', padding: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,193,7, 0.1)', borderRadius: '8px' }}>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>مجموع المصاريف (Partiel 2)</span>
+                                            <strong style={{ fontSize: '1rem', color: '#ffc107' }}>{formatAmount(['delimitation', 'inscri', 'mobilite', 'imprimer', 'postal', 'autre'].reduce((s,k) => s + (parseFloat(actionForm[k]) || 0), 0))}</strong>
                                         </div>
                                     </div>
 
                                     {/* Grand Total */}
-                                    <div className="glass" style={{ padding: '1rem', background: 'var(--primary)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '1rem', fontWeight: 600 }}>المجموع الجملي والمحتسب:</span>
-                                        <span style={{ fontSize: '1.6rem', fontWeight: 900 }}>{formatAmount(actionForm.salaire || 0)} د.ت</span>
+                                    <div className="glass" style={{ padding: '1.2rem', background: 'var(--primary)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '12px' }}>
+                                        <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>المجموع الجملي والمحتسب:</span>
+                                        <span style={{ fontSize: '1.8rem', fontWeight: 900 }}>{formatAmount(actionForm.salaire || 0)} <span style={{ fontSize: '1rem', fontWeight: 400 }}>د.ت</span></span>
                                     </div>
                                 </div>
                             </div>
 
                             <div style={{ display:'flex', gap: '1rem', marginTop: '1rem' }}>
-                                <button type="submit" className="btn" style={{ flex: 1 }}>
-                                    {editingActionId ? 'حفظ التعديلات' : 'إضافة'}
+                                <button type="submit" className="btn" style={{ flex: 1, padding: '0.8rem', fontSize: '1rem' }}>
+                                    {editingActionId ? 'حفظ التعديلات' : 'إضافة مرحلة'}
                                 </button>
-                                <button type="button" className="btn" style={{ flex: 1, background: 'rgba(255,255,255,0.1)' }} onClick={() => setShowActionModal(false)}>إلغاء</button>
+                                <button type="button" className="btn" style={{ flex: 1, background: 'rgba(255,255,255,0.1)', padding: '0.8rem', fontSize: '1rem' }} onClick={() => setShowActionModal(false)}>إلغاء</button>
                             </div>
                         </form>
                     </div>
