@@ -24,7 +24,7 @@ export default function RegistreGeneral() {
 
   // Search
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState({ ref: '', nom_cl1: '', de_part: '', date_inscri: '' });
+  const [filters, setFilters] = useState({ ref: '', nom_cl1: '', de_part: '' });
   const [activeFilters, setActiveFilters] = useState({});   // committed on search click
 
   const fetchRecords = useCallback(async (pg = page, lim = limit, flt = activeFilters) => {
@@ -102,10 +102,10 @@ export default function RegistreGeneral() {
           <div style={{ flex: 1, minWidth: '150px' }}>
             <AutocompleteInput placeholder="اسم الطالب" value={filters.nom_cl1} onChange={e => setFilters({ ...filters, nom_cl1: e.target.value })} />
           </div>
-          <input type="text" placeholder="تاريخ تبليغ المحضر (YYYY/MM/DD)" value={filters.date_inscri} onChange={e => setFilters({ ...filters, date_inscri: e.target.value })} />
+
           <button type="submit" className="btn"><Search size={18} /> بحث</button>
           <button type="button" className="btn" style={{ background: 'rgba(255,255,255,0.08)' }}
-            onClick={() => { setFilters({ ref: '', nom_cl1: '', de_part: '', date_inscri: '' }); setActiveFilters({}); setPage(1); }}>
+            onClick={() => { setFilters({ ref: '', nom_cl1: '', de_part: '' }); setActiveFilters({}); setPage(1); }}>
             مسح
           </button>
         </form>
@@ -124,7 +124,7 @@ export default function RegistreGeneral() {
                   <th className="hide-on-mobile">طالب الخدمة</th>
                   <th>الطالب</th>
                   <th className="hide-on-mobile">المطلوب</th>
-                  <th className="hide-on-mobile">تاريخ تبليغ المحضر</th>
+
                   <th className="hide-on-mobile">نوع المحضر</th>
                   <th className="hide-on-mobile" style={{ color: '#a78bfa' }}>المبلغ (د.ت)</th>
                   <th>الحالة</th>
@@ -140,7 +140,7 @@ export default function RegistreGeneral() {
                     <td className="hide-on-mobile">{item.de_part}</td>
                     <td>{item.nom_cl1}</td>
                     <td className="hide-on-mobile">{item.nom_cl2}</td>
-                    <td className="hide-on-mobile">{item.date_inscri && item.date_inscri !== '0' ? item.date_inscri : '-'}</td>
+
                     <td className="hide-on-mobile">{item.remarque}</td>
                     <td className="hide-on-mobile" style={{ fontWeight: 700, color: '#a78bfa' }}>
                        {formatAmount(item.salaire)}

@@ -36,8 +36,8 @@ router.post('/', authenticate, isAdmin, async (req, res) => {
         const hashedPassword = crypto.createHash('md5').update(password).digest('hex');
         
         await db.run(
-            `INSERT INTO admin_admin (username, password, role, societe) VALUES (?, ?, ?, ?) RETURNING id`,
-            [username, hashedPassword, role, societe || '']
+            `INSERT INTO admin_admin (username, password, role, societe, id_so) VALUES (?, ?, ?, ?, ?) RETURNING id`,
+            [username, hashedPassword, role, societe || '', req.user.id_so || '']
         );
         
         res.status(201).json({ message: 'User created successfully' });
