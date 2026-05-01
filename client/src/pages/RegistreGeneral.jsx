@@ -170,7 +170,7 @@ export default function RegistreGeneral() {
                     <td className="hide-on-mobile">{item.nom_cl2}</td>
 
                     <td className="hide-on-mobile">{item.remarque}</td>
-                    <td>{item.date_inscri || '-'}</td>
+                    <td>{(!item.date_inscri || item.date_inscri === '0') ? '-' : item.date_inscri}</td>
                     <td className="hide-on-mobile" style={{ fontWeight: 700, color: '#a78bfa' }}>
                        {formatAmount(item.salaire)}
                     </td>

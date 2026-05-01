@@ -158,7 +158,7 @@ router.post('/', authenticate, async (req, res) => {
                 else if (col === 'status') finalRecord[col] = 'has_deposit';
                 else if (['id_r'].includes(col)) {
                     // handled by Postgres
-                } else if (['nom_cl1', 'nom_cl2', 'de_part', 'date_reg', 'remarque', 'date_s', 'nombre', 'tribunal', 'resultat', 'service_petitioner_name', 'service_petitioner_contact', 'date_echeance'].includes(col)) {
+                } else if (['nom_cl1', 'nom_cl2', 'de_part', 'date_reg', 'remarque', 'date_s', 'nombre', 'tribunal', 'resultat', 'service_petitioner_name', 'service_petitioner_contact', 'date_echeance', 'date_inscri'].includes(col)) {
                     finalRecord[col] = finalRecord[col] || '';
                 } else {
                     finalRecord[col] = '0';

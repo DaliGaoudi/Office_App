@@ -58,8 +58,10 @@ export default function RecordDetail() {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const json = await res.json();
-            setRecord(json);
-            setFormData(json);
+            const recordData = { ...json };
+            if (recordData.date_inscri === '0') recordData.date_inscri = '';
+            setRecord(recordData);
+            setFormData(recordData);
             
             if (type === 'execution') {
                 const actRes = await fetch(`${API_BASE}/execution/${id}/actions`, {
