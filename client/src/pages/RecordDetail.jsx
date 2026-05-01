@@ -271,9 +271,7 @@ export default function RecordDetail() {
             { key: 'remarque', label: 'نوع المحضر' },
             { key: 'date_reg', label: 'تاريخ طلب الخدمة', type: 'date' },
             { key: 'date_echeance', label: 'تاريخ آخر أجل لالتبليغ', type: 'date', readonly: true },
-            ...(!isExecution ? [
-                { key: 'date_inscri', label: 'تاريخ تبليغ المحضر', type: 'date' }
-            ] : []),
+            { key: 'date_inscri', label: 'تاريخ تبليغ المحضر', type: 'date' },
 
             { key: 'de_part', label: 'طالب الخدمة' },
             { key: 'service_petitioner_contact', label: 'بيانات الاتصال' },

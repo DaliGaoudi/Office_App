@@ -26,7 +26,7 @@ export default function RegistreGeneral() {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlRef = searchParams.get('ref') || '';
   
-  const [filters, setFilters] = useState({ ref: urlRef, nom_cl1: '', de_part: '' });
+  const [filters, setFilters] = useState({ ref: urlRef, nom_cl1: '', de_part: '', date_inscri: '' });
   const [activeFilters, setActiveFilters] = useState({ ref: urlRef });   // committed on search click
 
   useEffect(() => {
@@ -129,10 +129,11 @@ export default function RegistreGeneral() {
           <div style={{ flex: 1, minWidth: '150px' }}>
             <AutocompleteInput placeholder="اسم الطالب" value={filters.nom_cl1} onChange={e => setFilters({ ...filters, nom_cl1: e.target.value })} />
           </div>
+          <input type="text" placeholder="تاريخ تبليغ المحضر (YYYY-MM-DD)" value={filters.date_inscri || ''} onChange={e => setFilters({ ...filters, date_inscri: e.target.value })} />
 
           <button type="submit" className="btn"><Search size={18} /> بحث</button>
           <button type="button" className="btn" style={{ background: 'rgba(255,255,255,0.08)' }}
-            onClick={() => { setFilters({ ref: '', nom_cl1: '', de_part: '' }); setActiveFilters({}); setPage(1); setSearchParams({}); }}>
+            onClick={() => { setFilters({ ref: '', nom_cl1: '', de_part: '', date_inscri: '' }); setActiveFilters({}); setPage(1); setSearchParams({}); }}>
             مسح
           </button>
         </form>
