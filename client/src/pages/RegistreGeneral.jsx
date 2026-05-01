@@ -152,6 +152,7 @@ export default function RegistreGeneral() {
                   <th className="hide-on-mobile">المطلوب</th>
 
                   <th className="hide-on-mobile">نوع المحضر</th>
+                  <th>تاريخ تبليغ المحضر</th>
                   <th className="hide-on-mobile" style={{ color: '#a78bfa' }}>المبلغ (د.ت)</th>
                   <th>الحالة</th>
                   <th className="no-print">عمل</th>
@@ -168,6 +169,7 @@ export default function RegistreGeneral() {
                     <td className="hide-on-mobile">{item.nom_cl2}</td>
 
                     <td className="hide-on-mobile">{item.remarque}</td>
+                    <td>{item.date_inscri}</td>
                     <td className="hide-on-mobile" style={{ fontWeight: 700, color: '#a78bfa' }}>
                        {formatAmount(item.salaire)}
                     </td>

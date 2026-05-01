@@ -37,6 +37,7 @@ export default function RecordDetail() {
             const initialState = {
                 date_reg: today,
                 date_echeance: '', // Will be calculated
+                date_inscri: '',
                 status: 'has_deposit',
                 acompte: '0',
                 origine: '0', exemple: '0', version_bureau: '0', orientation: '0', mobilite: '0',
@@ -270,6 +271,9 @@ export default function RecordDetail() {
             { key: 'remarque', label: 'نوع المحضر' },
             { key: 'date_reg', label: 'تاريخ طلب الخدمة', type: 'date' },
             { key: 'date_echeance', label: 'تاريخ آخر أجل لالتبليغ', type: 'date', readonly: true },
+            ...(!isExecution ? [
+                { key: 'date_inscri', label: 'تاريخ تبليغ المحضر', type: 'date' }
+            ] : []),
 
             { key: 'de_part', label: 'طالب الخدمة' },
             { key: 'service_petitioner_contact', label: 'بيانات الاتصال' },

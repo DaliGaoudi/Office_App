@@ -15,6 +15,7 @@ const CONFIG = {
       { key: 'nom_cl1',  label: 'الطالب' },
       { key: 'nom_cl2',  label: 'المطلوب', hideOnMobile: true },
       { key: 'date_reg', label: 'تاريخ الطلب', hideOnMobile: true },
+      { key: 'date_inscri', label: 'تاريخ تبليغ المحضر', hideOnMobile: true },
 
       { key: 'base_fare', label: 'الأجور', isAmount: true, hideOnMobile: true },
       { key: 'tva',       label: 'أداء 19%', isAmount: true, hideOnMobile: true },
