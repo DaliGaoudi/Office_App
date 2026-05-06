@@ -14,7 +14,7 @@ const CONFIG = {
       { key: 'de_part',  label: 'طالب الخدمة', hideOnMobile: true },
       { key: 'nom_cl1',  label: 'الطالب' },
       { key: 'nom_cl2',  label: 'المطلوب', hideOnMobile: true },
-      { key: 'date_reg', label: 'تاريخ الطلب', hideOnMobile: true },
+      { key: 'remarque', label: 'نوع المحضر', hideOnMobile: true },
       { key: 'date_inscri', label: 'تاريخ تبليغ المحضر', hideOnMobile: true },
 
       { key: 'base_fare', label: 'الأجور', isAmount: true, hideOnMobile: true },
