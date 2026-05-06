@@ -85,7 +85,7 @@ export default function BillModal({ record, actions = [], records = [], onClose 
       const fees     = ['origine','exemple','versionbureau','orientation']
         .reduce((s, k) => s + (parseInt(act[k]) || 0), 0);
       const tva      = Math.round(fees * 0.19);
-      const expenses = ['delimitation','inscri','mobilite','imprimer','poste','autre']
+      const expenses = ['delimitation','inscri','mobilite','imprimer','postal','autre']
         .reduce((s, k) => s + (parseInt(act[k]) || 0), 0);
       // Fallback: use pre-computed total from backend if breakdown yields 0
       const computed = fees + tva + expenses;

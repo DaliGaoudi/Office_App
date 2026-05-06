@@ -151,13 +151,20 @@ router.get('/facturation/list', authenticate, async (req, res) => {
             const expenses = ['delimitation','inscri','mobilite','imprimer','postal','autre']
                 .reduce((sum, k) => sum + (parseFloat(row[k]) || 0), 0);
 
+            let calculated_tva = t;
+            if (!calculated_tva && fees > 0) calculated_tva = Math.round(fees * 0.19);
+
+            const computedTotal = fees + calculated_tva + expenses;
+            const finalTotal = computedTotal > 0 ? computedTotal : s;
+            const finalBase = computedTotal > 0 ? fees : finalTotal;
+
             groupedMap.get(row.id_r).actions.push({
                 id: row.action_id,
                 type: row.type_operation,
-                salaire: s,
-                tva: t,
-                total: s, // 'salaire' is already the grand total from DB
-                base: fees,
+                salaire: finalTotal,
+                tva: calculated_tva,
+                total: finalTotal,
+                base: finalBase,
                 expenses: expenses,
             });
         });
