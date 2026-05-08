@@ -24,9 +24,9 @@ export default function DataCleaning() {
       if (!res.ok) throw new Error('فشل في جلب اقتراحات الذكاء الاصطناعي');
       const data = await res.json();
       
-      // Add local state to track approval status
       const mapped = data.map(cluster => ({
         ...cluster,
+        items: cluster.items.map(item => ({ ...item, selected: true })),
         approved: false,
         rejected: false
       }));
@@ -65,13 +65,23 @@ export default function DataCleaning() {
     setEditingClusterIdx(null);
   };
 
+  const toggleItemSelection = (clusterIdx, itemIdx) => {
+    const newClusters = [...clusters];
+    newClusters[clusterIdx].items[itemIdx].selected = !newClusters[clusterIdx].items[itemIdx].selected;
+    setClusters(newClusters);
+  };
+
   const applyMerges = async () => {
     const mergesToApply = clusters
-      .filter(c => c.approved && c.items.length > 1)
-      .map(c => ({
-        canonicalName: c.canonicalName,
-        oldNames: c.items.map(i => i.name)
-      }));
+      .filter(c => c.approved)
+      .map(c => {
+        const selectedNames = c.items.filter(i => i.selected).map(i => i.name);
+        return {
+          canonicalName: c.canonicalName,
+          oldNames: selectedNames
+        };
+      })
+      .filter(m => m.oldNames.length > 0);
 
     if (mergesToApply.length === 0) {
       setError('الرجاء الموافقة على بعض الاقتراحات أولاً');
@@ -216,10 +226,18 @@ export default function DataCleaning() {
 
                 <div style={{ background: 'rgba(0,0,0,0.1)', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem' }}>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>الأسماء الحالية التي سيتم دمجها ({cluster.items.length}):</div>
-                  <ul style={{ margin: 0, paddingRight: '1.2rem', fontSize: '0.9rem' }}>
+                  <ul style={{ margin: 0, paddingRight: '0.5rem', listStyle: 'none', fontSize: '0.9rem' }}>
                     {cluster.items.map((item, i) => (
-                      <li key={i} style={{ opacity: item.name === cluster.canonicalName ? 0.5 : 1 }}>
-                        {item.name} <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>({item.count} ملف)</span>
+                      <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', opacity: item.name === cluster.canonicalName && item.selected ? 0.6 : 1 }}>
+                        <input 
+                          type="checkbox" 
+                          checked={item.selected} 
+                          onChange={() => toggleItemSelection(idx, i)}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                        />
+                        <span style={{ textDecoration: !item.selected ? 'line-through' : 'none', color: !item.selected ? 'var(--text-muted)' : 'inherit' }}>
+                          {item.name} <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>({item.count} ملف)</span>
+                        </span>
                       </li>
                     ))}
                   </ul>
