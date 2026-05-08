@@ -28,12 +28,13 @@ router.get('/stats', authenticate, isAdmin, async (req, res) => {
             [id_so, `${year}-%`]
         );
 
-        // 2. Execution Actions (œuvre_type)
+        // 2. Execution Actions (œuvre_type only for Execution files to prevent double-counting General files)
         const executionActions = await db.all(
-            `SELECT date_r, origine, exemple, versionbureau, orientation, 
-                    delimitation, inscri, mobilite, imprimer, postal, autre, "TVA" as stored_tva, salaire
-             FROM "œuvre_type"
-             WHERE id_so::text = ? AND date_r LIKE ?`,
+            `SELECT o.date_r, o.origine, o.exemple, o.versionbureau, o.orientation, 
+                    o.delimitation, o.inscri, o.mobilite, o.imprimer, o.postal, o.autre, o."TVA" as stored_tva, o.salaire
+             FROM "œuvre_type" o
+             JOIN clients_record c ON o.id_o::text = c.id_r::text
+             WHERE o.id_so::text = ? AND c.is_execution = TRUE AND o.date_r LIKE ?`,
             [id_so, `${year}-%`]
         );
 
