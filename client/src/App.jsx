@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate } from 'react-router-dom';
-import { Shield, BookOpen, Users as UsersIcon, CalendarDays, LogOut, FileText, Receipt, Settings as SettingsIcon, Sun, Moon, Menu, Search } from 'lucide-react';
+import { Shield, BookOpen, Users as UsersIcon, CalendarDays, LogOut, FileText, Receipt, Settings as SettingsIcon, Sun, Moon, Menu, Search, Database } from 'lucide-react';
 import './index.css';
 
 import logo from './assets/logo.png';
@@ -44,26 +44,36 @@ const Sidebar = ({ isOpen, closeMenu }) => {
         </div>
         
         <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
-          <form onSubmit={handleGlobalSearch} style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>
-            <input 
-              type="text" 
-              placeholder="بحث بالعدد الترتيبي..." 
-              value={globalSearch}
-              onChange={(e) => setGlobalSearch(e.target.value)}
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '0.85rem', width: '100%', outline: 'none' }}
-            />
-            <button type="submit" style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}>
-              <Search size={16} />
-            </button>
-          </form>
+          {user?.role !== 'client' && (
+            <form onSubmit={handleGlobalSearch} style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>
+              <input 
+                type="text" 
+                placeholder="بحث بالعدد الترتيبي..." 
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '0.85rem', width: '100%', outline: 'none' }}
+              />
+              <button type="submit" style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}>
+                <Search size={16} />
+              </button>
+            </form>
+          )}
         </div>
 
         <ul className="nav-links">
-          <li>
-            <NavLink to="/" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-              <FileText size={20} /> لوحة القيادة
-            </NavLink>
-          </li>
+          {user?.role === 'client' ? (
+            <li>
+              <NavLink to="/portal" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
+                <FileText size={20} /> ملفاتي
+              </NavLink>
+            </li>
+          ) : (
+            <>
+              <li>
+                <NavLink to="/" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
+                  <FileText size={20} /> لوحة القيادة
+                </NavLink>
+              </li>
 
           {/* ── Registres ── */}
           <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>السجلات</li>
@@ -113,6 +123,8 @@ const Sidebar = ({ isOpen, closeMenu }) => {
               <CalendarDays size={18} /> التقويم
             </NavLink>
           </li>
+            </>
+          )}
         </ul>
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <NavLink to="/settings" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}
@@ -120,10 +132,16 @@ const Sidebar = ({ isOpen, closeMenu }) => {
             <SettingsIcon size={17} /> الإعدادات
           </NavLink>
           {(user?.role === 'admin' || user?.role === 'superadmin') && (
-            <NavLink to="/users" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}
-              style={{ fontSize: '0.85rem' }}>
-              <UsersIcon size={17} /> المستخدمون
-            </NavLink>
+            <>
+              <NavLink to="/users" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}
+                style={{ fontSize: '0.85rem' }}>
+                <UsersIcon size={17} /> المستخدمون
+              </NavLink>
+              <NavLink to="/data-cleaning" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}
+                style={{ fontSize: '0.85rem' }}>
+                <Database size={17} /> تنظيف البيانات
+              </NavLink>
+            </>
           )}
           <button className="btn" style={{ width: '100%', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' }} onClick={logout}>
             <LogOut size={20} /> تسجيل الخروج
@@ -156,12 +174,14 @@ const Layout = ({ children }) => {
             <button className="btn-icon" onClick={toggleTheme} title="تبديل المظهر" style={{ marginRight: '0.5rem' }}>
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <span className="glass" style={{ padding: '0.5rem 1rem', borderRadius: '20px', color: 'var(--primary)' }}>مدير</span>
+            <span className="glass" style={{ padding: '0.5rem 1rem', borderRadius: '20px', color: 'var(--primary)' }}>
+              {user?.role === 'superadmin' ? 'مدير عام' : user?.role === 'admin' ? 'مدير' : user?.role === 'client' ? 'حريف' : 'مستخدم'}
+            </span>
           </div>
         </div>
         {children}
       </div>
-      <AIAssistant />
+      {user?.role !== 'client' && <AIAssistant />}
     </div>
   );
 }
@@ -228,6 +248,8 @@ import RecordDetail from './pages/RecordDetail';
 import Facturation from './pages/Facturation';
 import Settings from './pages/Settings';
 import Users from './pages/Users';
+import PortalDashboard from './pages/PortalDashboard';
+import DataCleaning from './pages/DataCleaning';
 
 function App() {
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user')) || null);
@@ -265,23 +287,33 @@ function App() {
             </Routes>
           ) : (
             <Layout>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/general" element={<RegistreGeneral />} />
-                <Route path="/execution" element={<RegistreExecution />} />
-                <Route path="/cnss" element={<RegistreCNSS />} />
-                <Route path="/telephone" element={<Telephone />} />
-                <Route path="/calendar" element={<Calendar />} />
-                <Route path="/record/:type/:id" element={<RecordDetail />} />
-                <Route path="/facturation/general"   element={<Facturation type="general" />} />
-                <Route path="/facturation/execution" element={<Facturation type="execution" />} />
-                <Route path="/facturation/cnss"      element={<Facturation type="cnss" />} />
-                <Route path="/settings"              element={<Settings />} />
-                {(user?.role === 'admin' || user?.role === 'superadmin') && (
-                  <Route path="/users" element={<Users />} />
-                )}
-                <Route path="*" element={<Navigate to="/" />} />
-              </Routes>
+              {user?.role === 'client' ? (
+                <Routes>
+                  <Route path="/portal" element={<PortalDashboard />} />
+                  <Route path="*" element={<Navigate to="/portal" />} />
+                </Routes>
+              ) : (
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/general" element={<RegistreGeneral />} />
+                  <Route path="/execution" element={<RegistreExecution />} />
+                  <Route path="/cnss" element={<RegistreCNSS />} />
+                  <Route path="/telephone" element={<Telephone />} />
+                  <Route path="/calendar" element={<Calendar />} />
+                  <Route path="/record/:type/:id" element={<RecordDetail />} />
+                  <Route path="/facturation/general"   element={<Facturation type="general" />} />
+                  <Route path="/facturation/execution" element={<Facturation type="execution" />} />
+                  <Route path="/facturation/cnss"      element={<Facturation type="cnss" />} />
+                  <Route path="/settings"              element={<Settings />} />
+                  {(user?.role === 'admin' || user?.role === 'superadmin') && (
+                    <>
+                      <Route path="/users" element={<Users />} />
+                      <Route path="/data-cleaning" element={<DataCleaning />} />
+                    </>
+                  )}
+                  <Route path="*" element={<Navigate to="/" />} />
+                </Routes>
+              )}
             </Layout>
           )}
         </BrowserRouter>

@@ -22,7 +22,8 @@ router.post('/login', async (req, res) => {
                     id: row.id,
                     username: row.username,
                     role: row.role,
-                    societe: row.societe
+                    societe: row.societe,
+                    client_aliases: row.client_aliases
                 },
                 token
             });

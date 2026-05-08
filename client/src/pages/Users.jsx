@@ -14,7 +14,8 @@ export default function Users() {
     username: '',
     password: '',
     role: 'user',
-    societe: ''
+    societe: '',
+    client_aliases: ''
   });
 
   const fetchUsers = async () => {
@@ -45,7 +46,8 @@ export default function Users() {
         username: user.username,
         password: '', // Empty for editing
         role: user.role,
-        societe: user.societe || ''
+        societe: user.societe || '',
+        client_aliases: user.client_aliases || ''
       });
     } else {
       setCurrentUser(null);
@@ -53,7 +55,8 @@ export default function Users() {
         username: '',
         password: '',
         role: 'user',
-        societe: ''
+        societe: '',
+        client_aliases: ''
       });
     }
     setIsModalOpen(true);
@@ -125,6 +128,8 @@ export default function Users() {
         return <span className="glass" style={{ padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ShieldAlert size={14}/> مدير عام</span>;
       case 'admin':
         return <span className="glass" style={{ padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', color: '#3b82f6', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Shield size={14}/> مدير</span>;
+      case 'client':
+        return <span className="glass" style={{ padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', color: '#8b5cf6', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><User size={14}/> حريف (بوابة)</span>;
       default:
         return <span className="glass" style={{ padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><User size={14}/> مستخدم</span>;
     }
@@ -166,9 +171,10 @@ export default function Users() {
                   </button>
                 </div>
               </div>
-              {user.societe && (
+              {(user.societe || user.client_aliases) && (
                 <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>
-                  <strong>الشركة:</strong> {user.societe}
+                  {user.societe && <div><strong>الشركة:</strong> {user.societe}</div>}
+                  {user.client_aliases && <div><strong>الأسماء البديلة:</strong> {user.client_aliases}</div>}
                 </div>
               )}
             </div>
@@ -225,8 +231,35 @@ export default function Users() {
                   <option value="user">مستخدم (سكرتير)</option>
                   <option value="admin">مدير</option>
                   <option value="superadmin">مدير عام</option>
+                  <option value="client">حريف (بوابة خارجية)</option>
                 </select>
               </div>
+
+              {formData.role === 'client' && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>اسم الشركة / الحريف</label>
+                    <input
+                      type="text"
+                      value={formData.societe}
+                      onChange={e => setFormData({...formData, societe: e.target.value})}
+                      placeholder="يطابق اسم الطالب في الدفاتر"
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text)' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>الأسماء البديلة (مفصولة بفاصلة ,)</label>
+                    <input
+                      type="text"
+                      value={formData.client_aliases}
+                      onChange={e => setFormData({...formData, client_aliases: e.target.value})}
+                      placeholder="مثال: DIAM TUNISIE, شركة ديام تونس"
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text)' }}
+                    />
+                    <small style={{ opacity: 0.6, fontSize: '0.75rem', display: 'block', marginTop: '4px' }}>يستخدم للبحث عن الملفات التي قد تكتب فيها أسماء الشركة بطرق مختلفة.</small>
+                  </div>
+                </>
+              )}
 
               <button type="submit" className="btn" style={{ marginTop: '1rem', padding: '0.75rem' }}>
                 حفظ

@@ -16,7 +16,7 @@ const isAdmin = (req, res, next) => {
 // Get all users
 router.get('/', authenticate, isAdmin, async (req, res) => {
     try {
-        const rows = await db.all('SELECT id, username, societe, email, role, id_so FROM admin_admin ORDER BY id ASC');
+        const rows = await db.all('SELECT id, username, societe, email, role, id_so, client_aliases FROM admin_admin ORDER BY id ASC');
         res.json(rows);
     } catch (err) {
         console.error('Error fetching users:', err);
@@ -27,7 +27,7 @@ router.get('/', authenticate, isAdmin, async (req, res) => {
 // Create new user
 router.post('/', authenticate, isAdmin, async (req, res) => {
     try {
-        const { username, password, role, societe } = req.body;
+        const { username, password, role, societe, client_aliases } = req.body;
         
         if (!username || !password || !role) {
             return res.status(400).json({ error: 'Missing required fields' });
@@ -36,8 +36,8 @@ router.post('/', authenticate, isAdmin, async (req, res) => {
         const hashedPassword = crypto.createHash('md5').update(password).digest('hex');
         
         await db.run(
-            `INSERT INTO admin_admin (username, password, role, societe, id_so) VALUES (?, ?, ?, ?, ?) RETURNING id`,
-            [username, hashedPassword, role, societe || '', req.user.id_so || '']
+            `INSERT INTO admin_admin (username, password, role, societe, id_so, client_aliases) VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
+            [username, hashedPassword, role, societe || '', req.user.id_so || '', client_aliases || '']
         );
         
         res.status(201).json({ message: 'User created successfully' });
@@ -51,19 +51,19 @@ router.post('/', authenticate, isAdmin, async (req, res) => {
 router.put('/:id', authenticate, isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { username, password, role, societe } = req.body;
+        const { username, password, role, societe, client_aliases } = req.body;
         
         if (!username || !role) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        let query = `UPDATE admin_admin SET username = ?, role = ?, societe = ? WHERE id = ?`;
-        let params = [username, role, societe || '', id];
+        let query = `UPDATE admin_admin SET username = ?, role = ?, societe = ?, client_aliases = ? WHERE id = ?`;
+        let params = [username, role, societe || '', client_aliases || '', id];
 
         if (password && password.trim() !== '') {
             const hashedPassword = crypto.createHash('md5').update(password).digest('hex');
-            query = `UPDATE admin_admin SET username = ?, role = ?, societe = ?, password = ? WHERE id = ?`;
-            params = [username, role, societe || '', hashedPassword, id];
+            query = `UPDATE admin_admin SET username = ?, role = ?, societe = ?, client_aliases = ?, password = ? WHERE id = ?`;
+            params = [username, role, societe || '', client_aliases || '', hashedPassword, id];
         }
 
         await db.run(query, params);
