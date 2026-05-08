@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate } from 'react-router-dom';
-import { Shield, BookOpen, Users as UsersIcon, CalendarDays, LogOut, FileText, Receipt, Settings as SettingsIcon, Sun, Moon, Menu, Search, Database, Eye } from 'lucide-react';
+import { Shield, BookOpen, Users as UsersIcon, CalendarDays, LogOut, FileText, Receipt, Settings as SettingsIcon, Sun, Moon, Menu, Search, Database, Eye, PieChart } from 'lucide-react';
 import './index.css';
 
 import logo from './assets/logo.png';
@@ -145,6 +145,10 @@ const Sidebar = ({ isOpen, closeMenu }) => {
                 style={{ fontSize: '0.85rem' }}>
                 <Eye size={17} /> سجل النشاطات
               </NavLink>
+              <NavLink to="/accounting" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}
+                style={{ fontSize: '0.85rem' }}>
+                <PieChart size={17} /> المحاسبة
+              </NavLink>
             </>
           )}
           <button className="btn" style={{ width: '100%', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' }} onClick={logout}>
@@ -255,6 +259,7 @@ import Users from './pages/Users';
 import PortalDashboard from './pages/PortalDashboard';
 import DataCleaning from './pages/DataCleaning';
 import AuditLogs from './pages/AuditLogs';
+import Accounting from './pages/Accounting';
 
 function App() {
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user')) || null);
@@ -315,6 +320,7 @@ function App() {
                       <Route path="/users" element={<Users />} />
                       <Route path="/data-cleaning" element={<DataCleaning />} />
                       <Route path="/audit-logs" element={<AuditLogs />} />
+                      <Route path="/accounting" element={<Accounting />} />
                     </>
                   )}
                   <Route path="*" element={<Navigate to="/" />} />

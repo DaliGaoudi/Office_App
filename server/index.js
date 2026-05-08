@@ -38,6 +38,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/portal', require('./routes/portal'));
 app.use('/api/data-cleaning', require('./routes/data-cleaning'));
 app.use('/api/audit', require('./routes/audit'));
+app.use('/api/accounting', require('./routes/accounting'));
 
 // Settings — after update, flush TVA cache in registre
 app.use('/api/settings', (req, res, next) => {
