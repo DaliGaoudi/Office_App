@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db');
 
 const authenticate = require('../middleware/auth');
+const { logActivity } = require('../utils/logger');
 
 // Get all records for CNSS
 router.get('/', authenticate, async (req, res) => {
@@ -57,6 +58,9 @@ router.get('/:id', authenticate, async (req, res) => {
     try {
         const { id } = req.params;
         const row = await db.get(`SELECT * FROM cnss WHERE id_cn = ? AND id_so = ?`, [id, req.user.id_so]);
+        if (row) {
+            await logActivity(req.user, 'VIEW', 'RECORD', `عرض ملف CNSS عدد ${row.num_affaire || id}`);
+        }
         res.json(row);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -81,6 +85,9 @@ router.post('/', authenticate, async (req, res) => {
         }
         
         const result = await db.run(query, values);
+        
+        await logActivity(req.user, 'CREATE', 'RECORD', `إضافة ملف CNSS جديد عدد ${record.num_affaire}`);
+
         res.json({ id_cn: result.lastID, ...record });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -108,6 +115,9 @@ router.put('/:id', authenticate, async (req, res) => {
         values.push(id, req.user.id_so);
         
         await db.run(query, values);
+        
+        await logActivity(req.user, 'UPDATE', 'RECORD', `تعديل ملف CNSS (ID: ${id})`);
+
         res.json({ success: true, updatedID: id });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -185,6 +195,9 @@ router.delete('/:id', authenticate, async (req, res) => {
         const { id } = req.params;
         await db.run('DELETE FROM cnss_oeuvre WHERE id_cn::text = ? AND id_so::text = ?', [id, req.user.id_so]);
         await db.run('DELETE FROM cnss WHERE id_cn::text = ? AND id_so::text = ?', [id, req.user.id_so]);
+        
+        await logActivity(req.user, 'DELETE', 'RECORD', `حذف ملف CNSS (ID: ${id})`);
+
         res.json({ success: true, deletedID: id });
     } catch (err) {
         res.status(500).json({ error: err.message });

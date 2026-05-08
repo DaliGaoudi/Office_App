@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db');
 const crypto = require('crypto');
 const authenticate = require('../middleware/auth');
+const { logActivity } = require('../utils/logger');
 
 // Middleware to check admin privileges
 const isAdmin = (req, res, next) => {
@@ -40,6 +41,8 @@ router.post('/', authenticate, isAdmin, async (req, res) => {
             [username, hashedPassword, role, societe || '', req.user.id_so || '', client_aliases || '']
         );
         
+        await logActivity(req.user, 'CREATE', 'USER', `إنشاء مستخدم جديد: ${username} (الصلاحية: ${role})`);
+        
         res.status(201).json({ message: 'User created successfully' });
     } catch (err) {
         console.error('Error creating user:', err);
@@ -67,6 +70,9 @@ router.put('/:id', authenticate, isAdmin, async (req, res) => {
         }
 
         await db.run(query, params);
+        
+        await logActivity(req.user, 'UPDATE', 'USER', `تعديل المستخدم: ${username}`);
+        
         res.json({ message: 'User updated successfully' });
     } catch (err) {
         console.error('Error updating user:', err);
@@ -85,6 +91,9 @@ router.delete('/:id', authenticate, isAdmin, async (req, res) => {
         }
 
         await db.run(`DELETE FROM admin_admin WHERE id = ?`, [id]);
+        
+        await logActivity(req.user, 'DELETE', 'USER', `حذف المستخدم (ID: ${id})`);
+        
         res.json({ message: 'User deleted successfully' });
     } catch (err) {
         console.error('Error deleting user:', err);

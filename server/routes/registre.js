@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db');
 
 const authenticate = require('../middleware/auth');
+const { logActivity } = require('../utils/logger');
 
 // ── TVA cache (refreshed from settings table) ──────────────────────────────
 let cachedTVA = 19; // default — overridden on first DB read
@@ -101,6 +102,9 @@ router.get('/:id', authenticate, async (req, res) => {
     try {
         const { id } = req.params;
         const row = await db.get(`SELECT * FROM clients_record WHERE id_r::text = ? AND id_so::text = ?`, [id, req.user.id_so]);
+        if (row) {
+            await logActivity(req.user, 'VIEW', 'RECORD', `عرض الملف العام عدد ${row.ref || id}`);
+        }
         res.json(row);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -177,6 +181,9 @@ router.post('/', authenticate, async (req, res) => {
         }
         
         const result = await db.run(query, values);
+        
+        await logActivity(req.user, 'CREATE', 'RECORD', `إضافة ملف عام جديد عدد ${finalRecord.ref}`);
+
         res.json({ id_r: result.lastID, ...finalRecord });
     } catch (err) {
         console.error('INSERT ERROR:', err.message);
@@ -205,6 +212,9 @@ router.put('/:id', authenticate, async (req, res) => {
         values.push(id, req.user.id_so);
         
         await db.run(query, values);
+        
+        await logActivity(req.user, 'UPDATE', 'RECORD', `تعديل الملف العام (ID: ${id})`);
+
         res.json({ success: true, updatedID: id });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -330,6 +340,9 @@ router.delete('/:id', authenticate, async (req, res) => {
         const { id } = req.params;
         await db.run('DELETE FROM "œuvre_type" WHERE id_o::text = ? AND id_so::text = ?', [id, req.user.id_so]);
         await db.run('DELETE FROM clients_record WHERE id_r::text = ? AND id_so::text = ?', [id, req.user.id_so]);
+        
+        await logActivity(req.user, 'DELETE', 'RECORD', `حذف الملف العام (ID: ${id})`);
+
         res.json({ success: true, deletedID: id });
     } catch (err) {
         res.status(500).json({ error: err.message });

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const authenticate = require('../middleware/auth');
+const { logActivity } = require('../utils/logger');
 
 function computeActionSalaire(row) {
     if (!row) return 0;
@@ -88,7 +89,7 @@ router.post('/', authenticate, async (req, res) => {
 
         const newId = clientResult.lastID;
 
-
+        await logActivity(req.user, 'CREATE', 'RECORD', `إضافة ملف تنفيذ جديد عدد ${ref}`);
 
         res.json({ success: true, id: newId });
     } catch (err) {
@@ -189,6 +190,9 @@ router.get('/:id', authenticate, async (req, res) => {
     try {
         const row = await db.get('SELECT *, id_r as id_o FROM clients_record WHERE id_r::text = ? AND id_so::text = ?', [req.params.id, req.user.id_so]);
         if (!row) return res.status(404).json({ error: 'Not found' });
+        
+        await logActivity(req.user, 'VIEW', 'RECORD', `عرض ملف التنفيذ عدد ${row.ref || req.params.id}`);
+        
         res.json(row);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -219,6 +223,9 @@ router.put('/:id', authenticate, async (req, res) => {
         values.push(id, req.user.id_so);
         
         await db.run(query, values);
+        
+        await logActivity(req.user, 'UPDATE', 'RECORD', `تعديل ملف التنفيذ (ID: ${id})`);
+
         res.json({ success: true, updatedID: id });
     } catch (err) {
         console.error("Execution base update error:", err);
@@ -232,6 +239,9 @@ router.patch('/:id/status', authenticate, async (req, res) => {
         const { id } = req.params;
         const { status } = req.body;
         await db.run('UPDATE clients_record SET status = ? WHERE id_r::text = ? AND id_so::text = ?', [status, id, req.user.id_so]);
+        
+        await logActivity(req.user, 'UPDATE', 'RECORD', `تغيير حالة ملف التنفيذ (ID: ${id}) إلى: ${status}`);
+
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -293,6 +303,8 @@ router.post('/:id/actions', authenticate, async (req, res) => {
         // db.run returns lastID which will be the new 'id'
         const finalId = result.lastID;
 
+        await logActivity(req.user, 'CREATE', 'ACTION', `إضافة إجراء جديد '${action.type_operation}' للملف ID: ${id}`);
+
         res.json({ success: true, id: finalId, ...data });
     } catch (err) {
         console.error("Action insertion error:", err);
@@ -317,6 +329,9 @@ router.delete('/:id/actions/:actionId', authenticate, async (req, res) => {
         }
 
         await db.run(query, params);
+        
+        await logActivity(req.user, 'DELETE', 'ACTION', `حذف إجراء (ID: ${actionId}) من الملف ID: ${id}`);
+
         res.json({ success: true, deletedID: actionId });
     } catch (err) {
         console.error("Action deletion error:", err);
@@ -369,6 +384,9 @@ router.delete('/:id', authenticate, async (req, res) => {
         const { id } = req.params;
         await db.run('DELETE FROM "œuvre_type" WHERE id_o::text = $1 AND id_so::text = $2', [id, req.user.id_so]);
         await db.run('DELETE FROM clients_record WHERE id_r::text = $1 AND id_so::text = $2', [id, req.user.id_so]);
+        
+        await logActivity(req.user, 'DELETE', 'RECORD', `حذف ملف التنفيذ (ID: ${id}) مع جميع إجراءاته`);
+
         res.json({ success: true, deletedID: id });
     } catch (err) {
         res.status(500).json({ error: err.message, v: "2.1" });
