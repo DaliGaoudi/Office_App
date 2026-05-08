@@ -39,10 +39,10 @@ router.get('/stats', authenticate, isAdmin, async (req, res) => {
 
         // 3. CNSS Actions (cnss_oeuvre)
         const cnssActions = await db.all(
-            `SELECT o.date_o, o.montant 
+            `SELECT c.date_s, o.montant 
              FROM cnss_oeuvre o
              JOIN cnss c ON o.id_cn::text = c.id_cn::text
-             WHERE c.id_so::text = ? AND o.date_o LIKE ?`,
+             WHERE c.id_so::text = ? AND c.date_s LIKE ?`,
             [id_so, `${year}-%`]
         );
 
@@ -104,7 +104,7 @@ router.get('/stats', authenticate, isAdmin, async (req, res) => {
         cnssActions.forEach(r => {
             const total = parseFloat(r.montant) || 0;
             // Since CNSS often doesn't have a breakdown, we put it all in "base" for now, or just add to total.
-            processRecord(r.date_o, total, 0, 0);
+            processRecord(r.date_s, total, 0, 0);
         });
 
         // Compute global sums
