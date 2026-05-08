@@ -38,11 +38,11 @@ router.get('/stats', authenticate, isAdmin, async (req, res) => {
         );
 
         // 3. CNSS Actions (cnss_oeuvre)
+        // Based on Postgres hints, date_s and montant belong to the cnss table.
         const cnssActions = await db.all(
-            `SELECT c.date_s, o.montant 
-             FROM cnss_oeuvre o
-             JOIN cnss c ON o.id_cn::text = c.id_cn::text
-             WHERE c.id_so::text = ? AND c.date_s LIKE ?`,
+            `SELECT date_s, montant 
+             FROM cnss 
+             WHERE id_so::text = ? AND date_s LIKE ?`,
             [id_so, `${year}-%`]
         );
 
