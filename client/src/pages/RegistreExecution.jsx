@@ -130,7 +130,6 @@ export default function RegistreExecution() {
                   <th className="hide-on-mobile">طالب الخدمة</th>
                   <th>الطالب</th>
                   <th className="hide-on-mobile">المطلوب</th>
-                  <th>تاريخ تبليغ المحضر</th>
                   <th className="hide-on-mobile">نوع المحضر</th>
                   <th className="hide-on-mobile">المبلغ الجملي</th>
                   <th>الحالة</th>
