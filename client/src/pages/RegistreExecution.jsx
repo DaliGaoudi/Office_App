@@ -130,6 +130,7 @@ export default function RegistreExecution() {
                   <th className="hide-on-mobile">طالب الخدمة</th>
                   <th>الطالب</th>
                   <th className="hide-on-mobile">المطلوب</th>
+
                   <th className="hide-on-mobile">نوع المحضر</th>
                   <th className="hide-on-mobile">المبلغ الجملي</th>
                   <th>الحالة</th>
@@ -145,7 +146,7 @@ export default function RegistreExecution() {
                     <td className="hide-on-mobile">{item.de_part}</td>
                     <td>{item.nom_cl1}</td>
                     <td className="hide-on-mobile">{item.nom_cl2}</td>
-                    <td>{(!item.date_inscri || item.date_inscri === '0') ? '-' : item.date_inscri}</td>
+
                     <td className="hide-on-mobile">{item.remarque}</td>
                     <td className="hide-on-mobile" style={{ fontWeight: 700, color: 'var(--primary)' }}>{formatAmount(item.total_salaire)}</td>
                     <td onClick={(e) => e.stopPropagation()}>
