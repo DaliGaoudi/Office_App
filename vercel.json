@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "installCommand": "cd client && npm install",
   "buildCommand": "cd client && npm run build:demo",
   "outputDirectory": "client/dist",
   "rewrites": [
