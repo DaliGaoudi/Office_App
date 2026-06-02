@@ -267,6 +267,17 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
 
   useEffect(() => {
+    if (import.meta.env.VITE_DEMO_MODE === 'true' && !user) {
+      const demoUser = { username: "demo", role: "superadmin", id_so: "demo_so" };
+      const demoToken = "demo-jwt-token";
+      setUser(demoUser);
+      setToken(demoToken);
+      localStorage.setItem('user', JSON.stringify(demoUser));
+      localStorage.setItem('token', demoToken);
+    }
+  }, [user]);
+
+  useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
