@@ -40,7 +40,7 @@ const Sidebar = ({ isOpen, closeMenu }) => {
       <div className={`sidebar glass-panel ${isOpen ? 'open' : ''}`}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', padding: '0 1rem' }}>
           <img src={logo} alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-          <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>مكتب الأستاذ مراد القعودي</h2>
+          <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>Mourad Gaoudi Law Office</h2>
         </div>
         
         <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
@@ -48,7 +48,7 @@ const Sidebar = ({ isOpen, closeMenu }) => {
             <form onSubmit={handleGlobalSearch} style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>
               <input 
                 type="text" 
-                placeholder="بحث بالعدد الترتيبي..." 
+                placeholder="Search by reference number..." 
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
                 style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '0.85rem', width: '100%', outline: 'none' }}
@@ -64,63 +64,63 @@ const Sidebar = ({ isOpen, closeMenu }) => {
           {user?.role === 'client' ? (
             <li>
               <NavLink to="/portal" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-                <FileText size={20} /> ملفاتي
+                <FileText size={20} /> My Files
               </NavLink>
             </li>
           ) : (
             <>
               <li>
                 <NavLink to="/" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-                  <FileText size={20} /> لوحة القيادة
+                  <FileText size={20} /> Dashboard
                 </NavLink>
               </li>
 
           {/* ── Registres ── */}
-          <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>السجلات</li>
+          <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Registers</li>
           <li>
             <NavLink to="/general" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-              <BookOpen size={18} /> الدفتر العام
+              <BookOpen size={18} /> General Register
             </NavLink>
           </li>
           <li>
             <NavLink to="/execution" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-              <BookOpen size={18} /> دفتر التنفيذ
+              <BookOpen size={18} /> Execution
             </NavLink>
           </li>
           <li>
             <NavLink to="/cnss" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-              <BookOpen size={18} /> ملفات الضمان الاجتماعي
+              <BookOpen size={18} /> CNSS Files
             </NavLink>
           </li>
 
           {/* ── Facturation ── */}
-          <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>الفوترة</li>
+          <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Billing</li>
           <li>
             <NavLink to="/facturation/general" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-              <Receipt size={18} /> الفوترة العامة
+              <Receipt size={18} /> General Billing
             </NavLink>
           </li>
           <li>
             <NavLink to="/facturation/execution" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-              <Receipt size={18} /> فوترة التنفيذ
+              <Receipt size={18} /> Execution Billing
             </NavLink>
           </li>
           <li>
             <NavLink to="/facturation/cnss" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-              <Receipt size={18} /> فوترة الضمان الاجتماعي
+              <Receipt size={18} /> CNSS Billing
             </NavLink>
           </li>
 
           {/* ── Autres ── */}
-          <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>إضافات</li>
+          <li style={{ padding: '0.4rem 1rem 0', fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Add-ons</li>
           <li>
             <NavLink to="/telephone" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-              <UsersIcon size={18} /> دليل الهاتف
+              <UsersIcon size={18} /> Contacts
             </NavLink>
           </li>
           <li>
             <NavLink to="/calendar" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-              <CalendarDays size={18} /> التقويم
+              <CalendarDays size={18} /> Calendar
             </NavLink>
           </li>
             </>
@@ -129,30 +129,30 @@ const Sidebar = ({ isOpen, closeMenu }) => {
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <NavLink to="/settings" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}
             style={{ fontSize: '0.85rem' }}>
-            <SettingsIcon size={17} /> الإعدادات
+            <SettingsIcon size={17} /> Settings
           </NavLink>
           {(user?.role === 'admin' || user?.role === 'superadmin') && (
             <>
               <NavLink to="/users" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}
                 style={{ fontSize: '0.85rem' }}>
-                <UsersIcon size={17} /> المستخدمون
+                <UsersIcon size={17} /> Users
               </NavLink>
               <NavLink to="/data-cleaning" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}
                 style={{ fontSize: '0.85rem' }}>
-                <Database size={17} /> تنظيف البيانات
+                <Database size={17} /> Data Cleaning
               </NavLink>
               <NavLink to="/audit-logs" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}
                 style={{ fontSize: '0.85rem' }}>
-                <Eye size={17} /> سجل النشاطات
+                <Eye size={17} /> Audit Logs
               </NavLink>
               <NavLink to="/accounting" onClick={handleLinkClick} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}
                 style={{ fontSize: '0.85rem' }}>
-                <PieChart size={17} /> المحاسبة
+                <PieChart size={17} /> Accounting
               </NavLink>
             </>
           )}
           <button className="btn" style={{ width: '100%', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' }} onClick={logout}>
-            <LogOut size={20} /> تسجيل الخروج
+            <LogOut size={20} /> Logout
           </button>
         </div>
       </div>
@@ -176,14 +176,14 @@ const Layout = ({ children }) => {
             <button className="btn-icon mobile-menu-btn" onClick={() => setIsMobileMenuOpen(true)}>
               <Menu size={24} />
             </button>
-            <h1>مرحباً، {user?.username}</h1>
+            <h1>Welcome, {user?.username}</h1>
           </div>
           <div className="profile-section">
-            <button className="btn-icon" onClick={toggleTheme} title="تبديل المظهر" style={{ marginRight: '0.5rem' }}>
+            <button className="btn-icon" onClick={toggleTheme} title="Toggle Theme" style={{ marginRight: '0.5rem' }}>
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <span className="glass" style={{ padding: '0.5rem 1rem', borderRadius: '20px', color: 'var(--primary)' }}>
-              {user?.role === 'superadmin' ? 'مدير عام' : user?.role === 'admin' ? 'مدير' : user?.role === 'client' ? 'حريف' : 'مستخدم'}
+              {user?.role === 'superadmin' ? 'Super Admin' : user?.role === 'admin' ? 'Admin' : user?.role === 'client' ? 'Client' : 'User'}
             </span>
           </div>
         </div>
@@ -226,18 +226,18 @@ const Login = () => {
   return (
     <div className="login-container animate-fade">
       <div className="glass login-card">
-        <h1>تسجيل الدخول</h1>
+        <h1>Login</h1>
         {error && <div style={{color: '#ef4444', textAlign: 'center', background:'rgba(239, 68, 68, 0.1)', padding: '0.5rem', borderRadius:'5px'}}>{error}</div>}
         <form onSubmit={handleSubmit} style={{display:'flex', flexDirection:'column', gap:'1rem'}}>
           <div>
-            <label>اسم المستخدم</label>
+            <label>Username</label>
             <input type="text" value={username} onChange={e => setUsername(e.target.value)} required />
           </div>
           <div>
-            <label>كلمة المرور</label>
+            <label>Password</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
           </div>
-          <button type="submit" className="btn" style={{marginTop:'1rem'}}>دخول</button>
+          <button type="submit" className="btn" style={{marginTop:'1rem'}}>Sign In</button>
         </form>
       </div>
     </div>

@@ -30,7 +30,7 @@ export default function Accounting() {
       const res = await fetch(`${API_BASE}/accounting/stats?year=${year}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!res.ok) throw new Error('فشل في تحميل البيانات المالية');
+      if (!res.ok) throw new Error('Failed to load financial data');
       const json = await res.json();
       setData(json);
     } catch (err) {
@@ -41,7 +41,7 @@ export default function Accounting() {
   };
 
   const exportToCSV = () => {
-    const headers = ['الشهر', 'الأجور', 'الأداء (19%)', 'المصاريف', 'المجموع (د.ت)'];
+    const headers = ['Month', 'Base Fees', 'VAT (19%)', 'Expenses', 'Total (TND)'];
     
     const rows = data.monthly.map(m => [
       m.monthName,
@@ -53,7 +53,7 @@ export default function Accounting() {
     
     // Add Totals row
     rows.push([
-      'المجموع العام',
+      'Grand Total',
       data.totals.base.toFixed(3),
       data.totals.tva.toFixed(3),
       data.totals.expenses.toFixed(3),
@@ -82,7 +82,7 @@ export default function Accounting() {
           <p style={{ margin: '0 0 0.5rem 0', fontWeight: 'bold' }}>{label}</p>
           {payload.map((entry, index) => (
             <p key={`item-${index}`} style={{ margin: 0, color: entry.color, fontSize: '0.9rem' }}>
-              {entry.name}: {formatAmount(entry.value)} د.ت
+              {entry.name}: {formatAmount(entry.value)} TND
             </p>
           ))}
         </div>
@@ -92,13 +92,13 @@ export default function Accounting() {
   };
 
   return (
-    <div className="animate-fade" dir="rtl" style={{ padding: '1rem', paddingBottom: '3rem' }}>
+    <div className="animate-fade" style={{ padding: '1rem', paddingBottom: '3rem' }}>
       <div className="topbar" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <PieChart size={28} style={{ color: 'var(--primary)' }} />
           <div>
-            <h2 style={{ color: 'var(--primary)', margin: 0 }}>المحاسبة والتقارير المالية</h2>
-            <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.7 }}>نظرة شاملة على المداخيل، الأداءات، والمصاريف</p>
+            <h2 style={{ color: 'var(--primary)', margin: 0 }}>Accounting & Financial Reports</h2>
+            <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.7 }}>Comprehensive overview of income, taxes, and expenses</p>
           </div>
         </div>
         
@@ -115,13 +115,13 @@ export default function Accounting() {
 
           <button className="btn" onClick={exportToCSV} disabled={loading || data.totals.total === 0} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#10b981' }}>
             <Download size={18} />
-            تصدير للمحاسب
+            Export for Accountant
           </button>
         </div>
       </div>
 
       {loading ? (
-        <p style={{ opacity: 0.6, textAlign: 'center', padding: '2rem' }}>جاري الحساب والتحليل…</p>
+        <p style={{ opacity: 0.6, textAlign: 'center', padding: '2rem' }}>Calculating and analyzing...</p>
       ) : error ? (
         <p style={{ color: '#ef4444', textAlign: 'center', padding: '2rem' }}>{error}</p>
       ) : (
@@ -130,34 +130,34 @@ export default function Accounting() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
             <div className="glass" style={{ padding: '1.5rem', borderRadius: '12px', borderBottom: '4px solid #10b981' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>الأجور (مداخيل صافية)</div>
+                <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>Fees (Net Income)</div>
                 <TrendingUp size={20} color="#10b981" />
               </div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{formatAmount(data.totals.base)} <span style={{fontSize:'1rem', opacity:0.5}}>د.ت</span></div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{formatAmount(data.totals.base)} <span style={{fontSize:'1rem', opacity:0.5}}>TND</span></div>
             </div>
             
             <div className="glass" style={{ padding: '1.5rem', borderRadius: '12px', borderBottom: '4px solid #3b82f6' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>الأداء على القيمة المضافة (TVA)</div>
+                <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>Value Added Tax (VAT)</div>
                 <DollarSign size={20} color="#3b82f6" />
               </div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{formatAmount(data.totals.tva)} <span style={{fontSize:'1rem', opacity:0.5}}>د.ت</span></div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{formatAmount(data.totals.tva)} <span style={{fontSize:'1rem', opacity:0.5}}>TND</span></div>
             </div>
 
             <div className="glass" style={{ padding: '1.5rem', borderRadius: '12px', borderBottom: '4px solid #f59e0b' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>المصاريف المدفوعة (Expenses)</div>
+                <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>Paid Expenses</div>
                 <TrendingDown size={20} color="#f59e0b" />
               </div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{formatAmount(data.totals.expenses)} <span style={{fontSize:'1rem', opacity:0.5}}>د.ت</span></div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{formatAmount(data.totals.expenses)} <span style={{fontSize:'1rem', opacity:0.5}}>TND</span></div>
             </div>
 
             <div className="glass" style={{ padding: '1.5rem', borderRadius: '12px', borderBottom: '4px solid var(--primary)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>المجموع الجملي (Gross)</div>
+                <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>Gross Total</div>
                 <Activity size={20} color="var(--primary)" />
               </div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--primary)' }}>{formatAmount(data.totals.total)} <span style={{fontSize:'1rem', opacity:0.5}}>د.ت</span></div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--primary)' }}>{formatAmount(data.totals.total)} <span style={{fontSize:'1rem', opacity:0.5}}>TND</span></div>
             </div>
           </div>
 
@@ -166,7 +166,7 @@ export default function Accounting() {
             
             <div className="glass" style={{ padding: '1.5rem', borderRadius: '12px' }}>
               <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <BarChart3 size={18} color="var(--primary)"/> تحليل الإيرادات الشهرية {year}
+                <BarChart3 size={18} color="var(--primary)"/> Monthly Revenue Analysis {year}
               </h3>
               <div style={{ width: '100%', height: 350 }} dir="ltr">
                 <ResponsiveContainer width="100%" height="100%">
@@ -176,9 +176,9 @@ export default function Accounting() {
                     <YAxis stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
-                    <Bar dataKey="base" name="الأجور" stackId="a" fill="#10b981" radius={[0, 0, 4, 4]} />
-                    <Bar dataKey="tva" name="TVA" stackId="a" fill="#3b82f6" />
-                    <Bar dataKey="expenses" name="المصاريف" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="base" name="Base Fees" stackId="a" fill="#10b981" radius={[0, 0, 4, 4]} />
+                    <Bar dataKey="tva" name="VAT" stackId="a" fill="#3b82f6" />
+                    <Bar dataKey="expenses" name="Expenses" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -186,7 +186,7 @@ export default function Accounting() {
 
             <div className="glass" style={{ padding: '1.5rem', borderRadius: '12px' }}>
               <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Activity size={18} color="var(--primary)"/> تطور الدخل الجملي
+                <Activity size={18} color="var(--primary)"/> Gross Income Trend
               </h3>
               <div style={{ width: '100%', height: 250 }} dir="ltr">
                 <ResponsiveContainer width="100%" height="100%">
@@ -196,7 +196,7 @@ export default function Accounting() {
                     <YAxis stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
-                    <Line type="monotone" dataKey="total" name="المجموع الجملي" stroke="var(--primary)" strokeWidth={3} dot={{ r: 4, fill: 'var(--primary)', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="total" name="Gross Total" stroke="var(--primary)" strokeWidth={3} dot={{ r: 4, fill: 'var(--primary)', strokeWidth: 2 }} activeDot={{ r: 6 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

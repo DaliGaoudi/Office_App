@@ -98,7 +98,7 @@ export default function Calendar() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('هل تريد فعلاً حذف هذا الموعد؟')) return;
+    if (!window.confirm('Are you sure you want to delete this appointment?')) return;
     const token = localStorage.getItem('token');
     try {
       const res = await fetch(`${API_BASE}/calendar/${id}`, {
@@ -118,7 +118,7 @@ export default function Calendar() {
   const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
 
-  const monthNames = ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
@@ -163,7 +163,7 @@ export default function Calendar() {
     <div className="animate-fade">
       <div className="topbar">
         <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)' }}>
-          <CalendarDays /> جدول الجلسات
+          <CalendarDays /> Calendar
         </h2>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -175,19 +175,19 @@ export default function Calendar() {
             <button className="btn-icon" onClick={nextMonth}><ChevronRight size={18} /></button>
           </div>
           <button className="btn" onClick={() => handleOpenModal()}>
-            <Plus size={18} /> إضافة جلسة
+            <Plus size={18} /> Add Session
           </button>
         </div>
       </div>
 
       <div className="calendar-grid glass">
-        {['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'].map(day => (
+        {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => (
           <div key={day} className="calendar-day-header">{day}</div>
         ))}
         {days}
       </div>
 
-      {loading && <p style={{textAlign: 'center', marginTop: '2rem', color: 'var(--text-muted)'}}>جاري تحميل الجلسات...</p>}
+      {loading && <p style={{textAlign: 'center', marginTop: '2rem', color: 'var(--text-muted)'}}>Loading sessions...</p>}
 
       {/* Floating Action Button for mobile/quick access */}
       <div className="fab" onClick={() => handleOpenModal()}>
@@ -199,25 +199,25 @@ export default function Calendar() {
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
           <div className="modal-content glass" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editingEvent ? 'تعديل الجلسة' : 'إضافة جلسة جديدة'}</h3>
+              <h3>{editingEvent ? 'Edit Session' : 'Add New Session'}</h3>
               <button className="modal-close" onClick={() => setIsModalOpen(false)}><X /></button>
             </div>
             
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
               <div className="form-group">
-                <label>الموضوع</label>
+                <label>Subject</label>
                 <input 
                   type="text" 
                   value={formData.title} 
                   onChange={e => setFormData({...formData, title: e.target.value})} 
-                  placeholder="مثال: جلسة لدى المحكمة الابتدائية"
+                  placeholder="Example: Session at the Court of First Instance"
                   required
                 />
               </div>
 
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label>التاريخ</label>
+                  <label>Date</label>
                   <input 
                     type="date" 
                     value={formData.start} 
@@ -226,7 +226,7 @@ export default function Calendar() {
                   />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label>الوقت</label>
+                  <label>Time</label>
                   <input 
                     type="time" 
                     value={formData.time_even} 
@@ -236,7 +236,7 @@ export default function Calendar() {
               </div>
 
               <div className="form-group">
-                <label>المكان</label>
+                <label>Location</label>
                 <div style={{ position: 'relative' }}>
                   <MapPinned size={16} style={{ position: 'right', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                   <input 
@@ -244,19 +244,19 @@ export default function Calendar() {
                     style={{ paddingRight: '2.5rem' }}
                     value={formData.tribunal_even} 
                     onChange={e => setFormData({...formData, tribunal_even: e.target.value})} 
-                    placeholder="المحكمة..."
+                    placeholder="Court..."
                   />
                 </div>
               </div>
 
               <div className="form-group">
-                <label>ملاحظات / تفاصيل</label>
+                <label>Notes / Details</label>
                 <textarea 
                   className="glass"
                   style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', color: 'var(--text-main)', border: '1px solid var(--card-border)', background: 'rgba(15, 23, 42, 0.5)', minHeight: '80px', outline: 'none' }}
                   value={formData.description} 
                   onChange={e => setFormData({...formData, description: e.target.value})} 
-                  placeholder="ملاحظات إضافية..."
+                  placeholder="Additional notes..."
                 />
               </div>
 
@@ -267,7 +267,7 @@ export default function Calendar() {
                   </button>
                 )}
                 <button type="submit" className="btn" style={{ flex: 1 }}>
-                  {editingEvent ? 'تحديث' : 'حفظ'}
+                  {editingEvent ? 'Update' : 'Save'}
                 </button>
               </div>
             </form>

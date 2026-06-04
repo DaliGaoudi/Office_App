@@ -55,10 +55,10 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
       {/* Right: total count + page size chooser (flipped in RTL) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
         <span>
-          إجمالي: <strong style={{ color: 'var(--text-main)' }}>{total.toLocaleString()}</strong> سجل
+          Total: <strong style={{ color: 'var(--text-main)' }}>{total.toLocaleString()}</strong> records
         </span>
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          عرض:
+          Show:
           <select
             value={limit}
             onChange={e => { onLimitChange(Number(e.target.value)); onPageChange(1); }}
@@ -84,7 +84,7 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
           style={page === 1 ? btnDisabled : btnBase}
           disabled={page === 1}
           onClick={() => onPageChange(1)}
-          title="الصفحة الأولى"
+          title="First Page"
         ><ChevronsRight size={15} /></button>
 
         {/* Prev */}
@@ -92,7 +92,7 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
           style={page === 1 ? btnDisabled : btnBase}
           disabled={page === 1}
           onClick={() => onPageChange(page - 1)}
-          title="السابق"
+          title="Previous"
         ><ChevronRight size={15} /></button>
 
         {/* Page numbers */}
@@ -115,7 +115,7 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
           style={page === totalPages ? btnDisabled : btnBase}
           disabled={page === totalPages}
           onClick={() => onPageChange(page + 1)}
-          title="التالي"
+          title="Next"
         ><ChevronLeft size={15} /></button>
 
         {/* Last */}
@@ -123,7 +123,7 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
           style={page === totalPages ? btnDisabled : btnBase}
           disabled={page === totalPages}
           onClick={() => onPageChange(totalPages)}
-          title="الصفحة الأخيرة"
+          title="Last Page"
         ><ChevronsLeft size={15} /></button>
       </div>
     </div>

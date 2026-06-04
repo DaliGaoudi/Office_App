@@ -33,7 +33,7 @@ export default function PortalDashboard() {
       const res = await fetch(`${API_BASE}/portal/records`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!res.ok) throw new Error('فشل في تحميل الملفات');
+      if (!res.ok) throw new Error('Failed to load files');
       const data = await res.json();
       setRecords(data);
     } catch (err) {
@@ -51,7 +51,7 @@ export default function PortalDashboard() {
       const res = await fetch(`${API_BASE}/portal/records/${record.id}/actions`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!res.ok) throw new Error('فشل في تحميل الإجراءات');
+      if (!res.ok) throw new Error('Failed to load actions');
       const data = await res.json();
       setActions(data);
     } catch (err) {
@@ -70,12 +70,12 @@ export default function PortalDashboard() {
     if (filteredRecords.length === 0) return;
     
     // Create CSV Header
-    const headers = ['العدد', 'النوع', 'الطالب', 'المطلوب', 'التاريخ', 'الحالة'];
+    const headers = ['Ref', 'Type', 'Applicant', 'Defendant', 'Date', 'Status'];
     
     // Create CSV Rows
     const rows = filteredRecords.map(r => [
       r.ref,
-      r.is_execution ? 'تنفيذ' : 'عام',
+      r.is_execution ? 'Execution' : 'General',
       `"${r.nom_cl1 || ''}"`,
       `"${r.nom_cl2 || ''}"`,
       r.date_s || r.date_ajout || '',
@@ -132,19 +132,19 @@ export default function PortalDashboard() {
   const uniqueStatuses = [...new Set(records.map(r => r.status).filter(Boolean))];
 
   return (
-    <div className="animate-fade" dir="rtl" style={{ padding: '1rem', paddingBottom: '3rem' }}>
+    <div className="animate-fade" style={{ padding: '1rem', paddingBottom: '3rem' }}>
       <div className="topbar" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <FileText size={28} style={{ color: 'var(--primary)' }} />
           <div>
-            <h2 style={{ color: 'var(--primary)', margin: 0 }}>ملفاتي</h2>
-            <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.7 }}>بوابة الحريف لمتابعة الملفات والإجراءات</p>
+            <h2 style={{ color: 'var(--primary)', margin: 0 }}>My Files</h2>
+            <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.7 }}>Client portal to track files and procedures</p>
           </div>
         </div>
         
         <button className="btn" onClick={exportToCSV} disabled={filteredRecords.length === 0} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#10b981' }}>
           <Download size={18} />
-          تصدير إلى Excel
+          Export to Excel
         </button>
       </div>
 
@@ -152,15 +152,15 @@ export default function PortalDashboard() {
       {!loading && !error && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
           <div className="glass" style={{ padding: '1.5rem', borderRadius: '12px', borderLeft: '4px solid var(--primary)' }}>
-            <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.5rem' }}>إجمالي الملفات</div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.5rem' }}>Total Files</div>
             <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{totalFiles}</div>
           </div>
           <div className="glass" style={{ padding: '1.5rem', borderRadius: '12px', borderLeft: '4px solid #f59e0b' }}>
-            <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.5rem' }}>ملفات جارية</div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.5rem' }}>In Progress Files</div>
             <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{inProgressFiles}</div>
           </div>
           <div className="glass" style={{ padding: '1.5rem', borderRadius: '12px', borderLeft: '4px solid #10b981' }}>
-            <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.5rem' }}>ملفات منتهية</div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.5rem' }}>Completed Files</div>
             <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{completedFiles}</div>
           </div>
         </div>
@@ -170,7 +170,7 @@ export default function PortalDashboard() {
       <div className="glass" style={{ padding: '1rem', borderRadius: '12px', marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
           <Filter size={18} />
-          <span style={{ fontSize: '0.9rem' }}>تصفية:</span>
+          <span style={{ fontSize: '0.9rem' }}>Filter:</span>
         </div>
         
         <div style={{ flex: 1, minWidth: '200px' }}>
@@ -178,7 +178,7 @@ export default function PortalDashboard() {
             <Search size={16} style={{ color: 'var(--text-muted)' }} />
             <input 
               type="text" 
-              placeholder="بحث بالعدد أو الخصم..." 
+              placeholder="Search by ref or defendant..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '0.85rem', width: '100%', outline: 'none', marginRight: '0.5rem' }}
@@ -191,14 +191,14 @@ export default function PortalDashboard() {
           onChange={(e) => setFilterStatus(e.target.value)}
           style={{ padding: '0.5rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--card-border)', color: 'var(--text)', outline: 'none' }}
         >
-          <option value="">كل الحالات</option>
+          <option value="">All Statuses</option>
           {uniqueStatuses.map(status => (
             <option key={status} value={status}>{status}</option>
           ))}
         </select>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>من</span>
+          <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>From</span>
           <input 
             type="date" 
             value={dateFrom}
@@ -207,7 +207,7 @@ export default function PortalDashboard() {
           />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>إلى</span>
+          <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>To</span>
           <input 
             type="date" 
             value={dateTo}
@@ -218,7 +218,7 @@ export default function PortalDashboard() {
       </div>
 
       {loading ? (
-        <p style={{ opacity: 0.6, textAlign: 'center', padding: '2rem' }}>جاري التحميل…</p>
+        <p style={{ opacity: 0.6, textAlign: 'center', padding: '2rem' }}>Loading...</p>
       ) : error ? (
         <p style={{ color: '#ef4444', textAlign: 'center', padding: '2rem' }}>{error}</p>
       ) : (
@@ -244,20 +244,20 @@ export default function PortalDashboard() {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <h3 style={{ margin: 0, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    عدد: {record.ref}
+                    Ref: {record.ref}
                   </h3>
                   <span className="glass" style={{ padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', color: record.is_execution ? '#ef4444' : '#3b82f6' }}>
-                    {record.is_execution ? 'تنفيذ' : 'عام'}
+                    {record.is_execution ? 'Execution' : 'General'}
                   </span>
                 </div>
                 
                 <div>
-                  <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.2rem' }}>الطالب</div>
+                  <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.2rem' }}>Applicant</div>
                   <div style={{ fontWeight: 'bold' }}>{record.nom_cl1 || '-'}</div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.2rem' }}>المطلوب (الخصم)</div>
+                  <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.2rem' }}>Defendant</div>
                   <div style={{ fontWeight: 'bold' }}>{record.nom_cl2 || '-'}</div>
                 </div>
 
@@ -277,7 +277,7 @@ export default function PortalDashboard() {
             {filteredRecords.length === 0 && (
               <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', opacity: 0.5 }}>
                 <Info size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
-                <p>لا توجد ملفات متطابقة</p>
+                <p>No matching files</p>
               </div>
             )}
           </div>
@@ -293,7 +293,7 @@ export default function PortalDashboard() {
                 <ChevronRight size={20} />
               </button>
               <span style={{ fontSize: '0.9rem', opacity: 0.8 }}>
-                صفحة {currentPage} من {totalPages}
+                Page {currentPage} of {totalPages}
               </span>
               <button 
                 className="btn-icon glass" 
@@ -315,10 +315,10 @@ export default function PortalDashboard() {
               <div>
                 <h3 style={{ margin: 0, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Activity size={20} />
-                  إجراءات الملف عدد {selectedRecord.ref}
+                  Actions for File Ref {selectedRecord.ref}
                 </h3>
                 <div style={{ fontSize: '0.85rem', opacity: 0.7, marginTop: '0.2rem' }}>
-                  المطلوب: {selectedRecord.nom_cl2}
+                  Defendant: {selectedRecord.nom_cl2}
                 </div>
               </div>
               <button className="btn-icon" onClick={closeActionsModal}>
@@ -328,9 +328,9 @@ export default function PortalDashboard() {
             
             <div style={{ overflowY: 'auto', paddingRight: '0.5rem' }}>
               {actionsLoading ? (
-                <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>جاري تحميل الإجراءات…</p>
+                <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>Loading actions...</p>
               ) : actions.length === 0 ? (
-                <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>لا توجد إجراءات مسجلة لهذا الملف حتى الآن</p>
+                <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>No actions recorded for this file yet</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {actions.map((action, idx) => (

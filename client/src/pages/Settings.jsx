@@ -29,7 +29,7 @@ export default function Settings() {
     setSaved(false);
     const val = parseFloat(tva);
     if (isNaN(val) || val <= 0 || val > 100) {
-      setError('النسبة يجب أن تكون بين 1 و 100');
+      setError('The rate must be between 1 and 100');
       return;
     }
     const token = localStorage.getItem('token');
@@ -46,23 +46,23 @@ export default function Settings() {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch {
-      setError('حدث خطأ أثناء الحفظ');
+      setError('Error during save');
     }
   };
 
   return (
-    <div className="animate-fade" dir="rtl">
+    <div className="animate-fade">
 
       {/* Header */}
       <div className="topbar" style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <SettingsIcon size={24} style={{ color: 'var(--primary)' }} />
-          <h2 style={{ color: 'var(--primary)', margin: 0 }}>الإعدادات</h2>
+          <h2 style={{ color: 'var(--primary)', margin: 0 }}>Settings</h2>
         </div>
       </div>
 
       {loading ? (
-        <p style={{ opacity: 0.6 }}>جاري التحميل…</p>
+        <p style={{ opacity: 0.6 }}>Loading...</p>
       ) : (
         <div style={{ maxWidth: 520 }}>
 
@@ -70,11 +70,11 @@ export default function Settings() {
           <div className="glass" style={{ padding: '2rem', marginBottom: '1.5rem' }}>
             <h3 style={{ marginTop: 0, marginBottom: '0.5rem', color: 'var(--primary)' }}>
               <Percent size={18} style={{ marginLeft: '0.4rem', verticalAlign: 'middle' }} />
-              نسبة الأداء على القيمة المضافة (أ.ق.م)
+              Value Added Tax (VAT) Rate
             </h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-              تُستخدم هذه النسبة لحساب الأجرة الجملية تلقائياً في جميع المحاضر.
-              يُطبَّق هذا التعديل فوراً على جميع المحاضر الجديدة التي لم يُحدَّد لها مبلغ صريح.
+              This rate is used to automatically calculate the total fee in all records.
+              This change takes effect immediately for all new records without an explicit amount.
             </p>
 
             <form onSubmit={handleSave}>
@@ -113,7 +113,7 @@ export default function Settings() {
                   className="btn"
                   style={{ minWidth: 120, padding: '0.75rem 1.25rem', gap: '0.5rem' }}
                 >
-                  <Save size={18} /> حفظ
+                  <Save size={18} /> Save
                 </button>
               </div>
 
@@ -126,7 +126,7 @@ export default function Settings() {
                   fontSize: '0.9rem'
                 }}>
                   <CheckCircle size={18} />
-                  تم الحفظ بنجاح! النسبة الجديدة: {tva}%
+                  Saved successfully! New rate: {tva}%
                 </div>
               )}
               {error && (
@@ -145,10 +145,10 @@ export default function Settings() {
 
           {/* Info card */}
           <div className="glass" style={{ padding: '1.25rem', opacity: 0.75, fontSize: '0.85rem', lineHeight: 1.7 }}>
-            <strong>ملاحظة حول الحسابات:</strong><br />
-            المجموع = (أصل المحضر + النظائر + النسخة المكتبية + التوجه + التنقل)
-            &nbsp;+ (نسخ الأوراق + التسجيل + الترسيم + البريد + المختلفات + أ.ق.م)<br/>
-            أ.ق.م = مجموع الشق الأول × <strong>{tva}%</strong>
+            <strong>Calculation Note:</strong><br />
+            Total = (Base + Copies + Office Copy + Orientation + Transport)
+            &nbsp;+ (Paper Copies + Registration + Inscription + Post + Others + VAT)<br/>
+            VAT = Sum of First Part × <strong>{tva}%</strong>
           </div>
 
         </div>

@@ -72,16 +72,16 @@ export default function RegistreGeneral() {
         setData(prev => prev.map(item => item.id_r === id ? { ...item, status: newStatus } : item));
       } else {
         const err = await res.json();
-        alert('حدث خطأ: ' + (err.error || 'فشل التحديث'));
+        alert('An error occurred: ' + (err.error || 'Failed to update'));
       }
     } catch (e) {
       console.error(e);
-      alert('خطأ في الاتصال بالخادم');
+      alert('Error communicating with the server');
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذا الملف؟')) return;
+    if (!window.confirm('Are you sure you want to delete this file?')) return;
     const token = localStorage.getItem('token');
     
     try {
@@ -94,11 +94,11 @@ export default function RegistreGeneral() {
         fetchRecords();
       } else {
         const err = await res.json();
-        alert('حدث خطأ: ' + (err.error || 'فشل الحذف'));
+        alert('An error occurred: ' + (err.error || 'Failed to delete'));
       }
     } catch (e) {
       console.error(e);
-      alert('خطأ في الاتصال بالخادم');
+      alert('Error communicating with the server');
     }
   };
 
@@ -109,59 +109,59 @@ export default function RegistreGeneral() {
     <div className="animate-fade">
       {/* ── Toolbar ── */}
       <div className="topbar" style={{ marginBottom: '1rem' }}>
-        <h2 style={{ color: 'var(--primary)' }}>الدفتر العام</h2>
+        <h2 style={{ color: 'var(--primary)' }}>General Register</h2>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button className="btn" onClick={() => window.print()}>
-            <Printer size={18} /> طباعة
+            <Printer size={18} /> Print
           </button>
           <button className="btn" onClick={() => navigate('/record/registre/new')}>
-            <Plus size={18} /> إضافة محضر
+            <Plus size={18} /> Add Record
           </button>
         </div>
       </div>
 
       {/* ── Search Filters ── */}
         <form onSubmit={handleSearch} className="search-wrapper glass" style={{ padding: '1rem', flexWrap: 'wrap', direction: 'rtl', marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
-          <input type="text" placeholder="العدد الترتيبي" value={filters.ref} onChange={e => setFilters({ ...filters, ref: e.target.value })} />
+          <input type="text" placeholder="Reference Number" value={filters.ref} onChange={e => setFilters({ ...filters, ref: e.target.value })} />
           <div style={{ flex: 1, minWidth: '150px' }}>
-            <AutocompleteInput placeholder="طالب الخدمة" value={filters.de_part} onChange={e => setFilters({ ...filters, de_part: e.target.value })} />
+            <AutocompleteInput placeholder="Service Requester" value={filters.de_part} onChange={e => setFilters({ ...filters, de_part: e.target.value })} />
           </div>
           <div style={{ flex: 1, minWidth: '150px' }}>
-            <AutocompleteInput placeholder="اسم الطالب" value={filters.nom_cl1} onChange={e => setFilters({ ...filters, nom_cl1: e.target.value })} />
+            <AutocompleteInput placeholder="Applicant Name" value={filters.nom_cl1} onChange={e => setFilters({ ...filters, nom_cl1: e.target.value })} />
           </div>
-          <input type="text" placeholder="تاريخ تبليغ المحضر (YYYY-MM-DD)" value={filters.date_inscri || ''} onChange={e => setFilters({ ...filters, date_inscri: e.target.value })} />
+          <input type="text" placeholder="Record Notification Date (YYYY-MM-DD)" value={filters.date_inscri || ''} onChange={e => setFilters({ ...filters, date_inscri: e.target.value })} />
 
-          <button type="submit" className="btn"><Search size={18} /> بحث</button>
+          <button type="submit" className="btn"><Search size={18} /> Search</button>
           <button type="button" className="btn" style={{ background: 'rgba(255,255,255,0.08)' }}
             onClick={() => { setFilters({ ref: '', nom_cl1: '', de_part: '', date_inscri: '' }); setActiveFilters({}); setPage(1); setSearchParams({}); }}>
-            مسح
+            Clear
           </button>
         </form>
 
       {/* ── Table ── */}
       <div className="glass table-container print-area" style={{ direction: 'rtl' }}>
         {loading ? (
-          <p style={{ padding: '2rem', textAlign: 'center', opacity: 0.6 }}>جاري التحميل…</p>
+          <p style={{ padding: '2rem', textAlign: 'center', opacity: 0.6 }}>Loading…</p>
         ) : (
           <>
             <table>
               <thead>
                 <tr>
-                  <th>العدد الترتيبي</th>
-                  <th className="hide-on-mobile">طالب الخدمة</th>
-                  <th>الطالب</th>
-                  <th className="hide-on-mobile">المطلوب</th>
+                  <th>Reference Number</th>
+                  <th className="hide-on-mobile">Service Requester</th>
+                  <th>Applicant</th>
+                  <th className="hide-on-mobile">Defendant</th>
 
-                  <th className="hide-on-mobile">نوع المحضر</th>
-                  <th>تاريخ تبليغ المحضر</th>
-                  <th className="hide-on-mobile" style={{ color: '#a78bfa' }}>المبلغ (د.ت)</th>
-                  <th>الحالة</th>
-                  <th className="no-print">عمل</th>
+                  <th className="hide-on-mobile">Record Type</th>
+                  <th>Notification Date</th>
+                  <th className="hide-on-mobile" style={{ color: '#a78bfa' }}>Amount (TND)</th>
+                  <th>Status</th>
+                  <th className="no-print">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {data.length === 0 ? (
-                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>لا توجد نتائج</td></tr>
+                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>No results</td></tr>
                 ) : data.map(item => (
                   <tr key={item.id_r}>
                     <td>{item.ref}</td>
@@ -194,12 +194,12 @@ export default function RegistreGeneral() {
                     </td>
                     <td className="no-print" style={{ display: 'flex', gap: '0.5rem' }}>
                       <button onClick={() => navigate(`/record/registre/${item.id_r}`)}
-                        title="تعديل"
+                        title="Edit"
                         style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer' }}>
                         <Edit size={18} />
                       </button>
                       <button onClick={() => handleDelete(item.id_r)}
-                        title="حذف"
+                        title="Delete"
                         style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
                         <Trash2 size={18} />
                       </button>

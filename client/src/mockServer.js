@@ -21,13 +21,13 @@ export function makeServer({ environment = "development" } = {}) {
         server.create("record", {
           id_r: i,
           ref: 1000 + i,
-          de_part: `طالب ${i}`,
-          nom_cl1: `الخصم ${i}`,
+          de_part: `Petitioner ${i}`,
+          nom_cl1: `Defendant ${i}`,
           date_reg: `2026-06-${String((i % 28) + 1).padStart(2, '0')}`,
           status: i % 3 === 0 ? 'completed' : 'in_progress',
           salaire: (150 + i * 10),
           tva: 19,
-          remarque: "ملف تجريبي للمراجعة",
+          remarque: "Sample test file for review",
           id_so: "demo_so"
         });
       }
@@ -35,7 +35,7 @@ export function makeServer({ environment = "development" } = {}) {
       // Create Calendar Events
       server.create("event", {
          id: 1,
-         title: "جلسة محكمة استئناف",
+         title: "Appeal Court Hearing",
          date: new Date().toISOString().split('T')[0], // Today
          type: "audience"
       });
@@ -44,7 +44,7 @@ export function makeServer({ environment = "development" } = {}) {
       tomorrow.setDate(tomorrow.getDate() + 1);
       server.create("event", {
          id: 2,
-         title: "تبليغ حكم",
+         title: "Judgment Notification",
          date: tomorrow.toISOString().split('T')[0],
          type: "deadline"
       });
@@ -52,13 +52,13 @@ export function makeServer({ environment = "development" } = {}) {
       // Phone contacts
       server.create("contact", {
          id: 1,
-         name: "المحكمة الابتدائية بتونس",
+         name: "First Instance Court of Tunis",
          phone: "71234567",
          type: "court"
       });
       server.create("contact", {
          id: 2,
-         name: "المحكمة الابتدائية بأريانة",
+         name: "First Instance Court of Ariana",
          phone: "71234000",
          type: "court"
       });
@@ -175,7 +175,7 @@ export function makeServer({ environment = "development" } = {}) {
       this.post("/telephone", (schema, request) => schema.contacts.create(JSON.parse(request.requestBody)).attrs);
 
       this.post("/ai/chat", () => {
-         return { response: "أهلاً بك في النسخة التجريبية (Demo). المساعد الذكي يعمل بكفاءة في النسخة الكاملة باستخدام Anthropic Claude API." };
+         return { response: "Welcome to the Demo version! In the full version, this AI assistant uses the Anthropic Claude API to draft legal documents and answer complex questions." };
       });
       
       // Ignore remaining POST/PUT/DELETE for unhandled endpoints

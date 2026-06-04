@@ -31,8 +31,8 @@ const MiniCalendar = ({ deadlines }) => {
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
 
-  const monthNames = ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-  const dayNames = ["ح", "ن", "ث", "ر", "خ", "ج", "س"];
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const deadlinesByDate = {};
   deadlines?.forEach(dl => {
@@ -107,11 +107,11 @@ const MiniCalendar = ({ deadlines }) => {
       <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', justifyContent: 'center', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
           <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--status-error, #ef4444)' }}></div>
-          أجل قريب
+          Approaching deadline
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
           <div style={{ width: '12px', height: '12px', borderRadius: '4px', background: 'var(--primary-light, rgba(23, 118, 210, 0.1))', border: '1px solid var(--primary)' }}></div>
-          اليوم
+          Today
         </div>
       </div>
 
@@ -120,7 +120,7 @@ const MiniCalendar = ({ deadlines }) => {
         <div className="animate-fade" style={{ marginTop: '1rem', padding: '1rem', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
             <h4 style={{ fontSize: '0.85rem', color: 'var(--primary)', margin: 0 }}>
-              ملفات يوم {new Date(selectedDateStr).toLocaleDateString('fr-FR')}
+              Files for {new Date(selectedDateStr).toLocaleDateString('en-GB')}
             </h4>
             <button className="btn-icon" onClick={() => setSelectedDateStr(null)} style={{ padding: '0.2rem' }}><X size={14} /></button>
           </div>
@@ -190,7 +190,7 @@ export default function Dashboard() {
     </div>
   );
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem' }}>جاري التحميل...</div>;
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem' }}>Loading...</div>;
 
   return (
     <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -198,43 +198,43 @@ export default function Dashboard() {
       {/* ── Quick Actions (Top) ── */}
       <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
         <button className="btn" onClick={() => navigate('/record/registre/new')}>
-          <Plus size={18} /> محضر جديد
+          <Plus size={18} /> New Record
         </button>
         <button className="btn" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-main)' }}>
-          <FileText size={18} /> إنشاء مستند
+          <FileText size={18} /> Create Document
         </button>
         <button className="btn" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-main)' }}>
-          <DollarSign size={18} /> تسجيل دفع
+          <DollarSign size={18} /> Register Payment
         </button>
       </div>
 
       {/* ── 1. Metrics Grid ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
         <MetricCard 
-          title="الملفات النشطة" 
+          title="Active Files" 
           value={data?.metrics?.activeCount} 
-          label="ملف" 
+          label="File" 
           icon={Gavel} 
           color="var(--primary)" 
         />
         <MetricCard 
-          title="مواعيد اليوم" 
+          title="Today's Tasks" 
           value={data?.metrics?.dueToday} 
-          label="مهمة" 
+          label="Task" 
           icon={Clock} 
           color="var(--accent-gold)" 
         />
         <MetricCard 
-          title="هذا الأسبوع" 
+          title="This Week" 
           value={data?.metrics?.dueWeek} 
-          label="موعد" 
+          label="Deadline" 
           icon={CalendarDays} 
           color="#8b5cf6" 
         />
         <MetricCard 
-          title="إنجازات الشهر" 
+          title="Month's Achievements" 
           value={data?.metrics?.completedMonth} 
-          label="منتهي" 
+          label="Completed" 
           icon={CheckCircle2} 
           color="var(--status-success)" 
         />
@@ -249,14 +249,14 @@ export default function Dashboard() {
           <div className="glass" style={{ padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <FileText size={20} style={{ color: 'var(--primary)' }} /> إدارة الملفات
+                <FileText size={20} style={{ color: 'var(--primary)' }} /> File Management
               </h3>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <div style={{ position: 'relative' }}>
                   <Search size={16} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-soft)' }} />
                   <input 
                     type="text" 
-                    placeholder="بحث في الملفات..." 
+                    placeholder="Search files..." 
                     style={{ paddingRight: '2.2rem', fontSize: '0.85rem', width: '200px' }}
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
@@ -267,10 +267,10 @@ export default function Dashboard() {
                   value={filterStatus}
                   onChange={e => setFilterStatus(e.target.value)}
                 >
-                  <option value="all">كل الحالات</option>
-                  <option value="not_started">غير مبدأ</option>
-                  <option value="in_progress">قيد الإنجاز</option>
-                  <option value="finished">مكتمل</option>
+                  <option value="all">All Statuses</option>
+                  <option value="not_started">Not Started</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="finished">Completed</option>
                 </select>
               </div>
             </div>
@@ -279,11 +279,11 @@ export default function Dashboard() {
               <table>
                 <thead>
                   <tr>
-                    <th>المرجع</th>
-                    <th>الطالب</th>
-                    <th className="hide-on-mobile">المطلوب ضده</th>
-                    <th>الحالة</th>
-                    <th className="hide-on-mobile">تاريخ الأجل</th>
+                    <th>Reference</th>
+                    <th>Applicant</th>
+                    <th className="hide-on-mobile">Defendant</th>
+                    <th>Status</th>
+                    <th className="hide-on-mobile">Deadline Date</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -295,11 +295,11 @@ export default function Dashboard() {
                       <td className="hide-on-mobile">{c.de_part}</td>
                       <td>
                         <span className={`badge badge-${c.status === 'finished' ? 'green' : c.status === 'not_started' ? 'red' : 'amber'}`}>
-                          {c.status === 'finished' ? 'مكتمل' : c.status === 'not_started' ? 'جديد' : 'قيد الإنجاز'}
+                          {c.status === 'finished' ? 'Completed' : c.status === 'not_started' ? 'New' : 'In Progress'}
                         </span>
                       </td>
                       <td className="hide-on-mobile" style={{ color: new Date(c.date_echeance) < new Date() ? 'var(--primary)' : 'inherit' }}>
-                        {c.date_echeance ? new Date(c.date_echeance).toLocaleDateString('fr-FR') : '--'}
+                        {c.date_echeance ? new Date(c.date_echeance).toLocaleDateString('en-GB') : '--'}
                       </td>
                       <td><ChevronRight size={18} style={{ opacity: 0.3 }} /></td>
                     </tr>
@@ -312,22 +312,22 @@ export default function Dashboard() {
           {/* 4. Tasks / Actions Queue */}
           <div className="glass" style={{ padding: '1.5rem' }}>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <Activity size={20} style={{ color: 'var(--accent-gold)' }} /> قائمة المهام (To-Do)
+              <Activity size={20} style={{ color: 'var(--accent-gold)' }} /> Tasks Queue (To-Do)
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
               {data?.tasksQueue?.map(task => (
                 <div key={task.id_r} className="glass" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRight: '4px solid var(--primary)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 'bold' }}>أولوية عالية</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 'bold' }}>High Priority</span>
                     <span style={{ fontSize: '0.7rem', color: 'var(--text-soft)' }}>#{task.ref}</span>
                   </div>
-                  <h4 style={{ fontSize: '0.95rem', marginBottom: '0.25rem' }}>{task.nom_cl1} ضد {task.de_part}</h4>
+                  <h4 style={{ fontSize: '0.95rem', marginBottom: '0.25rem' }}>{task.nom_cl1} vs. {task.de_part}</h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <MapPin size={12} /> معاينة العنوان المذكور
+                    <MapPin size={12} /> View Mentioned Address
                   </p>
                   <div style={{ marginTop: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--primary)' }}>متأخر: {task.date_echeance}</span>
-                    <button className="btn" style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem' }}>إنجاز</button>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--primary)' }}>Overdue: {task.date_echeance}</span>
+                    <button className="btn" style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem' }}>Complete</button>
                   </div>
                 </div>
               ))}
@@ -341,21 +341,21 @@ export default function Dashboard() {
           {/* 3. Deadlines & Calendar */}
           <div className="glass" style={{ padding: '1.5rem' }}>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <CalendarDays size={20} style={{ color: 'var(--primary)' }} /> المواعيد والأجال
+              <CalendarDays size={20} style={{ color: 'var(--primary)' }} /> Deadlines & Appointments
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {data?.deadlines?.map(dl => (
                 <div key={dl.id_even} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                   <div style={{ textAlign: 'center', minWidth: '45px' }}>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-soft)', textTransform: 'uppercase' }}>
-                      {new Date(dl.start).toLocaleDateString('fr-FR', { month: 'short' })}
+                      {new Date(dl.start).toLocaleDateString('en-GB', { month: 'short' })}
                     </div>
                     <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{new Date(dl.start).getDate()}</div>
                   </div>
                   <div className="glass" style={{ flex: 1, padding: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
                     <h4 style={{ fontSize: '0.85rem', marginBottom: '0.2rem' }}>{dl.title}</h4>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <Clock size={12} /> {dl.time_even || '--:--'} • {dl.tribunal_even || 'لا يوجد مكان'}
+                      <Clock size={12} /> {dl.time_even || '--:--'} • {dl.tribunal_even || 'No Location'}
                     </div>
                   </div>
                 </div>
@@ -366,7 +366,7 @@ export default function Dashboard() {
           {/* New: Calendar Widget */}
           <div className="glass" style={{ padding: '1.5rem' }}>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-              <CalendarDays size={20} style={{ color: 'var(--accent-gold)' }} /> رزنامة الآجال
+              <CalendarDays size={20} style={{ color: 'var(--accent-gold)' }} /> Deadlines Calendar
             </h3>
             <MiniCalendar deadlines={data?.calendarDeadlines} />
           </div>
@@ -374,16 +374,16 @@ export default function Dashboard() {
           {/* 6. Payments Summary */}
           <div className="glass" style={{ padding: '1.5rem' }}>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-              <DollarSign size={20} style={{ color: 'var(--status-success)' }} /> ملخص الأداء
+              <DollarSign size={20} style={{ color: 'var(--status-success)' }} /> Payments Summary
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                <span color="var(--text-muted)">المجموع المتوقع:</span>
-                <span style={{ fontWeight: 'bold' }}>{data?.payments?.expected?.toLocaleString()} د.ت</span>
+                <span color="var(--text-muted)">Expected Total:</span>
+                <span style={{ fontWeight: 'bold' }}>{data?.payments?.expected?.toLocaleString()} TND</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                <span color="var(--text-muted)">المبالغ المحصلة:</span>
-                <span style={{ fontWeight: 'bold', color: 'var(--status-success)' }}>{data?.payments?.collected?.toLocaleString()} د.ت</span>
+                <span color="var(--text-muted)">Collected Amounts:</span>
+                <span style={{ fontWeight: 'bold', color: 'var(--status-success)' }}>{data?.payments?.collected?.toLocaleString()} TND</span>
               </div>
               <div style={{ height: '4px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden', marginTop: '0.5rem' }}>
                 <div style={{ 
@@ -398,7 +398,7 @@ export default function Dashboard() {
           {/* 9. Activity Timeline */}
           <div className="glass" style={{ padding: '1.5rem' }}>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <Activity size={20} style={{ color: 'var(--text-soft)' }} /> سجل النشاطات
+              <Activity size={20} style={{ color: 'var(--text-soft)' }} /> Activity Timeline
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'relative' }}>
               <div style={{ position: 'absolute', right: '7px', top: 0, bottom: 0, width: '2px', background: 'var(--border)', zIndex: 0 }}></div>
@@ -446,38 +446,38 @@ export default function Dashboard() {
             boxShadow: 'var(--glass-shadow)'
           }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2>عرض سريع للملف</h2>
+              <h2>Quick View</h2>
               <button className="btn-icon" onClick={() => setSelectedCase(null)}><X size={20} /></button>
             </div>
 
             <div style={{ padding: '1rem', borderRadius: '12px', background: 'var(--nav-active-bg)', border: '1px solid var(--primary)' }}>
               <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 'bold' }}>#{selectedCase.ref}</div>
               <h3 style={{ margin: '0.5rem 0' }}>{selectedCase.nom_cl1}</h3>
-              <p style={{ color: 'var(--text-muted)' }}>ضد {selectedCase.de_part}</p>
+              <p style={{ color: 'var(--text-muted)' }}>vs. {selectedCase.de_part}</p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div className="form-group">
-                <label>الحالة</label>
+                <label>Status</label>
                 <div className={`badge badge-${selectedCase.status === 'finished' ? 'green' : 'amber'}`}>
-                  {selectedCase.status === 'finished' ? 'مكتمل' : 'قيد الإنجاز'}
+                  {selectedCase.status === 'finished' ? 'Completed' : 'In Progress'}
                 </div>
               </div>
               <div className="form-group">
-                <label>تاريخ التسجيل</label>
+                <label>Registration Date</label>
                 <div style={{ fontSize: '0.95rem' }}>{selectedCase.date_reg}</div>
               </div>
               <div className="form-group">
-                <label>تاريخ الأجل</label>
+                <label>Deadline Date</label>
                 <div style={{ fontSize: '0.95rem', color: 'var(--primary)' }}>{selectedCase.date_echeance}</div>
               </div>
               <div className="form-group">
-                <label>المبلغ الإجمالي</label>
-                <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{selectedCase.salaire?.toLocaleString()} د.ت</div>
+                <label>Total Amount</label>
+                <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{selectedCase.salaire?.toLocaleString()} TND</div>
               </div>
               {selectedCase.remarque && (
                 <div className="form-group">
-                  <label>ملاحظات</label>
+                  <label>Remarks</label>
                   <p style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{selectedCase.remarque}</p>
                 </div>
               )}
@@ -485,7 +485,7 @@ export default function Dashboard() {
 
             <div style={{ marginTop: 'auto', display: 'flex', gap: '1rem' }}>
                <button className="btn" style={{ flex: 1 }} onClick={() => navigate(`/record/registre/${selectedCase.id_r}`)}>
-                 <ExternalLink size={18} /> معاينة كاملة وتعديل
+                 <ExternalLink size={18} /> Full View & Edit
                </button>
             </div>
           </div>

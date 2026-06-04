@@ -21,7 +21,7 @@ export default function AuditLogs() {
       const res = await fetch(`${API_BASE}/audit?page=${page}&limit=50&search=${encodeURIComponent(search)}&action_type=${actionFilter}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!res.ok) throw new Error('فشل في تحميل السجلات');
+      if (!res.ok) throw new Error('Failed to load logs');
       const data = await res.json();
       setLogs(data.data);
       setTotal(data.total);
@@ -58,10 +58,10 @@ export default function AuditLogs() {
 
   const getActionLabel = (action) => {
     switch(action) {
-      case 'CREATE': return <span style={{ color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>إضافة</span>;
-      case 'UPDATE': return <span style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>تعديل</span>;
-      case 'DELETE': return <span style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>حذف</span>;
-      case 'VIEW': return <span style={{ color: '#3b82f6', background: 'rgba(59,130,246,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>عرض</span>;
+      case 'CREATE': return <span style={{ color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>Create</span>;
+      case 'UPDATE': return <span style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>Update</span>;
+      case 'DELETE': return <span style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>Delete</span>;
+      case 'VIEW': return <span style={{ color: '#3b82f6', background: 'rgba(59,130,246,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>View</span>;
       default: return <span style={{ color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>{action}</span>;
     }
   };
@@ -77,13 +77,13 @@ export default function AuditLogs() {
   };
 
   return (
-    <div className="animate-fade" dir="rtl" style={{ padding: '1rem', paddingBottom: '3rem' }}>
+    <div className="animate-fade" style={{ padding: '1rem', paddingBottom: '3rem' }}>
       <div className="topbar" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Eye size={28} style={{ color: 'var(--primary)' }} />
           <div>
-            <h2 style={{ color: 'var(--primary)', margin: 0 }}>سجل النشاطات (Audit Logs)</h2>
-            <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.7 }}>تتبع جميع الحركات والتغييرات في النظام لضمان الشفافية والمحاسبة</p>
+            <h2 style={{ color: 'var(--primary)', margin: 0 }}>Audit Logs</h2>
+            <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.7 }}>Track all system actions and changes to ensure transparency and accountability</p>
           </div>
         </div>
       </div>
@@ -91,7 +91,7 @@ export default function AuditLogs() {
       <div className="glass" style={{ padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
           <Filter size={18} />
-          <span style={{ fontSize: '0.9rem' }}>تصفية:</span>
+          <span style={{ fontSize: '0.9rem' }}>Filter:</span>
         </div>
         
         <div style={{ flex: 1, minWidth: '200px' }}>
@@ -99,7 +99,7 @@ export default function AuditLogs() {
             <Search size={16} style={{ color: 'var(--text-muted)' }} />
             <input 
               type="text" 
-              placeholder="بحث بالاسم أو التفاصيل..." 
+              placeholder="Search by name or details..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '0.85rem', width: '100%', outline: 'none', marginRight: '0.5rem' }}
@@ -112,16 +112,16 @@ export default function AuditLogs() {
           onChange={(e) => setActionFilter(e.target.value)}
           style={{ padding: '0.5rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--card-border)', color: 'var(--text)', outline: 'none' }}
         >
-          <option value="">كل الحركات</option>
-          <option value="CREATE">إضافة</option>
-          <option value="UPDATE">تعديل</option>
-          <option value="DELETE">حذف</option>
-          <option value="VIEW">عرض</option>
+          <option value="">All Actions</option>
+          <option value="CREATE">Create</option>
+          <option value="UPDATE">Update</option>
+          <option value="DELETE">Delete</option>
+          <option value="VIEW">View</option>
         </select>
       </div>
 
       {loading && page === 1 ? (
-        <p style={{ opacity: 0.6, textAlign: 'center', padding: '2rem' }}>جاري تحميل السجلات…</p>
+        <p style={{ opacity: 0.6, textAlign: 'center', padding: '2rem' }}>Loading logs...</p>
       ) : error ? (
         <p style={{ color: '#ef4444', textAlign: 'center', padding: '2rem' }}>{error}</p>
       ) : (
@@ -130,18 +130,18 @@ export default function AuditLogs() {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
               <thead>
                 <tr style={{ background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid var(--card-border)' }}>
-                  <th style={{ padding: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)', width: '15%' }}>التاريخ والوقت</th>
-                  <th style={{ padding: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)', width: '15%' }}>المستخدم</th>
-                  <th style={{ padding: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)', width: '10%' }}>الحركة</th>
-                  <th style={{ padding: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)', width: '15%' }}>الوحدة</th>
-                  <th style={{ padding: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)', width: '45%' }}>التفاصيل</th>
+                  <th style={{ padding: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)', width: '15%' }}>Date and Time</th>
+                  <th style={{ padding: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)', width: '15%' }}>User</th>
+                  <th style={{ padding: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)', width: '10%' }}>Action</th>
+                  <th style={{ padding: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)', width: '15%' }}>Entity</th>
+                  <th style={{ padding: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)', width: '45%' }}>Details</th>
                 </tr>
               </thead>
               <tbody>
                 {logs.length === 0 ? (
                   <tr>
                     <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>
-                      لا توجد نشاطات مسجلة
+                      No activities recorded
                     </td>
                   </tr>
                 ) : (
@@ -186,7 +186,7 @@ export default function AuditLogs() {
 
           <div style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--card-border)', background: 'rgba(0,0,0,0.1)' }}>
             <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>
-              إجمالي السجلات: {total}
+              Total logs: {total}
             </span>
             {totalPages > 1 && (
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -198,7 +198,7 @@ export default function AuditLogs() {
                   <ChevronRight size={18} />
                 </button>
                 <span style={{ fontSize: '0.85rem', padding: '0 0.5rem' }}>
-                  صفحة {page} من {totalPages}
+                  Page {page} of {totalPages}
                 </span>
                 <button 
                   className="btn-icon glass" 

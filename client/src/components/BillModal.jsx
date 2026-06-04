@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { X, Printer, FileText } from 'lucide-react';
-import { numberToArabicWords } from '../utils/numberToArabicWords';
+import { numberToEnglishWords } from '../utils/numberToEnglishWords';
 
 /* ─── helpers ──────────────────────────────────────────────── */
 
@@ -32,12 +32,12 @@ function fmtDate(raw) {
  * Current Arabic date string: سوسة في DD MMMM YYYY
  */
 const ARABIC_MONTHS = [
-  'جانفي', 'فيفري', 'مارس', 'أفريل', 'ماي', 'جوان',
-  'جويلية', 'أوت', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
 ];
-function todayArabic() {
+function todayEnglish() {
   const now = new Date();
-  return `سوسة في ${now.getDate()} ${ARABIC_MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+  return `Sousse, ${now.getDate()} ${ARABIC_MONTHS[now.getMonth()]} ${now.getFullYear()}`;
 }
 
 /* ─── Component ─────────────────────────────────────────────── */
@@ -138,7 +138,7 @@ export default function BillModal({ record, actions = [], records = [], onClose 
   const grandTotal    = rows.reduce((s, r) => s + r.total,    0);
 
   // grandTotal is already in millimes (integer)
-  const amountWords = numberToArabicWords(grandTotal);
+  const amountWords = numberToEnglishWords(grandTotal);
 
   /* ── Print handler ─────────────────────────────────────────── */
   const handleExportWord = () => {
@@ -150,14 +150,14 @@ export default function BillModal({ record, actions = [], records = [], onClose 
         <meta charset='utf-8'>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&display=swap');
-          body { font-family: 'Cairo', 'Amiri', Arial, sans-serif; direction: rtl; }
+          body { font-family: 'Cairo', 'Amiri', Arial, sans-serif; direction: ltr; }
           table { border-collapse: collapse; width: 100%; margin-top: 10px; }
           th, td { border: 1px solid #555; padding: 5px; text-align: center; vertical-align: middle; }
           .bill-header { text-align: center; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px; }
           .bill-meta td { border: none !important; }
         </style>
       </head>
-      <body lang="ar-TN">
+      <body lang="en-TN">
         ${content}
       </body>
       </html>
@@ -167,7 +167,7 @@ export default function BillModal({ record, actions = [], records = [], onClose 
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
-    a.download = `فاتورة_${headerRecord.ref || 'ملف'}.doc`;
+    a.download = `Invoice_${headerRecord.ref || 'file'}.doc`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -179,14 +179,14 @@ export default function BillModal({ record, actions = [], records = [], onClose 
     const win = window.open('', '_blank', 'width=900,height=700');
     win.document.write(`
       <!DOCTYPE html>
-      <html dir="rtl" lang="ar">
+      <html dir="ltr" lang="en">
       <head>
         <meta charset="UTF-8"/>
-        <title>قائمة مصاريف وأجور محاضر</title>
+        <title>Statement of Fees and Expenses</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&display=swap');
           * { box-sizing: border-box; margin: 0; padding: 0; }
-          body { font-family: 'Cairo', 'Amiri', Arial, sans-serif; direction: rtl; background: white; color: #000; font-size: 12pt; padding: 0; }
+          body { font-family: 'Cairo', 'Amiri', Arial, sans-serif; direction: ltr; background: white; color: #000; font-size: 12pt; padding: 0; }
           .bill-page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 12mm 15mm 10mm; position: relative; }
           .bill-header { text-align: center; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px; }
           .bill-header h1 { font-size: 18pt; font-weight: 700; letter-spacing: 1px; }
@@ -255,7 +255,7 @@ export default function BillModal({ record, actions = [], records = [], onClose 
             background: 'rgba(var(--primary-rgb),0.06)'
           }}>
             <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary)' }}>
-              قائمة مصاريف وأجور محاضر{isMulti ? ` (مجمعة — ${records.length} ملفات)` : ''}
+              Statement of Fees and Expenses{isMulti ? ` (Grouped — ${records.length} files)` : ''}
             </span>
             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
               <button
@@ -269,7 +269,7 @@ export default function BillModal({ record, actions = [], records = [], onClose 
                   fontFamily: 'inherit'
                 }}
               >
-                <Printer size={17} /> طباعة
+                <Printer size={17} /> Print
               </button>
               <button
                 onClick={handleExportWord}
@@ -302,7 +302,7 @@ export default function BillModal({ record, actions = [], records = [], onClose 
               style={{
                 background: 'white', color: '#000',
                 fontFamily: "'Cairo', 'Amiri', Arial, sans-serif",
-                direction: 'rtl',
+                direction: 'ltr',
                 padding: '14mm 16mm 12mm',
                 width: '100%',
                 fontSize: '11pt',
@@ -317,42 +317,42 @@ export default function BillModal({ record, actions = [], records = [], onClose 
                 marginBottom: '14px'
               }}>
                 <div style={{ fontSize: '18pt', fontWeight: 700, letterSpacing: '1px' }}>
-                  مكـــتــب الأستـــاذ
+                  Office of Maître
                 </div>
                 <div style={{ fontSize: '17pt', fontWeight: 700, marginTop: '2px' }}>
-                  مـــراد القــعــودي
+                  Mourad Gaoudi
                 </div>
                 <div style={{ fontSize: '12pt', fontWeight: 500, marginTop: '4px' }}>
-                  العدل المنفذ بسوسة
+                  Bailiff in Sousse
                 </div>
               </div>
 
               {/* ── Date + title ── */}
               <div style={{ marginBottom: '10px' }}>
                 <div style={{ textAlign: 'right', fontWeight: 600, marginBottom: '8px', fontSize: '11pt' }}>
-                  {todayArabic()}
+                  {todayEnglish()}
                 </div>
                 <div style={{
                   textAlign: 'center', fontSize: '15pt', fontWeight: 700,
                   textDecoration: 'underline', letterSpacing: '2px', marginBottom: '12px'
                 }}>
-                  قائـــمـــة مصـاريف وأجور محاضر
+                  Statement of Fees and Expenses
                 </div>
 
                 {/* Client info block */}
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11pt' }}>
                   <tbody>
                     <tr>
-                      <td style={{ fontWeight: 700, width: '110px', paddingBottom: '4px', whiteSpace: 'nowrap' }}>الحريف :</td>
+                      <td style={{ fontWeight: 700, width: '110px', paddingBottom: '4px', whiteSpace: 'nowrap' }}>Client :</td>
                       <td style={{ paddingBottom: '4px' }}>{headerRecord.de_part || headerRecord.nom_cl1 || '—'}</td>
                     </tr>
                     <tr>
-                      <td style={{ fontWeight: 700, paddingBottom: '4px' }}>العنوان :</td>
+                      <td style={{ fontWeight: 700, paddingBottom: '4px' }}>Address :</td>
                       <td style={{ paddingBottom: '4px' }}>{(headerRecord.cl1_adresse === '0' || !headerRecord.cl1_adresse) ? '' : headerRecord.cl1_adresse}</td>
                     </tr>
                     <tr>
-                      <td style={{ fontWeight: 700 }}>المرجع :</td>
-                      <td>{isMulti ? `ملفات متعددة (${records.length})` : (headerRecord.remarque || headerRecord.nom_cl2 || '—')}</td>
+                      <td style={{ fontWeight: 700 }}>Reference :</td>
+                      <td>{isMulti ? `Multiple files (${records.length})` : (headerRecord.remarque || headerRecord.nom_cl2 || '—')}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -366,11 +366,11 @@ export default function BillModal({ record, actions = [], records = [], onClose 
                 <thead>
                   <tr>
                     {[
-                      ' رتبي', 
-                      ...(isExecution ? [] : ['تضمين']),
-                      'نوع العملية',
-                      'المتوجه إليه', 'تاريخ المحضر',
-                      'الأجور', 'TVA', 'المصاريف', 'المجموع'
+                      ' Index', 
+                      ...(isExecution ? [] : ['Inclusion']),
+                      'Operation Type',
+                      'Addressed to', 'Record Date',
+                      'Fees', 'TVA', 'Expenses', 'Total'
                     ].map(h => (
                       <th key={h} style={{
                         background: '#f0f0f0', border: '1px solid #444',
@@ -385,8 +385,8 @@ export default function BillModal({ record, actions = [], records = [], onClose 
                     <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#f7f7f7' }}>
                       <td style={tdStyle}>{row.idx}</td>
                       {!isExecution && <td style={tdStyle}>{row.ref}</td>}
-                      <td style={{ ...tdStyle, textAlign: 'right' }}>{row.operation}</td>
-                      <td style={{ ...tdStyle, textAlign: 'right' }}>{row.target}</td>
+                      <td style={{ ...tdStyle, textAlign: 'left' }}>{row.operation}</td>
+                      <td style={{ ...tdStyle, textAlign: 'left' }}>{row.target}</td>
                       <td style={tdStyle}>{row.date}</td>
                       <td style={tdStyle}>{billFormat(row.fees)}</td>
                       <td style={tdStyle}>{billFormat(row.tva)}</td>
@@ -399,9 +399,9 @@ export default function BillModal({ record, actions = [], records = [], onClose 
                   <tr>
                     <td colSpan={isExecution ? 4 : 5} style={{ 
                       border: '1px solid #444', padding: '6px 4px', 
-                      fontWeight: 700, background: '#e0e0e0', textAlign: 'center' 
+                      fontWeight: 700, background: '#e0e0e0', textAlign: 'right' 
                     }}>
-                      المجموع العام :
+                      Grand Total :
                     </td>
                     <td style={{ border: '1px solid #444', padding: '6px 4px', fontWeight: 700, background: '#e0e0e0' }}>{billFormat(totalFees)}</td>
                     <td style={{ border: '1px solid #444', padding: '6px 4px', fontWeight: 700, background: '#e0e0e0' }}>{billFormat(totalTva)}</td>
@@ -417,12 +417,12 @@ export default function BillModal({ record, actions = [], records = [], onClose 
                 padding: '8px 14px', fontSize: '11pt', fontWeight: 600,
                 textAlign: 'center', background: '#f5f5f5', borderRadius: '4px'
               }}>
-                أوقفت هذه القائمة على مبلغ قدره : {amountWords}.
+                This statement is fixed at the sum of : {amountWords}.
               </div>
 
               {/* ── Signature ── */}
               <div style={{ textAlign: 'center', marginTop: '28px', fontSize: '13pt', fontWeight: 700 }}>
-                العـدل المنفـذ
+                The Bailiff
               </div>
 
               {/* ── Letterhead footer ── */}
@@ -431,10 +431,10 @@ export default function BillModal({ record, actions = [], records = [], onClose 
                 paddingTop: '8px', textAlign: 'center', fontSize: '8.5pt',
                 color: '#333'
               }}>
-                <div>عمارة قلولو – مكتب عدد A23 - شارع محمد معروف – 4000 سوسة</div>
-                <div>الهاتف : 73226226 – الفاكس : 73226300 - البريد الإلكتروني : mourad.gaoudi@gmail.com</div>
-                <div>ب ت و عدد 02983329 - المعرف الجبائي 1301683X/A/P/000</div>
-                <div>الحساب البنكي : البنك التونسي 05500000022300094016</div>
+                <div>Kallalou Building – Office No. A23 - Mohamed Maarouf Street – 4000 Sousse</div>
+                <div>Phone : 73226226 – Fax : 73226300 - Email : mourad.gaoudi@gmail.com</div>
+                <div>CIN No. 02983329 - Tax ID 1301683X/A/P/000</div>
+                <div>Bank Account : Banque de Tunisie 05500000022300094016</div>
               </div>
             </div>
           </div>

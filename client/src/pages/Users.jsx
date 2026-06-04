@@ -25,7 +25,7 @@ export default function Users() {
       const res = await fetch(`${API_BASE}/users`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!res.ok) throw new Error('فشل في تحميل المستخدمين');
+      if (!res.ok) throw new Error('Failed to load users');
       const data = await res.json();
       setUsers(data);
     } catch (err) {
@@ -72,7 +72,7 @@ export default function Users() {
     const token = localStorage.getItem('token');
     
     if (!currentUser && !formData.password) {
-      alert('الرجاء إدخال كلمة المرور');
+      alert('Please enter a password');
       return;
     }
 
@@ -91,7 +91,7 @@ export default function Users() {
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || 'حدث خطأ');
+        throw new Error(errorData.error || 'An error occurred');
       }
 
       handleCloseModal();
@@ -102,7 +102,7 @@ export default function Users() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذا المستخدم؟')) return;
+    if (!window.confirm('Are you sure you want to delete this user?')) return;
     
     const token = localStorage.getItem('token');
     try {
@@ -113,7 +113,7 @@ export default function Users() {
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || 'حدث خطأ أثناء الحذف');
+        throw new Error(errorData.error || 'An error occurred during deletion');
       }
 
       fetchUsers();
@@ -125,30 +125,30 @@ export default function Users() {
   const getRoleBadge = (role) => {
     switch (role) {
       case 'superadmin':
-        return <span className="glass" style={{ padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ShieldAlert size={14}/> مدير عام</span>;
+        return <span className="glass" style={{ padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ShieldAlert size={14}/> Super Admin</span>;
       case 'admin':
-        return <span className="glass" style={{ padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', color: '#3b82f6', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Shield size={14}/> مدير</span>;
+        return <span className="glass" style={{ padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', color: '#3b82f6', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Shield size={14}/> Admin</span>;
       case 'client':
-        return <span className="glass" style={{ padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', color: '#8b5cf6', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><User size={14}/> حريف (بوابة)</span>;
+        return <span className="glass" style={{ padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', color: '#8b5cf6', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><User size={14}/> Client (Portal)</span>;
       default:
-        return <span className="glass" style={{ padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><User size={14}/> مستخدم</span>;
+        return <span className="glass" style={{ padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><User size={14}/> User</span>;
     }
   };
 
   return (
-    <div className="animate-fade" dir="rtl" style={{ padding: '1rem' }}>
+    <div className="animate-fade" style={{ padding: '1rem' }}>
       <div className="topbar" style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <UsersIcon size={24} style={{ color: 'var(--primary)' }} />
-          <h2 style={{ color: 'var(--primary)', margin: 0 }}>المستخدمون</h2>
+          <h2 style={{ color: 'var(--primary)', margin: 0 }}>Users</h2>
         </div>
         <button className="btn" onClick={() => handleOpenModal()} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Plus size={18} /> إضافة مستخدم
+          <Plus size={18} /> Add User
         </button>
       </div>
 
       {loading ? (
-        <p style={{ opacity: 0.6 }}>جاري التحميل…</p>
+        <p style={{ opacity: 0.6 }}>Loading...</p>
       ) : error ? (
         <p style={{ color: '#ef4444' }}>{error}</p>
       ) : (
@@ -163,23 +163,23 @@ export default function Users() {
                   {getRoleBadge(user.role)}
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button className="btn-icon" onClick={() => handleOpenModal(user)} title="تعديل">
+                  <button className="btn-icon" onClick={() => handleOpenModal(user)} title="Edit">
                     <Edit2 size={18} style={{ color: '#3b82f6' }} />
                   </button>
-                  <button className="btn-icon" onClick={() => handleDelete(user.id)} title="حذف">
+                  <button className="btn-icon" onClick={() => handleDelete(user.id)} title="Delete">
                     <Trash2 size={18} style={{ color: '#ef4444' }} />
                   </button>
                 </div>
               </div>
               {(user.societe || user.client_aliases) && (
                 <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>
-                  {user.societe && <div><strong>الشركة:</strong> {user.societe}</div>}
-                  {user.client_aliases && <div><strong>الأسماء البديلة:</strong> {user.client_aliases}</div>}
+                  {user.societe && <div><strong>Company:</strong> {user.societe}</div>}
+                  {user.client_aliases && <div><strong>Aliases:</strong> {user.client_aliases}</div>}
                 </div>
               )}
             </div>
           ))}
-          {users.length === 0 && <p style={{ opacity: 0.6 }}>لا يوجد مستخدمين</p>}
+          {users.length === 0 && <p style={{ opacity: 0.6 }}>No users found</p>}
         </div>
       )}
 
@@ -189,7 +189,7 @@ export default function Users() {
           <div className="modal-content glass-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', width: '90%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 style={{ margin: 0, color: 'var(--primary)' }}>
-                {currentUser ? 'تعديل مستخدم' : 'إضافة مستخدم جديد'}
+                {currentUser ? 'Edit User' : 'Add New User'}
               </h3>
               <button className="btn-icon" onClick={handleCloseModal}>
                 <X size={20} />
@@ -198,7 +198,7 @@ export default function Users() {
             
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>اسم المستخدم</label>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Username</label>
                 <input
                   type="text"
                   value={formData.username}
@@ -210,7 +210,7 @@ export default function Users() {
 
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-                  كلمة المرور {currentUser && <span style={{ opacity: 0.6, fontSize: '0.8rem' }}>(اتركها فارغة لعدم التغيير)</span>}
+                  Password {currentUser && <span style={{ opacity: 0.6, fontSize: '0.8rem' }}>(leave blank to keep unchanged)</span>}
                 </label>
                 <input
                   type="password"
@@ -222,47 +222,47 @@ export default function Users() {
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>الدور</label>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Role</label>
                 <select
                   value={formData.role}
                   onChange={e => setFormData({...formData, role: e.target.value})}
                   style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text)' }}
                 >
-                  <option value="user">مستخدم (سكرتير)</option>
-                  <option value="admin">مدير</option>
-                  <option value="superadmin">مدير عام</option>
-                  <option value="client">حريف (بوابة خارجية)</option>
+                  <option value="user">User (Secretary)</option>
+                  <option value="admin">Admin</option>
+                  <option value="superadmin">Super Admin</option>
+                  <option value="client">Client (External Portal)</option>
                 </select>
               </div>
 
               {formData.role === 'client' && (
                 <>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>اسم الشركة / الحريف</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Company / Client Name</label>
                     <input
                       type="text"
                       value={formData.societe}
                       onChange={e => setFormData({...formData, societe: e.target.value})}
-                      placeholder="يطابق اسم الطالب في الدفاتر"
+                      placeholder="Matches the petitioner name in records"
                       style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text)' }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>الأسماء البديلة (مفصولة بفاصلة ,)</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Aliases (comma separated ,)</label>
                     <input
                       type="text"
                       value={formData.client_aliases}
                       onChange={e => setFormData({...formData, client_aliases: e.target.value})}
-                      placeholder="مثال: DIAM TUNISIE, شركة ديام تونس"
+                      placeholder="Example: DIAM TUNISIE, Diam Tunisie Company"
                       style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text)' }}
                     />
-                    <small style={{ opacity: 0.6, fontSize: '0.75rem', display: 'block', marginTop: '4px' }}>يستخدم للبحث عن الملفات التي قد تكتب فيها أسماء الشركة بطرق مختلفة.</small>
+                    <small style={{ opacity: 0.6, fontSize: '0.75rem', display: 'block', marginTop: '4px' }}>Used to search for records where the company name might be written differently.</small>
                   </div>
                 </>
               )}
 
               <button type="submit" className="btn" style={{ marginTop: '1rem', padding: '0.75rem' }}>
-                حفظ
+                Save
               </button>
             </form>
           </div>

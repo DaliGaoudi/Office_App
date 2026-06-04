@@ -58,16 +58,16 @@ export default function RegistreCNSS() {
         setData(prev => prev.map(item => item.id_cn === id ? { ...item, status: newStatus } : item));
       } else {
         const err = await res.json();
-        alert('حدث خطأ: ' + (err.error || 'فشل التحديث'));
+        alert('An error occurred: ' + (err.error || 'Failed to update'));
       }
     } catch (e) {
       console.error(e);
-      alert('خطأ في الاتصال بالخادم');
+      alert('Error communicating with the server');
     }
   };
   
   const handleDelete = async (id) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذا الملف؟')) return;
+    if (!window.confirm('Are you sure you want to delete this file?')) return;
     const token = localStorage.getItem('token');
     
     try {
@@ -80,11 +80,11 @@ export default function RegistreCNSS() {
         fetchRecords();
       } else {
         const err = await res.json();
-        alert('حدث خطأ: ' + (err.error || 'فشل الحذف'));
+        alert('An error occurred: ' + (err.error || 'Failed to delete'));
       }
     } catch (e) {
       console.error(e);
-      alert('خطأ في الاتصال بالخادم');
+      alert('Error communicating with the server');
     }
   };
 
@@ -106,11 +106,11 @@ export default function RegistreCNSS() {
     <div className="animate-fade">
       {/* ── Toolbar ── */}
       <div className="topbar" style={{ marginBottom: '1rem' }}>
-        <h2 style={{ color: 'var(--primary)' }}>ملفات الضمان الاجتماعي</h2>
+        <h2 style={{ color: 'var(--primary)' }}>CNSS Files</h2>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="btn" onClick={() => window.print()}><Printer size={18} /> طباعة</button>
+          <button className="btn" onClick={() => window.print()}><Printer size={18} /> Print</button>
           <button className="btn" onClick={() => { setFormData({ nom_ste: '', num_cnss: '', num_affaire: '' }); setShowModal(true); }}>
-            <Plus size={18} /> إضافة
+            <Plus size={18} /> Add
           </button>
         </div>
       </div>
@@ -118,36 +118,36 @@ export default function RegistreCNSS() {
       {/* ── Filters ── */}
         <form onSubmit={handleSearch} className="search-wrapper glass" style={{ padding: '1rem', flexWrap: 'wrap', direction: 'rtl', marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
           <div style={{ flex: 1, minWidth: '150px' }}>
-            <AutocompleteInput placeholder="اسم الشركة"  value={filters.nom_ste}     onChange={e => setFilters({ ...filters, nom_ste: e.target.value })} />
+            <AutocompleteInput placeholder="Company Name"  value={filters.nom_ste}     onChange={e => setFilters({ ...filters, nom_ste: e.target.value })} />
           </div>
-          <input type="text" placeholder="رقم CNSS"    value={filters.num_cnss}    onChange={e => setFilters({ ...filters, num_cnss: e.target.value })} />
-          <input type="text" placeholder="رقم القضية"  value={filters.num_affaire} onChange={e => setFilters({ ...filters, num_affaire: e.target.value })} />
-          <button type="submit" className="btn"><Search size={18} /> بحث</button>
+          <input type="text" placeholder="CNSS Number"    value={filters.num_cnss}    onChange={e => setFilters({ ...filters, num_cnss: e.target.value })} />
+          <input type="text" placeholder="Case Number"  value={filters.num_affaire} onChange={e => setFilters({ ...filters, num_affaire: e.target.value })} />
+          <button type="submit" className="btn"><Search size={18} /> Search</button>
           <button type="button" className="btn" style={{ background: 'rgba(255,255,255,0.08)' }}
             onClick={() => { setFilters({ nom_ste: '', num_cnss: '', num_affaire: '' }); setActiveFilters({}); setPage(1); }}>
-            مسح
+            Clear
           </button>
         </form>
 
       {/* ── Table ── */}
       <div className="glass table-container print-area" style={{ direction: 'rtl' }}>
         {loading ? (
-          <p style={{ padding: '2rem', textAlign: 'center', opacity: 0.6 }}>جاري التحميل…</p>
+          <p style={{ padding: '2rem', textAlign: 'center', opacity: 0.6 }}>Loading…</p>
         ) : (
           <>
             <table>
               <thead>
                 <tr>
-                  <th>رقم القضية</th>
-                  <th>اسم الشركة</th>
-                  <th className="hide-on-mobile">رقم CNSS</th>
-                  <th className="hide-on-mobile">الحالة</th>
-                  <th className="no-print">عمل</th>
+                  <th>Case Number</th>
+                  <th>Company Name</th>
+                  <th className="hide-on-mobile">CNSS Number</th>
+                  <th className="hide-on-mobile">Status</th>
+                  <th className="no-print">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {data.length === 0 ? (
-                  <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>لا توجد نتائج</td></tr>
+                  <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>No results</td></tr>
                 ) : data.map(item => (
                   <tr key={item.id_cn}>
                     <td>{item.num_affaire}</td>
@@ -173,12 +173,12 @@ export default function RegistreCNSS() {
                     </td>
                     <td className="no-print" style={{ display: 'flex', gap: '0.5rem' }}>
                       <button onClick={() => navigate(`/record/cnss/${item.id_cn}`)}
-                        title="تعديل"
+                        title="Edit"
                         style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer' }}>
                         <Edit size={18} />
                       </button>
                       <button onClick={() => handleDelete(item.id_cn)}
-                        title="حذف"
+                        title="Delete"
                         style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
                         <Trash2 size={18} />
                       </button>
@@ -200,14 +200,14 @@ export default function RegistreCNSS() {
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div className="glass" style={{ padding: '2rem', width: 500, maxWidth: '90%', direction: 'rtl' }}>
-            <h3 style={{ marginBottom: '1.5rem', color: 'var(--primary)' }}>إضافة ملف الضمان الاجتماعي</h3>
+            <h3 style={{ marginBottom: '1.5rem', color: 'var(--primary)' }}>Add CNSS File</h3>
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <input type="text" placeholder="رقم القضية *"  value={formData.num_affaire} onChange={e => setFormData({ ...formData, num_affaire: e.target.value })} required />
-              <AutocompleteInput placeholder="اسم الشركة *"  value={formData.nom_ste}     onChange={e => setFormData({ ...formData, nom_ste: e.target.value })} required />
-              <input type="text" placeholder="رقم CNSS"      value={formData.num_cnss}    onChange={e => setFormData({ ...formData, num_cnss: e.target.value })} />
+              <input type="text" placeholder="Case Number *"  value={formData.num_affaire} onChange={e => setFormData({ ...formData, num_affaire: e.target.value })} required />
+              <AutocompleteInput placeholder="Company Name *"  value={formData.nom_ste}     onChange={e => setFormData({ ...formData, nom_ste: e.target.value })} required />
+              <input type="text" placeholder="CNSS Number"      value={formData.num_cnss}    onChange={e => setFormData({ ...formData, num_cnss: e.target.value })} />
               <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                <button type="submit" className="btn" style={{ flex: 1 }}>حفظ</button>
-                <button type="button" className="btn" style={{ flex: 1, background: 'rgba(255,255,255,0.1)' }} onClick={() => setShowModal(false)}>إلغاء</button>
+                <button type="submit" className="btn" style={{ flex: 1 }}>Save</button>
+                <button type="button" className="btn" style={{ flex: 1, background: 'rgba(255,255,255,0.1)' }} onClick={() => setShowModal(false)}>Cancel</button>
               </div>
             </form>
           </div>

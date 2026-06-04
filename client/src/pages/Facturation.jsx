@@ -8,55 +8,55 @@ import BillModal from '../components/BillModal';
 /* ─── config per register type ───────────────────────────────────────────── */
 const CONFIG = {
   general: {
-    label: 'الدفتر العام', api: 'registre', dateField: 'date_reg',
+    label: 'General Register', api: 'registre', dateField: 'date_reg',
     columns: [
-      { key: 'ref',      label: 'العدد' },
-      { key: 'de_part',  label: 'طالب الخدمة', hideOnMobile: true },
-      { key: 'nom_cl1',  label: 'الطالب' },
-      { key: 'nom_cl2',  label: 'المطلوب', hideOnMobile: true },
-      { key: 'remarque', label: 'نوع المحضر', hideOnMobile: true },
-      { key: 'date_inscri', label: 'تاريخ تبليغ المحضر', hideOnMobile: true },
+      { key: 'ref',      label: 'Reference' },
+      { key: 'de_part',  label: 'Service Requester', hideOnMobile: true },
+      { key: 'nom_cl1',  label: 'Applicant' },
+      { key: 'nom_cl2',  label: 'Defendant', hideOnMobile: true },
+      { key: 'remarque', label: 'Record Type', hideOnMobile: true },
+      { key: 'date_inscri', label: 'Notification Date', hideOnMobile: true },
 
-      { key: 'base_fare', label: 'الأجور', isAmount: true, hideOnMobile: true },
-      { key: 'tva',       label: 'أداء 19%', isAmount: true, hideOnMobile: true },
-      { key: 'expenses',  label: 'المصاريف', isAmount: true, hideOnMobile: true },
-      { key: 'calculated_total', label: 'الجملة', isAmount: true, isTotal: true },
-      { key: 'status',    label: 'الحالة', hideOnMobile: true },
+      { key: 'base_fare', label: 'Fees', isAmount: true, hideOnMobile: true },
+      { key: 'tva',       label: 'VAT 19%', isAmount: true, hideOnMobile: true },
+      { key: 'expenses',  label: 'Expenses', isAmount: true, hideOnMobile: true },
+      { key: 'calculated_total', label: 'Total', isAmount: true, isTotal: true },
+      { key: 'status',    label: 'Status', hideOnMobile: true },
     ],
     searchFields: [
-      { key: 'ref', placeholder: 'العدد' },
-      { key: 'de_part', placeholder: 'طالب الخدمة' },
+      { key: 'ref', placeholder: 'Reference' },
+      { key: 'de_part', placeholder: 'Service Requester' },
     ],
   },
   execution: {
-    label: 'دفتر التنفيذ', api: 'execution', dateField: 'date_reg',
+    label: 'Execution', api: 'execution', dateField: 'date_reg',
     columns: [
-      { key: 'ref',         label: 'الملف' },
-      { key: 'de_part',     label: 'طالب الخدمة', hideOnMobile: true },
-      { key: 'nom_cl1',     label: 'الطالب' },
-      { key: 'nom_cl2',     label: 'المطلوب', hideOnMobile: true },
+      { key: 'ref',         label: 'File' },
+      { key: 'de_part',     label: 'Service Requester', hideOnMobile: true },
+      { key: 'nom_cl1',     label: 'Applicant' },
+      { key: 'nom_cl2',     label: 'Defendant', hideOnMobile: true },
 
-      { key: 'base_fare',   label: 'الأجور', isAmount: true, hideOnMobile: true },
-      { key: 'tva',         label: 'أداء 19%', isAmount: true, hideOnMobile: true },
-      { key: 'expenses',    label: 'المصاريف', isAmount: true, hideOnMobile: true },
-      { key: 'calculated_total', label: 'الجملة', isAmount: true, isTotal: true },
-      { key: 'status',      label: 'الحالة', hideOnMobile: true },
+      { key: 'base_fare',   label: 'Fees', isAmount: true, hideOnMobile: true },
+      { key: 'tva',         label: 'VAT 19%', isAmount: true, hideOnMobile: true },
+      { key: 'expenses',    label: 'Expenses', isAmount: true, hideOnMobile: true },
+      { key: 'calculated_total', label: 'Total', isAmount: true, isTotal: true },
+      { key: 'status',      label: 'Status', hideOnMobile: true },
     ],
     searchFields: [
-      { key: 'ref', placeholder: 'الملف' },
-      { key: 'de_part', placeholder: 'طالب الخدمة' },
+      { key: 'ref', placeholder: 'File' },
+      { key: 'de_part', placeholder: 'Service Requester' },
     ],
   },
   cnss: {
-    label: 'ملفات الضمان الاجتماعي', api: 'cnss', dateField: null,
+    label: 'CNSS Files', api: 'cnss', dateField: null,
     columns: [
-      { key: 'num_affaire',   label: 'رقم القضية' },
-      { key: 'nom_ste',       label: 'الشركة' },
-      { key: 'total_montant', label: 'المبلغ (د.ت)', isAmount: true },
-      { key: 'status',        label: 'الحالة', hideOnMobile: true },
+      { key: 'num_affaire',   label: 'Case Number' },
+      { key: 'nom_ste',       label: 'Company' },
+      { key: 'total_montant', label: 'Amount (TND)', isAmount: true },
+      { key: 'status',        label: 'Status', hideOnMobile: true },
     ],
     searchFields: [
-      { key: 'nom_ste', placeholder: 'اسم الشركة' },
+      { key: 'nom_ste', placeholder: 'Company Name' },
     ],
   },
 };
@@ -239,14 +239,14 @@ export default function Facturation({ type = 'general' }) {
     : -1;
 
   return (
-    <div className="animate-fade" dir="rtl">
+    <div className="animate-fade">
       <div className="topbar no-print" style={{ marginBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <FileText size={22} style={{ color: 'var(--primary)' }} />
-          <h2 style={{ color: 'var(--primary)', margin: 0 }}>أجور و مصاريف — {cfg.label}</h2>
+          <h2 style={{ color: 'var(--primary)', margin: 0 }}>Fees & Expenses — {cfg.label}</h2>
         </div>
         <button className="btn" onClick={() => window.print()} disabled={data.length === 0}>
-          <Printer size={18} /> طباعة الفاتورة
+          <Printer size={18} /> Print Invoice
         </button>
       </div>
 
@@ -261,28 +261,28 @@ export default function Facturation({ type = 'general' }) {
         ))}
         {cfg.dateField && (
             <>
-                <div><label style={{ fontSize:'0.75rem', opacity:0.6 }}>من تاريخ</label><input type="date" value={dateDebut} onChange={e => setDateDebut(e.target.value)} /></div>
-                <div><label style={{ fontSize:'0.75rem', opacity:0.6 }}>إلى تاريخ</label><input type="date" value={dateFin} onChange={e => setDateFin(e.target.value)} /></div>
+                <div><label style={{ fontSize:'0.75rem', opacity:0.6 }}>From Date</label><input type="date" value={dateDebut} onChange={e => setDateDebut(e.target.value)} /></div>
+                <div><label style={{ fontSize:'0.75rem', opacity:0.6 }}>To Date</label><input type="date" value={dateFin} onChange={e => setDateFin(e.target.value)} /></div>
             </>
         )}
-        <button type="submit" className="btn">بحث</button>
+        <button type="submit" className="btn">Search</button>
       </form>
 
       {/* ── Results Container ── */}
       <div className="glass table-container print-area">
         <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(var(--primary-rgb), 0.02)' }}>
             <div style={{ display: 'flex', gap: '2rem' }}>
-                <div className="summary-item"><label>عدد الملفات:</label> <strong>{count}</strong></div>
-                <div className="summary-item"><label>جملة الأجور:</label> <strong>{formatAmount(currentTotals.base)}</strong></div>
-                <div className="summary-item"><label>جملة VAT:</label> <strong>{formatAmount(currentTotals.tva)}</strong></div>
-                <div className="summary-item"><label>جملة المصاريف:</label> <strong>{formatAmount(currentTotals.expenses)}</strong></div>
+                <div className="summary-item"><label>Total Files:</label> <strong>{count}</strong></div>
+                <div className="summary-item"><label>Total Fees:</label> <strong>{formatAmount(currentTotals.base)}</strong></div>
+                <div className="summary-item"><label>Total VAT:</label> <strong>{formatAmount(currentTotals.tva)}</strong></div>
+                <div className="summary-item"><label>Total Expenses:</label> <strong>{formatAmount(currentTotals.expenses)}</strong></div>
             </div>
             <div style={{ textAlign: 'left' }}>
-                <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--primary)' }}>المجموع الجملي: {formatAmount(currentTotals.total)} د.ت</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--primary)' }}>Grand Total: {formatAmount(currentTotals.total)} TND</span>
             </div>
         </div>
 
-        {loading ? <p style={{ padding: '3rem', textAlign: 'center' }}>جاري التحميل...</p> : (
+        {loading ? <p style={{ padding: '3rem', textAlign: 'center' }}>Loading...</p> : (
             <table style={{ borderCollapse: 'collapse', width: '100%' }}>
                 <thead>
                     <tr>
@@ -293,19 +293,19 @@ export default function Facturation({ type = 'general' }) {
                               checked={allSelected}
                               onChange={toggleAll}
                               style={{ cursor: 'pointer', width: 16, height: 16 }}
-                              title="تحديد الكل"
+                              title="Select All"
                             />
                           </th>
                         )}
                         <th style={{ width: 40 }}>#</th>
                         {cfg.columns.map(c => <th key={c.key} className={c.hideOnMobile ? 'hide-on-mobile' : ''}>{c.label}</th>)}
-                        {isExecution && <th className="no-print" style={{ width: 60 }}>التفاصيل</th>}
-                        <th className="no-print" style={{ width: 50 }}>فاتورة</th>
+                        {isExecution && <th className="no-print" style={{ width: 60 }}>Details</th>}
+                        <th className="no-print" style={{ width: 50 }}>Invoice</th>
                     </tr>
                 </thead>
                 <tbody>
                     {data.length === 0 ? (
-                        <tr><td colSpan={10} style={{ textAlign:'center', padding:'3rem', opacity:0.5 }}>لا توجد سجلات حالياً</td></tr>
+                        <tr><td colSpan={10} style={{ textAlign:'center', padding:'3rem', opacity:0.5 }}>No records currently available</td></tr>
                     ) : data.map((item, idx) => {
                         const fileId = item.id_o || item.id_r;
                         const isExpanded = expandedFiles[fileId];
@@ -373,7 +373,7 @@ export default function Facturation({ type = 'general' }) {
                                     <td className="no-print">
                                         <button
                                             className="btn-icon"
-                                            title="طباعة الفاتورة"
+                                            title="Print Invoice"
                                             style={{ color: 'var(--primary)' }}
                                             onClick={() => openBill(item)}
                                         >
@@ -398,7 +398,7 @@ export default function Facturation({ type = 'general' }) {
                                         marginRight: '0.5rem'
                                       }}>
                                         <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--primary)', whiteSpace: 'nowrap' }}>
-                                          {selectedRows.length} ملف{selectedRows.length > 1 ? 'ات' : ''} محدد{selectedRows.length > 1 ? 'ة' : ''}
+                                          {selectedRows.length} File{selectedRows.length > 1 ? 's' : ''} Selected
                                         </span>
                                         <div style={{ width: 1, height: 20, background: 'var(--card-border)', flexShrink: 0 }} />
                                         <button
@@ -411,7 +411,7 @@ export default function Facturation({ type = 'general' }) {
                                             fontFamily: 'inherit', whiteSpace: 'nowrap'
                                           }}
                                         >
-                                          <Receipt size={15} /> فاتورة مجمعة
+                                          <Receipt size={15} /> Consolidated Invoice
                                         </button>
                                         <button
                                           onClick={() => setSelectedRows([])}
@@ -422,7 +422,7 @@ export default function Facturation({ type = 'general' }) {
                                             fontSize: '0.82rem', fontFamily: 'inherit', whiteSpace: 'nowrap'
                                           }}
                                         >
-                                          إلغاء التحديد
+                                          Deselect All
                                         </button>
                                       </div>
                                     </td>
@@ -435,10 +435,10 @@ export default function Facturation({ type = 'general' }) {
                                         <td colSpan={10} style={{ padding: '0.5rem 1.5rem 1rem' }}>
                                             <div className="glass" style={{ padding: '1.25rem', background: 'rgba(var(--primary-rgb), 0.03)', border: '1px solid rgba(var(--primary-rgb), 0.2)' }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                                    <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)' }}>المحاضر المنجزة في هذا الملف:</h4>
+                                                    <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)' }}>Completed records in this file:</h4>
                                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                        <button className="btn" style={{ padding: '2px 8px', fontSize: '10px' }} onClick={() => selectAllActions(fileId, item.actions)}>تحديد الكل</button>
-                                                        <button className="btn" style={{ padding: '2px 8px', fontSize: '10px', background: 'rgba(255,255,255,0.05)' }} onClick={() => deselectAllActions(fileId)}>إلغاء التحديد</button>
+                                                        <button className="btn" style={{ padding: '2px 8px', fontSize: '10px' }} onClick={() => selectAllActions(fileId, item.actions)}>Select All</button>
+                                                        <button className="btn" style={{ padding: '2px 8px', fontSize: '10px', background: 'rgba(255,255,255,0.05)' }} onClick={() => deselectAllActions(fileId)}>Deselect All</button>
                                                     </div>
                                                 </div>
                                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.75rem' }}>
@@ -461,7 +461,7 @@ export default function Facturation({ type = 'general' }) {
                                                                 </div>
                                                                 <div style={{ flex: 1 }}>
                                                                     <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '2px' }}>{act.type_operation}</div>
-                                                                    <div style={{ opacity: 0.5, fontSize: '0.7rem' }}>الأجرة: {formatAmount(act.base)} | TVA: {formatAmount(act.tva)} | مصاريف: {formatAmount(act.expenses)}</div>
+                                                                    <div style={{ opacity: 0.5, fontSize: '0.7rem' }}>Fees: {formatAmount(act.base)} | VAT: {formatAmount(act.tva)} | Expenses: {formatAmount(act.expenses)}</div>
                                                                 </div>
                                                                 <div style={{ fontWeight: 700, fontSize: '0.9rem', color: isSelected ? 'var(--primary)' : 'inherit' }}>
                                                                     {formatAmount(act.total)}

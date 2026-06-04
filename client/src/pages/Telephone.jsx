@@ -110,7 +110,7 @@ export default function Telephone() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('هل تريد فعلاً حذف جهة الاتصال هذه؟')) return;
+    if (!window.confirm('Are you sure you want to delete this contact?')) return;
     const token = localStorage.getItem('token');
     try {
       const res = await fetch(`${API_BASE}/telephone/${id}`, {
@@ -133,10 +133,10 @@ export default function Telephone() {
     <div className="animate-fade">
       <div className="topbar">
         <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)' }}>
-          <User /> دليل الهاتف
+          <User /> Phone Directory
         </h2>
         <button className="btn" onClick={() => handleOpenModal()}>
-          <Plus size={18} /> جهة اتصال جديدة
+          <Plus size={18} /> New Contact
         </button>
       </div>
 
@@ -147,19 +147,19 @@ export default function Telephone() {
             type="text" 
             className="search-input" 
             style={{ paddingRight: '2.5rem' }}
-            placeholder="البحث بالاسم أو اللقب أو الرقم..." 
+            placeholder="Search by name, surname or number..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
       </div>
 
-      {loading && <p style={{padding:'2rem', textAlign: 'center'}}>جاري البحث...</p>}
+      {loading && <p style={{padding:'2rem', textAlign: 'center'}}>Searching...</p>}
       
       {!loading && data.length === 0 && (
         <div className="glass" style={{ padding: '4rem', textAlign: 'center', borderRadius: '16px' }}>
           <User size={48} style={{ color: 'var(--text-muted)', marginBottom: '1rem', opacity: 0.2 }} />
-          <p>لم يتم العثور على جهات اتصال</p>
+          <p>No contacts found</p>
         </div>
       )}
 
@@ -173,7 +173,7 @@ export default function Telephone() {
               <div className="contact-info">
                 <h3>{contact.nom} {contact.prenom}</h3>
                 <span style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: '500' }}>
-                  {contact.qualite || 'جهة اتصال'}
+                  {contact.qualite || 'Contact'}
                 </span>
               </div>
             </div>
@@ -228,14 +228,14 @@ export default function Telephone() {
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
           <div className="modal-content glass" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editingContact ? 'تعديل جهة الاتصال' : 'إضافة جهة اتصال'}</h3>
+              <h3>{editingContact ? 'Edit Contact' : 'Add Contact'}</h3>
               <button className="modal-close" onClick={() => setIsModalOpen(false)}><X /></button>
             </div>
             
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label>اللقب</label>
+                  <label>Last Name</label>
                   <input 
                     type="text" 
                     value={formData.nom} 
@@ -244,7 +244,7 @@ export default function Telephone() {
                   />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label>الاسم</label>
+                  <label>First Name</label>
                   <input 
                     type="text" 
                     value={formData.prenom} 
@@ -254,18 +254,18 @@ export default function Telephone() {
               </div>
 
               <div className="form-group">
-                <label>الصفة / الرتبة</label>
+                <label>Title / Role</label>
                 <input 
                   type="text" 
                   value={formData.qualite} 
                   onChange={e => setFormData({...formData, qualite: e.target.value})} 
-                  placeholder="مثال: محامي، خبير..."
+                  placeholder="Example: Lawyer, Expert..."
                 />
               </div>
 
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label>الهاتف 1</label>
+                  <label>Phone 1</label>
                   <input 
                     type="text" 
                     value={formData.num_tel1} 
@@ -274,7 +274,7 @@ export default function Telephone() {
                   />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label>الهاتف 2</label>
+                  <label>Phone 2</label>
                   <input 
                     type="text" 
                     value={formData.num_tel2} 
@@ -284,7 +284,7 @@ export default function Telephone() {
               </div>
 
               <div className="form-group">
-                <label>البريد الإلكتروني</label>
+                <label>Email</label>
                 <input 
                   type="email" 
                   value={formData.email_tel} 
@@ -293,7 +293,7 @@ export default function Telephone() {
               </div>
 
               <div className="form-group">
-                <label>العنوان</label>
+                <label>Address</label>
                 <input 
                   type="text" 
                   value={formData.adresse_tel} 
@@ -302,7 +302,7 @@ export default function Telephone() {
               </div>
 
               <div className="form-group">
-                <label>ملاحظات</label>
+                <label>Notes</label>
                 <textarea 
                   className="glass"
                   style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', color: 'var(--text-main)', border: '1px solid var(--card-border)', background: 'rgba(15, 23, 42, 0.5)', minHeight: '60px', outline: 'none' }}
@@ -312,7 +312,7 @@ export default function Telephone() {
               </div>
 
               <button type="submit" className="btn" style={{ marginTop: '1rem' }}>
-                {editingContact ? 'تحديث' : 'حفظ'}
+                {editingContact ? 'Update' : 'Save'}
               </button>
             </form>
           </div>

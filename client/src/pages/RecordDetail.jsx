@@ -107,7 +107,7 @@ export default function RecordDetail() {
     };
 
     const handleDelete = async () => {
-        if (!window.confirm('هل أنت متأكد من حذف هذا الملف نهائياً؟ لا يمكن التراجع عن هذه العملية.')) return;
+        if (!window.confirm('Are you sure you want to permanently delete this record? This action cannot be undone.')) return;
         const token = localStorage.getItem('token');
         try {
             const res = await fetch(`${API_BASE}/${type}/${id}`, { 
@@ -115,15 +115,15 @@ export default function RecordDetail() {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
-                alert('تم حذف الملف بنجاح');
+                alert('Record deleted successfully');
                 navigate(type === 'execution' ? '/execution' : '/general');
             } else {
                 const error = await res.json();
-                alert('فشل الحذف: ' + error.error);
+                alert('Failed to delete: ' + error.error);
             }
         } catch (err) {
             console.error('Delete error:', err);
-            alert('حدث خطأ أثناء الاتصال بالخادم');
+            alert('A server communication error occurred');
         }
     };
 
@@ -186,7 +186,7 @@ export default function RecordDetail() {
     };
 
     const handleDeleteAction = async (actionId) => {
-        if (!confirm('هل أنت متأكد من حذف هذا المحضر؟')) return;
+        if (!confirm('Are you sure you want to delete this report?')) return;
         const token = localStorage.getItem('token');
         try {
             await fetch(`${API_BASE}/execution/${id}/actions/${actionId}`, {
@@ -242,89 +242,89 @@ export default function RecordDetail() {
                 }
 
                 setFormData(updated);
-                alert("تم استخراج البيانات بنجاح! يرجى مراجعتها.");
+                alert("Data extracted successfully! Please review it.");
             } else {
-                alert("فشلت عملية الاستخراج: " + (result.error || ""));
+                alert("Extraction failed: " + (result.error || ""));
             }
         } catch (e) {
             console.error("Extraction error:", e);
-            alert("خطأ في الاتصال بخادم الذكاء الاصطناعي");
+            alert("AI server communication error");
         }
         setIsAILoading(false);
         // Reset file input
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    if (loading) return <div style={{padding:'4rem', textAlign:'center', opacity:0.5}}>جاري التحميل...</div>;
-    if (!record && !isNew) return <div style={{padding:'4rem', textAlign:'center', color:'var(--error)'}}>الملف غير موجود</div>;
+    if (loading) return <div style={{padding:'4rem', textAlign:'center', opacity:0.5}}>Loading...</div>;
+    if (!record && !isNew) return <div style={{padding:'4rem', textAlign:'center', color:'var(--error)'}}>Record not found</div>;
 
 
 
     const tabConfig = [
-        { id: 'general', label: 'المعلومات العامة' },
-        { id: 'client1', label: 'الطالب' },
-        { id: 'client2', label: 'المطلوب' },
-        ...(!isExecution ? [{ id: 'financials', label: 'الأجور والمصاريف' }] : [])
+        { id: 'general', label: 'General Information' },
+        { id: 'client1', label: 'Petitioner' },
+        { id: 'client2', label: 'Respondent' },
+        ...(!isExecution ? [{ id: 'financials', label: 'Fees and Expenses' }] : [])
     ];
 
     const fieldGroups = {
         general: [
-            { key: 'ref', label: 'العدد الترتيبي', placeholder: 'تلقائي' },
-            { key: 'remarque', label: 'نوع المحضر' },
-            { key: 'date_reg', label: 'تاريخ طلب الخدمة', type: 'date' },
-            { key: 'date_echeance', label: 'تاريخ آخر أجل لالتبليغ', type: 'date', readonly: true },
-            { key: 'date_inscri', label: 'تاريخ تبليغ المحضر', type: 'date' },
+            { key: 'ref', label: 'Reference Number', placeholder: 'Auto' },
+            { key: 'remarque', label: 'Record Type' },
+            { key: 'date_reg', label: 'Service Request Date', type: 'date' },
+            { key: 'date_echeance', label: 'Last Notification Deadline', type: 'date', readonly: true },
+            { key: 'date_inscri', label: 'Notification Date', type: 'date' },
 
-            { key: 'de_part', label: 'طالب الخدمة' },
-            { key: 'service_petitioner_contact', label: 'بيانات الاتصال' },
+            { key: 'de_part', label: 'Petitioner' },
+            { key: 'service_petitioner_contact', label: 'Contact Info' },
             ...(isExecution ? [
-                { key: 'tribunal', label: 'المحكمة' },
-                { key: 'nombre', label: 'عدد القضية' },
-                { key: 'date_s', label: 'تاريخ السند' },
-                { key: 'resultat', label: 'المآل النهائي' }
+                { key: 'tribunal', label: 'Court' },
+                { key: 'nombre', label: 'Case Number' },
+                { key: 'date_s', label: 'Document Date' },
+                { key: 'resultat', label: 'Final Outcome' }
             ] : [])
         ],
         client1: [
-            { key: 'nom_cl1', label: 'اسم الطالب' },
-            { key: 'cl1_profession', label: 'المهنة' },
-            { key: 'cl1_adresse', label: 'العنوان' },
-            { key: 'cl1_tel', label: 'الهاتف 1' },
-            { key: 'tel2_cl1', label: 'الهاتف 2' },
-            { key: 'cl1_avocat', label: 'المحامي' }
+            { key: 'nom_cl1', label: 'Petitioner Name' },
+            { key: 'cl1_profession', label: 'Profession' },
+            { key: 'cl1_adresse', label: 'Address' },
+            { key: 'cl1_tel', label: 'Phone 1' },
+            { key: 'tel2_cl1', label: 'Phone 2' },
+            { key: 'cl1_avocat', label: 'Lawyer' }
         ],
         client2: [
-            { key: 'nom_cl2', label: 'اسم المطلوب' },
-            { key: 'cl2_profession', label: 'المهنة' },
-            { key: 'cl2_adresse', label: 'العنوان' },
-            { key: 'cl2_tel', label: 'الهاتف 1' },
-            { key: 'tel2_cl2', label: 'الهاتف 2' },
-            { key: 'cl2_avocat', label: 'المحامي' }
+            { key: 'nom_cl2', label: 'Respondent Name' },
+            { key: 'cl2_profession', label: 'Profession' },
+            { key: 'cl2_adresse', label: 'Address' },
+            { key: 'cl2_tel', label: 'Phone 1' },
+            { key: 'tel2_cl2', label: 'Phone 2' },
+            { key: 'cl2_avocat', label: 'Lawyer' }
         ],
         financials: [
-            { key: 'acompte', label: 'تسبقة (د.ت)' },
-            { key: 'origine', label: 'أصل المحضر' },
-            { key: 'exemple', label: 'نظائر' },
-            { key: 'version_bureau', label: 'نسخة مكتب' },
-            { key: 'orientation', label: 'التوجه' },
-            { key: 'delimitation', label: 'التسجيل' },
-            { key: 'inscri', label: 'الترسيم' },
-            { key: 'mobilite', label: 'التنقل' },
-            { key: 'imprimer', label: 'نسخ أوراق' },
-            { key: 'poste', label: 'البريد' },
-            { key: 'autre', label: 'المختلفات' },
-            { key: 'TVA', label: 'الأداء على القيمة المضافة (VAT)', readonly: true }
+            { key: 'acompte', label: 'Deposit (TND)' },
+            { key: 'origine', label: 'Base Fee' },
+            { key: 'exemple', label: 'Copies' },
+            { key: 'version_bureau', label: 'Office Copy' },
+            { key: 'orientation', label: 'Orientation' },
+            { key: 'delimitation', label: 'Registration' },
+            { key: 'inscri', label: 'Inscription' },
+            { key: 'mobilite', label: 'Transport' },
+            { key: 'imprimer', label: 'Paper Copies' },
+            { key: 'poste', label: 'Post' },
+            { key: 'autre', label: 'Others' },
+            { key: 'TVA', label: 'Value Added Tax (VAT)', readonly: true }
         ]
     };
 
     return (
-        <div className="animate-fade" dir="rtl">
+        <div className="animate-fade">
             <div className="topbar no-print" style={{ marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <button className="btn" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', color: 'var(--text-main)' }} onClick={() => navigate(-1)}>
-                        <ArrowLeft size={18} /> رجوع
+                        <ArrowLeft size={18} /> Back
                     </button>
                     <h2 style={{color: 'var(--primary)', margin: 0}}>
-                        {isExecution ? 'ملف تنفيذ' : 'محضر'} #{record?.ref || id} {formData.remarque && <span style={{ opacity: 0.7, fontSize: '0.9em', marginRight: '0.5rem' }}>— {formData.remarque}</span>}
+                        {isExecution ? 'Execution File' : 'Record'} #{record?.ref || id} {formData.remarque && <span style={{ opacity: 0.7, fontSize: '0.9em', marginRight: '0.5rem' }}>— {formData.remarque}</span>}
                     </h2>
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
@@ -341,7 +341,7 @@ export default function RecordDetail() {
                         onClick={() => fileInputRef.current && fileInputRef.current.click()}
                         disabled={isAILoading}
                     >
-                        {isAILoading ? 'جاري القراءة...' : <><UploadCloud size={18} /> مسح ذكي (الذكاء الاصطناعي)</>}
+                        {isAILoading ? 'Reading...' : <><UploadCloud size={18} /> Smart Scan (AI)</>}
                     </button>
                     
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.4rem 1rem', borderRadius: '12px', border: '1px solid var(--card-border)' }}>
@@ -362,11 +362,11 @@ export default function RecordDetail() {
                             style={{ background: 'rgba(var(--primary-rgb),0.15)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
                             onClick={() => setShowBill(true)}
                         >
-                            <Receipt size={18} /> طباعة الفاتورة
+                            <Receipt size={18} /> Print Invoice
                         </button>
                     )}
                     <button className="btn" onClick={() => window.print()}>
-                        <Printer size={18} /> طباعة الملف
+                        <Printer size={18} /> Print Record
                     </button>
                 </div>
             </div>
@@ -469,13 +469,13 @@ export default function RecordDetail() {
                                     <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                                         {/* Block 1: Deposit */}
                                         <div className="glass" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>تسبقة (د.ت)</label>
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>Deposit (TND)</label>
                                             <input type="number" value={formData.acompte || '0'} onChange={(e) => setFormData({...formData, acompte: e.target.value})} style={{ width: '100%', padding: '0.6rem' }} />
                                         </div>
 
                                         {/* Block 2: Fees (Sum 1) */}
                                         <div className="glass" style={{ padding: '1.5rem', background: 'rgba(var(--primary-rgb), 0.05)', border: '1px solid rgba(var(--primary-rgb), 0.1)' }}>
-                                            <h4 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--primary)', fontWeight: 600 }}>الأجور</h4>
+                                            <h4 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--primary)', fontWeight: 600 }}>Fees</h4>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
                                                 {['origine', 'exemple', 'version_bureau', 'orientation'].map(k => (
                                                     <div key={k}>
@@ -496,20 +496,20 @@ export default function RecordDetail() {
                                             </div>
                                             {/* Partial Sum 1 Badge */}
                                             <div className="glass" style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(var(--primary-rgb), 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>مجموع الأجور (Partiel 1):</span>
-                                                <span style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary)' }}>{formatAmount(formData.montant_partiel1 || 0)} د.ت</span>
+                                                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Fees Total (Partiel 1):</span>
+                                                <span style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary)' }}>{formatAmount(formData.montant_partiel1 || 0)} TND</span>
                                             </div>
                                         </div>
 
                                         {/* Block 3: VAT Badge */}
                                         <div className="glass" style={{ padding: '1.2rem 1.5rem', border: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontSize: '0.9rem', opacity: 0.8 }}>الأداء على القيمة المضافة (VAT 19%):</span>
-                                            <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>{formatAmount(formData.TVA || 0)} د.ت</span>
+                                            <span style={{ fontSize: '0.9rem', opacity: 0.8 }}>Value Added Tax (VAT 19%):</span>
+                                            <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>{formatAmount(formData.TVA || 0)} TND</span>
                                         </div>
 
                                         {/* Block 4: Expenses (Sum 2) */}
                                         <div className="glass" style={{ padding: '1.5rem', background: 'rgba(255,193,7, 0.03)', border: '1px solid rgba(255,193,7, 0.1)' }}>
-                                            <h4 style={{ fontSize: '1rem', marginBottom: '1rem', color: '#ffc107', fontWeight: 600 }}>المصاريف</h4>
+                                            <h4 style={{ fontSize: '1rem', marginBottom: '1rem', color: '#ffc107', fontWeight: 600 }}>Expenses</h4>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
                                                 {['delimitation', 'inscri', 'mobilite', 'imprimer', 'poste', 'autre'].map(k => (
                                                     <div key={k}>
@@ -529,28 +529,28 @@ export default function RecordDetail() {
                                             </div>
                                             {/* Partial Sum 2 Badge */}
                                             <div className="glass" style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(255,193,7, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>مجموع المصاريف (Partiel 2):</span>
-                                                <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#ffc107' }}>{formatAmount(formData.montant_partiel2 || 0)} د.ت</span>
+                                                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Expenses Total (Partiel 2):</span>
+                                                <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#ffc107' }}>{formatAmount(formData.montant_partiel2 || 0)} TND</span>
                                             </div>
                                         </div>
 
                                         {/* Block 5: Grand Total */}
                                         <div className="glass" style={{ marginTop: '1rem', padding: '1.5rem', background: 'var(--primary)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 8px 32px rgba(var(--primary-rgb), 0.3)' }}>
-                                            <span style={{ fontSize: '1.2rem', fontWeight: 800 }}>المجموع الجملي المحتسب:</span>
-                                            <span style={{ fontSize: '2.5rem', fontWeight: 900 }}>{formatAmount(formData.salaire || 0)} د.ت</span>
+                                            <span style={{ fontSize: '1.2rem', fontWeight: 800 }}>Calculated Grand Total:</span>
+                                            <span style={{ fontSize: '2.5rem', fontWeight: 900 }}>{formatAmount(formData.salaire || 0)} TND</span>
                                         </div>
                                     </div>
                                 )}
 
                                 {/* Remarks Field (Visible Regardless of Tabs) */}
                                 <div style={{ gridColumn: 'span 2', marginTop: '1.5rem', borderTop: '1px solid var(--card-border)', paddingTop: '1.5rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>ملاحظات</label>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>Remarks</label>
                                     <textarea 
                                         value={formData.resume || ''} 
                                         onChange={(e) => setFormData({...formData, resume: e.target.value})}
                                         className="glass"
                                         style={{ width: '100%', padding: '0.6rem', minHeight: '100px', color: 'var(--text-main)', border: '1px solid var(--card-border)' }}
-                                        placeholder="أضف ملاحظاتك هنا..."
+                                        placeholder="Add your remarks here..."
                                     />
                                 </div>
                             </div>
@@ -562,19 +562,19 @@ export default function RecordDetail() {
                                             const idx = tabConfig.findIndex(t => t.id === activeTab);
                                             setActiveTab(tabConfig[idx+1].id);
                                         }}>
-                                        التالي
+                                        Next
                                     </button>
                                 ) : <div></div>}
                                 
                                 <div style={{ display: 'flex', gap: '1rem' }}>
                                     {!isNew && (
                                         <button type="button" className="btn" style={{ background: '#ef444420', color: '#ef4444' }} onClick={handleDelete}>
-                                            <Trash2 size={18} /> حذف
+                                            <Trash2 size={18} /> Delete
                                         </button>
                                     )}
                                     <button type="submit" className="btn" style={{ width: 'auto' }} disabled={isSaving}>
                                         {saved ? <Check size={18} /> : <Save size={18} />} 
-                                        {isSaving ? 'جاري الحفظ...' : (isNew ? 'إضافة الملف' : (saved ? 'تم الحفظ!' : 'حفظ التعديلات'))}
+                                        {isSaving ? 'Saving...' : (isNew ? 'Add Record' : (saved ? 'Saved!' : 'Save Changes'))}
                                     </button>
                                 </div>
                             </div>
@@ -587,17 +587,17 @@ export default function RecordDetail() {
                     <div className="glass" style={{ padding: '2rem', height: '100%', borderRight: '4px solid var(--primary)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', color: 'var(--primary)' }}>
                             <Activity size={20} />
-                            <h3 style={{ margin: 0 }}>إحصاءات الملف</h3>
+                            <h3 style={{ margin: 0 }}>Record Stats</h3>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div className="glass" style={{ padding: '1rem', textAlign: 'center' }}>
-                                <span style={{ fontSize: '0.8rem', opacity: 0.6, display: 'block' }}>عدد المحاضر</span>
+                                <span style={{ fontSize: '0.8rem', opacity: 0.6, display: 'block' }}>Number of Reports</span>
                                 <strong style={{ fontSize: '1.5rem' }}>{actions.length}</strong>
                             </div>
                             <div className="glass" style={{ padding: '1rem', textAlign: 'center', border: '1px solid rgba(var(--primary-rgb), 0.3)' }}>
-                                <span style={{ fontSize: '0.8rem', opacity: 0.6, display: 'block' }}>المجموع الجملي للمصاريف</span>
+                                <span style={{ fontSize: '0.8rem', opacity: 0.6, display: 'block' }}>Total Expenses</span>
                                 <strong style={{ fontSize: '1.5rem', color: 'var(--primary)' }}>
-                                    {formatAmount(actions.reduce((s,a) => s + (parseFloat(a.total) || 0), 0))} د.ت
+                                    {formatAmount(actions.reduce((s,a) => s + (parseFloat(a.total) || 0), 0))} TND
                                 </strong>
                             </div>
                         </div>
@@ -611,10 +611,10 @@ export default function RecordDetail() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--primary)' }}>
                             <Plus size={20} />
-                            <h3 style={{ margin: 0 }}>مراحل التنفيذ (المحاضر المرتبطة)</h3>
+                            <h3 style={{ margin: 0 }}>Execution Phases (Linked Reports)</h3>
                         </div>
                         <button className="btn no-print" onClick={() => { setEditingActionId(null); setActionForm({ type_operation: '', date_r: '', remarques: '', origine: '0', exemple: '0', versionbureau: '0', mobilite: '0', orientation: '0', imprimer: '0', inscri: '0', delimitation: '0', postal: '0', autre: '0', TVA: '0', salaire: '0' }); setShowActionModal(true); }}>
-                            <Plus size={18} /> إضافة مرحلة
+                            <Plus size={18} /> Add Phase
                         </button>
                     </div>
 
@@ -623,16 +623,16 @@ export default function RecordDetail() {
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>نوع العملية</th>
-                                    <th>التاريخ</th>
-                                    <th>ملاحظات</th>
-                                    <th>المبلغ (د.ت)</th>
-                                    <th className="no-print">عمل</th>
+                                    <th>Operation Type</th>
+                                    <th>Date</th>
+                                    <th>Remarks</th>
+                                    <th>Amount (TND)</th>
+                                    <th className="no-print">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {actions.length === 0 ? (
-                                    <tr><td colSpan={6} style={{ textAlign:'center', opacity:0.5, padding:'2rem' }}>لا توجد محاضر مرتبطة بهذا الملف</td></tr>
+                                    <tr><td colSpan={6} style={{ textAlign:'center', opacity:0.5, padding:'2rem' }}>No reports linked to this record</td></tr>
                                 ) : actions.map((act, idx) => (
                                     <tr key={act.id}>
                                         <td style={{ opacity: 0.5 }}>{idx + 1}</td>
@@ -659,7 +659,7 @@ export default function RecordDetail() {
                                 <tfoot style={{ borderTop: '2px solid var(--primary)' }}>
                                     <tr>
                                         <td colSpan={4} style={{ textAlign: 'left', fontWeight: 'bold', padding: '1rem' }}>
-                                            المجموع الجملي للمصاريف:
+                                            Total Expenses:
                                         </td>
                                         <td style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '1.2rem' }}>
                                             {formatAmount(actions.reduce((s, a) => s + (parseFloat(a.total) || 0), 0))}
@@ -678,38 +678,38 @@ export default function RecordDetail() {
                 <div className="modal-overlay no-print" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding: '1rem' }}>
                     <div className="glass card animate-scale" style={{ width: 700, maxWidth: '100%', padding:'2rem', maxHeight: '95vh', overflowY: 'auto', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
                         <h3 style={{ color: 'var(--primary)', marginBottom: '1.5rem', textAlign: 'center', fontSize: '1.3rem' }}>
-                            {editingActionId ? 'تعديل مرحلة التنفيذ' : 'إضافة مرحلة تنفيذ جديدة'}
+                            {editingActionId ? 'Edit Execution Phase' : 'Add New Execution Phase'}
                         </h3>
                         <form onSubmit={handleSaveAction} style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
                                 <div>
-                                    <label style={{ display:'block', marginBottom:'0.4rem', fontSize:'0.85rem', opacity:0.8, fontWeight: 500 }}>نوع العملية</label>
-                                    <input type="text" placeholder="مثال: تبليغ، عقلة..." value={actionForm.type_operation} onChange={e => setActionForm({...actionForm, type_operation: e.target.value})} required style={{ width:'100%', padding: '0.6rem', borderRadius: '8px' }} />
+                                    <label style={{ display:'block', marginBottom:'0.4rem', fontSize:'0.85rem', opacity:0.8, fontWeight: 500 }}>Operation Type</label>
+                                    <input type="text" placeholder="e.g., Notification, Seizure..." value={actionForm.type_operation} onChange={e => setActionForm({...actionForm, type_operation: e.target.value})} required style={{ width:'100%', padding: '0.6rem', borderRadius: '8px' }} />
                                 </div>
                                 <div>
-                                    <label style={{ display:'block', marginBottom:'0.4rem', fontSize:'0.85rem', opacity:0.8, fontWeight: 500 }}>التاريخ</label>
+                                    <label style={{ display:'block', marginBottom:'0.4rem', fontSize:'0.85rem', opacity:0.8, fontWeight: 500 }}>Date</label>
                                     <input type="text" placeholder="YYYY/MM/DD" value={actionForm.date_r} onChange={e => setActionForm({...actionForm, date_r: e.target.value})} style={{ width:'100%', padding: '0.6rem', borderRadius: '8px' }} />
                                 </div>
                             </div>
                             
                             <div>
-                                <label style={{ display:'block', marginBottom:'0.4rem', fontSize:'0.85rem', opacity:0.8, fontWeight: 500 }}>ملاحظات</label>
+                                <label style={{ display:'block', marginBottom:'0.4rem', fontSize:'0.85rem', opacity:0.8, fontWeight: 500 }}>Remarks</label>
                                 <textarea className="glass" style={{ width:'100%', height: 80, padding:'0.8rem', color:'var(--text-main)', border:'1px solid var(--card-border)', borderRadius: '8px', resize: 'vertical' }}
                                     value={actionForm.remarques} onChange={e => setActionForm({...actionForm, remarques: e.target.value})} />
                             </div>
 
                             {/* Financial breakdown for Action */}
                             <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '1.5rem' }}>
-                                <h4 style={{ fontSize: '1rem', marginBottom: '1.2rem', color:'var(--primary)' }}>تفاصيل الأتعاب والمصاريف</h4>
+                                <h4 style={{ fontSize: '1rem', marginBottom: '1.2rem', color:'var(--primary)' }}>Fees and Expenses Details</h4>
                                 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
                                     {/* Fees Section */}
                                     <div className="glass" style={{ padding: '1.2rem', background: 'rgba(var(--primary-rgb), 0.05)', borderRadius: '12px' }}>
-                                        <h5 style={{ fontSize: '0.9rem', marginBottom: '1rem', opacity: 0.9 }}>الأجور</h5>
+                                        <h5 style={{ fontSize: '0.9rem', marginBottom: '1rem', opacity: 0.9 }}>Fees</h5>
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '0.8rem' }}>
                                             {[
-                                                {k:'origine', l:'أصل'}, {k:'exemple', l:'نظائر'}, 
-                                                {k:'versionbureau', l:'نسخة مكتب'}, {k:'orientation', l:'التوجه'}
+                                                {k:'origine', l:'Base Fee'}, {k:'exemple', l:'Copies'}, 
+                                                {k:'versionbureau', l:'Office Copy'}, {k:'orientation', l:'Orientation'}
                                             ].map(f => (
                                                 <div key={f.k}>
                                                     <label style={{ fontSize:'0.75rem', opacity:0.7, display: 'block', marginBottom: '0.3rem' }}>{f.l}</label>
@@ -732,24 +732,24 @@ export default function RecordDetail() {
                                             ))}
                                         </div>
                                         <div className="glass" style={{ marginTop: '1rem', padding: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(var(--primary-rgb), 0.1)', borderRadius: '8px' }}>
-                                            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>مجموع الأجور (Partiel 1)</span>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Fees Total (Partiel 1)</span>
                                             <strong style={{ fontSize: '1rem', color: 'var(--primary)' }}>{formatAmount(['origine', 'exemple', 'versionbureau', 'orientation'].reduce((s,k) => s + (parseFloat(actionForm[k]) || 0), 0))}</strong>
                                         </div>
                                     </div>
 
                                     {/* VAT Bridging */}
                                     <div className="glass" style={{ padding: '0.8rem 1.2rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--card-border)' }}>
-                                        <span style={{ fontSize: '0.85rem', opacity: 0.8 }}>الأداء على القيمة المضافة (VAT 19%)</span>
+                                        <span style={{ fontSize: '0.85rem', opacity: 0.8 }}>Value Added Tax (VAT 19%)</span>
                                         <strong style={{ fontSize: '1.1rem', fontWeight: 700 }}>{formatAmount(actionForm.TVA || 0)}</strong>
                                     </div>
 
                                     {/* Expenses Section */}
                                     <div className="glass" style={{ padding: '1.2rem', background: 'rgba(255,193,7, 0.03)', borderRadius: '12px' }}>
-                                        <h5 style={{ fontSize: '0.9rem', marginBottom: '1rem', opacity: 0.9 }}>المصاريف</h5>
+                                        <h5 style={{ fontSize: '0.9rem', marginBottom: '1rem', opacity: 0.9 }}>Expenses</h5>
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '0.8rem' }}>
                                             {[
-                                                {k:'delimitation', l:'التسجيل'}, {k:'inscri', l:'الترسيم'}, {k:'mobilite', l:'التنقل'},
-                                                {k:'imprimer', l:'نسخ'}, {k:'postal', l:'البريد'}, {k:'autre', l:'المختلفات'}
+                                                {k:'delimitation', l:'Registration'}, {k:'inscri', l:'Inscription'}, {k:'mobilite', l:'Transport'},
+                                                {k:'imprimer', l:'Copies'}, {k:'postal', l:'Post'}, {k:'autre', l:'Others'}
                                             ].map(f => (
                                                 <div key={f.k}>
                                                     <label style={{ fontSize:'0.75rem', opacity:0.7, display: 'block', marginBottom: '0.3rem' }}>{f.l}</label>
@@ -772,24 +772,24 @@ export default function RecordDetail() {
                                             ))}
                                         </div>
                                         <div className="glass" style={{ marginTop: '1rem', padding: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,193,7, 0.1)', borderRadius: '8px' }}>
-                                            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>مجموع المصاريف (Partiel 2)</span>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Expenses Total (Partiel 2)</span>
                                             <strong style={{ fontSize: '1rem', color: '#ffc107' }}>{formatAmount(['delimitation', 'inscri', 'mobilite', 'imprimer', 'postal', 'autre'].reduce((s,k) => s + (parseFloat(actionForm[k]) || 0), 0))}</strong>
                                         </div>
                                     </div>
 
                                     {/* Grand Total */}
                                     <div className="glass" style={{ padding: '1.2rem', background: 'var(--primary)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '12px' }}>
-                                        <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>المجموع الجملي والمحتسب:</span>
-                                        <span style={{ fontSize: '1.8rem', fontWeight: 900 }}>{formatAmount(actionForm.salaire || 0)} <span style={{ fontSize: '1rem', fontWeight: 400 }}>د.ت</span></span>
+                                        <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>Calculated Grand Total:</span>
+                                        <span style={{ fontSize: '1.8rem', fontWeight: 900 }}>{formatAmount(actionForm.salaire || 0)} <span style={{ fontSize: '1rem', fontWeight: 400 }}>TND</span></span>
                                     </div>
                                 </div>
                             </div>
 
                             <div style={{ display:'flex', gap: '1rem', marginTop: '1rem' }}>
                                 <button type="submit" className="btn" style={{ flex: 1, padding: '0.8rem', fontSize: '1rem' }}>
-                                    {editingActionId ? 'حفظ التعديلات' : 'إضافة مرحلة'}
+                                    {editingActionId ? 'Save Changes' : 'Add Phase'}
                                 </button>
-                                <button type="button" className="btn" style={{ flex: 1, background: 'rgba(255,255,255,0.1)', padding: '0.8rem', fontSize: '1rem' }} onClick={() => setShowActionModal(false)}>إلغاء</button>
+                                <button type="button" className="btn" style={{ flex: 1, background: 'rgba(255,255,255,0.1)', padding: '0.8rem', fontSize: '1rem' }} onClick={() => setShowActionModal(false)}>Cancel</button>
                             </div>
                         </form>
                     </div>
