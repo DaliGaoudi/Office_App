@@ -126,7 +126,7 @@ const MiniCalendar = ({ deadlines }) => {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto' }}>
             {deadlinesByDate[selectedDateStr].map(dl => (
-              <div key={dl.id_r} style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border)' }}>
+              <div key={dl.id_r} style={{ padding: '0.5rem', background: 'var(--surface-subtle)', borderRadius: '6px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border)' }}>
                 <div>
                   <span style={{ fontWeight: 'bold', color: 'var(--text-main)', marginRight: '0.3rem' }}>#{dl.ref}</span>
                   <span style={{ color: 'var(--text-soft)' }}>{dl.nom_cl1}</span>
@@ -316,7 +316,7 @@ export default function Dashboard() {
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
               {data?.tasksQueue?.map(task => (
-                <div key={task.id_r} className="glass" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRight: '4px solid var(--primary)' }}>
+                <div key={task.id_r} className="glass" style={{ padding: '1rem', background: 'var(--surface-subtle)', borderRight: '4px solid var(--primary)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                     <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 'bold' }}>أولوية عالية</span>
                     <span style={{ fontSize: '0.7rem', color: 'var(--text-soft)' }}>#{task.ref}</span>
@@ -352,7 +352,7 @@ export default function Dashboard() {
                     </div>
                     <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{new Date(dl.start).getDate()}</div>
                   </div>
-                  <div className="glass" style={{ flex: 1, padding: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                  <div className="glass" style={{ flex: 1, padding: '0.75rem', background: 'var(--surface-subtle)' }}>
                     <h4 style={{ fontSize: '0.85rem', marginBottom: '0.2rem' }}>{dl.title}</h4>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       <Clock size={12} /> {dl.time_even || '--:--'} • {dl.tribunal_even || 'لا يوجد مكان'}

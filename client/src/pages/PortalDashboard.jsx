@@ -261,13 +261,13 @@ export default function PortalDashboard() {
                   <div style={{ fontWeight: 'bold' }}>{record.nom_cl2 || '-'}</div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                     <Clock size={14} />
                     {record.date_s || record.date_ajout || '-'}
                   </div>
                   {record.status && (
-                    <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.6rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)' }}>
+                    <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.6rem', borderRadius: '4px', background: 'var(--surface-2)' }}>
                       {record.status}
                     </span>
                   )}
@@ -311,7 +311,7 @@ export default function PortalDashboard() {
       {selectedRecord && (
         <div className="modal-overlay animate-fade" onClick={closeActionsModal} style={{ zIndex: 1000 }}>
           <div className="modal-content glass-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', width: '95%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
               <div>
                 <h3 style={{ margin: 0, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Activity size={20} />
@@ -334,13 +334,13 @@ export default function PortalDashboard() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {actions.map((action, idx) => (
-                    <div key={action.id || idx} style={{ padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRight: '4px solid var(--primary)', borderRadius: '4px 8px 8px 4px' }}>
+                    <div key={action.id || idx} style={{ padding: '1rem', background: 'var(--surface-inset)', borderRight: '4px solid var(--primary)', borderRadius: '4px 8px 8px 4px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                         <strong style={{ fontSize: '1.05rem' }}>{action.title}</strong>
                         <span style={{ fontSize: '0.85rem', opacity: 0.7, color: 'var(--primary)' }}>{action.date || action.date_ajout}</span>
                       </div>
                       {action.remarques && (
-                        <div style={{ fontSize: '0.9rem', opacity: 0.8, whiteSpace: 'pre-wrap', marginTop: '0.5rem', background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '4px' }}>
+                        <div style={{ fontSize: '0.9rem', opacity: 0.8, whiteSpace: 'pre-wrap', marginTop: '0.5rem', background: 'var(--surface-subtle)', padding: '0.5rem', borderRadius: '4px' }}>
                           {action.remarques}
                         </div>
                       )}

@@ -111,7 +111,7 @@ export default function RegistreExecution() {
           <input type="text" placeholder="تاريخ تبليغ المحضر (YYYY-MM-DD)" value={filters.date_inscri || ''} onChange={e => setFilters({ ...filters, date_inscri: e.target.value })} />
 
           <button type="submit" className="btn"><Search size={18} /> بحث</button>
-          <button type="button" className="btn" style={{ background: 'rgba(255,255,255,0.08)' }}
+          <button type="button" className="btn" style={{ background: 'var(--surface-2)' }}
             onClick={() => { setFilters({ ref: '', nom_cl1: '', de_part: '', date_inscri: '' }); setActiveFilters({}); setPage(1); }}>
             مسح
           </button>

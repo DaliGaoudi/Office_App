@@ -45,7 +45,7 @@ const Sidebar = ({ isOpen, closeMenu }) => {
         
         <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
           {user?.role !== 'client' && (
-            <form onSubmit={handleGlobalSearch} style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>
+            <form onSubmit={handleGlobalSearch} style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-2)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>
               <input 
                 type="text" 
                 placeholder="بحث بالعدد الترتيبي..." 

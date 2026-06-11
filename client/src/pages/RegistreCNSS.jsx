@@ -123,7 +123,7 @@ export default function RegistreCNSS() {
           <input type="text" placeholder="رقم CNSS"    value={filters.num_cnss}    onChange={e => setFilters({ ...filters, num_cnss: e.target.value })} />
           <input type="text" placeholder="رقم القضية"  value={filters.num_affaire} onChange={e => setFilters({ ...filters, num_affaire: e.target.value })} />
           <button type="submit" className="btn"><Search size={18} /> بحث</button>
-          <button type="button" className="btn" style={{ background: 'rgba(255,255,255,0.08)' }}
+          <button type="button" className="btn" style={{ background: 'var(--surface-2)' }}
             onClick={() => { setFilters({ nom_ste: '', num_cnss: '', num_affaire: '' }); setActiveFilters({}); setPage(1); }}>
             مسح
           </button>
@@ -207,7 +207,7 @@ export default function RegistreCNSS() {
               <input type="text" placeholder="رقم CNSS"      value={formData.num_cnss}    onChange={e => setFormData({ ...formData, num_cnss: e.target.value })} />
               <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
                 <button type="submit" className="btn" style={{ flex: 1 }}>حفظ</button>
-                <button type="button" className="btn" style={{ flex: 1, background: 'rgba(255,255,255,0.1)' }} onClick={() => setShowModal(false)}>إلغاء</button>
+                <button type="button" className="btn" style={{ flex: 1, background: 'var(--surface-2)' }} onClick={() => setShowModal(false)}>إلغاء</button>
               </div>
             </form>
           </div>

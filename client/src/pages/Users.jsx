@@ -204,7 +204,7 @@ export default function Users() {
                   value={formData.username}
                   onChange={e => setFormData({...formData, username: e.target.value})}
                   required
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text)' }}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
                 />
               </div>
 
@@ -217,7 +217,7 @@ export default function Users() {
                   value={formData.password}
                   onChange={e => setFormData({...formData, password: e.target.value})}
                   required={!currentUser}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text)' }}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
                 />
               </div>
 
@@ -226,7 +226,7 @@ export default function Users() {
                 <select
                   value={formData.role}
                   onChange={e => setFormData({...formData, role: e.target.value})}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text)' }}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
                 >
                   <option value="user">مستخدم (سكرتير)</option>
                   <option value="admin">مدير</option>
@@ -244,7 +244,7 @@ export default function Users() {
                       value={formData.societe}
                       onChange={e => setFormData({...formData, societe: e.target.value})}
                       placeholder="يطابق اسم الطالب في الدفاتر"
-                      style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text)' }}
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
                     />
                   </div>
                   <div>
@@ -254,7 +254,7 @@ export default function Users() {
                       value={formData.client_aliases}
                       onChange={e => setFormData({...formData, client_aliases: e.target.value})}
                       placeholder="مثال: DIAM TUNISIE, شركة ديام تونس"
-                      style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text)' }}
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
                     />
                     <small style={{ opacity: 0.6, fontSize: '0.75rem', display: 'block', marginTop: '4px' }}>يستخدم للبحث عن الملفات التي قد تكتب فيها أسماء الشركة بطرق مختلفة.</small>
                   </div>

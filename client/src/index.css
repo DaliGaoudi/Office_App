@@ -42,6 +42,8 @@
   --sidebar-bg: #08080a;       /* nav sits one step below canvas */
   --surface: #151517;          /* surface-1 — cards, panels */
   --surface-2: #1c1c1f;        /* surface-2 — lifted/hovered */
+  --surface-subtle: rgba(255, 255, 255, 0.03); /* faint raised fill */
+  --surface-inset: rgba(0, 0, 0, 0.22);        /* sunken fill (table heads, wells) */
   --card-bg: #151517;          /* alias of surface-1 */
   --border: #26262b;           /* hairline */
   --card-border: #26262b;      /* alias of hairline */
@@ -71,6 +73,8 @@
   --sidebar-bg: #ffffff;
   --surface: #ffffff;          /* surface-1 */
   --surface-2: #f5f5f4;        /* surface-2 */
+  --surface-subtle: rgba(16, 18, 22, 0.03); /* faint raised fill */
+  --surface-inset: rgba(16, 18, 22, 0.04);  /* sunken fill */
   --card-bg: #ffffff;
   --border: #e7e7e4;           /* hairline */
   --card-border: #e7e7e4;

@@ -86,7 +86,7 @@ export default function AIAssistant() {
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)',
         backdropFilter: 'blur(20px) saturate(180%)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        border: '1px solid var(--border)',
       }}
     >
       <div className="modal-header" style={{ marginBottom: 0, padding: '1rem 1.5rem', background: 'var(--nav-active-bg)' }}>

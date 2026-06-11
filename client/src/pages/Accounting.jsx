@@ -171,7 +171,7 @@ export default function Accounting() {
               <div style={{ width: '100%', height: 350 }} dir="ltr">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={data.monthly} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,148,148,0.2)" vertical={false} />
                     <XAxis dataKey="monthName" stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} />
                     <YAxis stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} />
                     <Tooltip content={<CustomTooltip />} />
@@ -191,7 +191,7 @@ export default function Accounting() {
               <div style={{ width: '100%', height: 250 }} dir="ltr">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data.monthly} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,148,148,0.2)" vertical={false} />
                     <XAxis dataKey="monthName" stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} />
                     <YAxis stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} />
                     <Tooltip content={<CustomTooltip />} />

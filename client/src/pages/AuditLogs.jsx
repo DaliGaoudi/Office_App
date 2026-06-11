@@ -62,7 +62,7 @@ export default function AuditLogs() {
       case 'UPDATE': return <span style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>تعديل</span>;
       case 'DELETE': return <span style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>حذف</span>;
       case 'VIEW': return <span style={{ color: '#3b82f6', background: 'rgba(59,130,246,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>عرض</span>;
-      default: return <span style={{ color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>{action}</span>;
+      default: return <span style={{ color: 'var(--text-muted)', background: 'var(--surface-2)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>{action}</span>;
     }
   };
 
@@ -129,7 +129,7 @@ export default function AuditLogs() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
               <thead>
-                <tr style={{ background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid var(--card-border)' }}>
+                <tr style={{ background: 'var(--surface-inset)', borderBottom: '1px solid var(--card-border)' }}>
                   <th style={{ padding: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)', width: '15%' }}>التاريخ والوقت</th>
                   <th style={{ padding: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)', width: '15%' }}>المستخدم</th>
                   <th style={{ padding: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)', width: '10%' }}>الحركة</th>
@@ -146,7 +146,7 @@ export default function AuditLogs() {
                   </tr>
                 ) : (
                   logs.map((log) => (
-                    <tr key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }}>
+                    <tr key={log.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }}>
                       <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.8 }}>
                           <Clock size={14} />
@@ -184,7 +184,7 @@ export default function AuditLogs() {
             </table>
           </div>
 
-          <div style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--card-border)', background: 'rgba(0,0,0,0.1)' }}>
+          <div style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--card-border)', background: 'var(--surface-inset)' }}>
             <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>
               إجمالي السجلات: {total}
             </span>

@@ -224,7 +224,7 @@ export default function DataCleaning() {
                   )}
                 </div>
 
-                <div style={{ background: 'rgba(0,0,0,0.1)', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem' }}>
+                <div style={{ background: 'var(--surface-inset)', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem' }}>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>الأسماء الحالية التي سيتم دمجها ({cluster.items.length}):</div>
                   <ul style={{ margin: 0, paddingRight: '0.5rem', listStyle: 'none', fontSize: '0.9rem' }}>
                     {cluster.items.map((item, i) => (
