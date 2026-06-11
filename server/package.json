@@ -11,6 +11,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@vercel/blob": "^2.4.0",
     "@vercel/postgres": "^0.10.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",

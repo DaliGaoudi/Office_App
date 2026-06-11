@@ -32,6 +32,11 @@ export default function RecordDetail() {
     const [isAILoading, setIsAILoading] = useState(false);
     const fileInputRef = useRef(null);
 
+    // Scanned documents (attachments)
+    const [attachments, setAttachments] = useState([]);
+    const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+    const docInputRef = useRef(null);
+
     const fetchRecord = useCallback(async () => {
         if (isNew) {
             const initialState = {
@@ -255,6 +260,78 @@ export default function RecordDetail() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
+    // ── Scanned documents ──
+    const fetchAttachments = useCallback(async () => {
+        if (isNew) return;
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`${API_BASE}/attachments/${type}/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) setAttachments(await res.json());
+        } catch (e) { console.error('Failed to load documents', e); }
+    }, [type, id, isNew]);
+
+    useEffect(() => { fetchAttachments(); }, [fetchAttachments]);
+
+    // Register this record as the active scan target, then poll so documents
+    // scanned via the local watcher agent appear automatically (no refresh).
+    useEffect(() => {
+        if (isNew) return;
+        const token = localStorage.getItem('token');
+        const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+        fetch(`${API_BASE}/attachments/scan-target`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ record_type: type, record_id: id })
+        }).catch(() => {});
+
+        const interval = setInterval(() => { fetchAttachments(); }, 5000);
+        return () => clearInterval(interval);
+    }, [type, id, isNew, fetchAttachments]);
+
+    const handleDocumentUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setIsUploadingDoc(true);
+        const token = localStorage.getItem('token');
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('record_type', type);
+        fd.append('record_id', id);
+        try {
+            const res = await fetch(`${API_BASE}/attachments`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: fd
+            });
+            const result = await res.json();
+            if (result.success) {
+                await fetchAttachments();
+            } else {
+                alert('فشل رفع المستند: ' + (result.error || ''));
+            }
+        } catch (err) {
+            console.error('Document upload error:', err);
+            alert('خطأ في الاتصال بالخادم');
+        }
+        setIsUploadingDoc(false);
+        if (docInputRef.current) docInputRef.current.value = '';
+    };
+
+    const handleDeleteAttachment = async (attId) => {
+        if (!confirm('هل تريد حذف هذا المستند؟')) return;
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`${API_BASE}/attachments/${attId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) setAttachments(prev => prev.filter(a => a.id !== attId));
+        } catch (err) { console.error('Delete failed', err); }
+    };
+
     if (loading) return <div style={{padding:'4rem', textAlign:'center', opacity:0.5}}>جاري التحميل...</div>;
     if (!record && !isNew) return <div style={{padding:'4rem', textAlign:'center', color:'var(--error)'}}>الملف غير موجود</div>;
 
@@ -264,7 +341,8 @@ export default function RecordDetail() {
         { id: 'general', label: 'المعلومات العامة' },
         { id: 'client1', label: 'الطالب' },
         { id: 'client2', label: 'المطلوب' },
-        ...(!isExecution ? [{ id: 'financials', label: 'الأجور والمصاريف' }] : [])
+        ...(!isExecution ? [{ id: 'financials', label: 'الأجور والمصاريف' }] : []),
+        ...(!isNew ? [{ id: 'documents', label: 'المستندات الممسوحة' }] : [])
     ];
 
     const fieldGroups = {
@@ -344,7 +422,7 @@ export default function RecordDetail() {
                         {isAILoading ? 'جاري القراءة...' : <><UploadCloud size={18} /> مسح ذكي (الذكاء الاصطناعي)</>}
                     </button>
                     
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.4rem 1rem', borderRadius: '12px', border: '1px solid var(--card-border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--surface-2)', padding: '0.4rem 1rem', borderRadius: '12px', border: '1px solid var(--card-border)' }}>
                         <Milestone size={16} />
                         <select 
                             value={formData.status || 'not_started'} 
@@ -399,7 +477,66 @@ export default function RecordDetail() {
                     <div className="glass" style={{ padding: '2rem', position: 'relative' }}>
                         <form onSubmit={handleSave}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                                {activeTab !== 'financials' ? (
+                                {activeTab === 'documents' ? (
+                                    <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                        <input
+                                            type="file"
+                                            ref={docInputRef}
+                                            style={{ display: 'none' }}
+                                            accept="image/*,application/pdf"
+                                            onChange={handleDocumentUpload}
+                                        />
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                                            <button
+                                                type="button"
+                                                className="btn-primary"
+                                                disabled={isUploadingDoc}
+                                                onClick={() => docInputRef.current && docInputRef.current.click()}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                            >
+                                                {isUploadingDoc ? 'جاري الرفع...' : <><UploadCloud size={18} /> رفع مستند ممسوح</>}
+                                            </button>
+                                            <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                                امسح المستند بالماسح الضوئي ثم ارفع الملف (PDF أو صورة)
+                                            </span>
+                                        </div>
+
+                                        {attachments.length === 0 ? (
+                                            <div style={{ padding: '2rem', textAlign: 'center', opacity: 0.5 }}>
+                                                لا توجد مستندات مرفقة بعد
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                {attachments.map(att => (
+                                                    <div key={att.id} className="glass" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', gap: '1rem' }}>
+                                                        <a
+                                                            href={att.blob_url}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--text-main)', textDecoration: 'none', flex: 1, minWidth: 0 }}
+                                                        >
+                                                            <FileText size={18} style={{ flexShrink: 0 }} />
+                                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.filename}</span>
+                                                        </a>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+                                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                                {att.size ? (att.size / 1024).toFixed(0) + ' KB' : ''}
+                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleDeleteAttachment(att.id)}
+                                                                style={{ background: 'transparent', border: 'none', color: 'var(--error)', cursor: 'pointer', display: 'flex' }}
+                                                                title="حذف"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : activeTab !== 'financials' ? (
                                     fieldGroups[activeTab].map((field) => (
                                         <div key={field.key} style={{ gridColumn: field.type === 'textarea' ? 'span 2' : 'span 1' }}>
                                             <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
@@ -468,7 +605,7 @@ export default function RecordDetail() {
                                 ) : (
                                     <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                                         {/* Block 1: Deposit */}
-                                        <div className="glass" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                                        <div className="glass" style={{ padding: '1rem', background: 'var(--surface-subtle)' }}>
                                             <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>تسبقة (د.ت)</label>
                                             <input type="number" value={formData.acompte || '0'} onChange={(e) => setFormData({...formData, acompte: e.target.value})} style={{ width: '100%', padding: '0.6rem' }} />
                                         </div>
@@ -557,7 +694,7 @@ export default function RecordDetail() {
                             
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem', gap: '1rem' }}>
                                 {tabConfig.findIndex(t => t.id === activeTab) < tabConfig.length - 1 ? (
-                                    <button type="button" className="btn" style={{ background: 'rgba(255,255,255,0.05)' }} 
+                                    <button type="button" className="btn" style={{ background: 'var(--surface-2)' }} 
                                         onClick={() => {
                                             const idx = tabConfig.findIndex(t => t.id === activeTab);
                                             setActiveTab(tabConfig[idx+1].id);
@@ -738,7 +875,7 @@ export default function RecordDetail() {
                                     </div>
 
                                     {/* VAT Bridging */}
-                                    <div className="glass" style={{ padding: '0.8rem 1.2rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--card-border)' }}>
+                                    <div className="glass" style={{ padding: '0.8rem 1.2rem', background: 'var(--surface-subtle)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--card-border)' }}>
                                         <span style={{ fontSize: '0.85rem', opacity: 0.8 }}>الأداء على القيمة المضافة (VAT 19%)</span>
                                         <strong style={{ fontSize: '1.1rem', fontWeight: 700 }}>{formatAmount(actionForm.TVA || 0)}</strong>
                                     </div>
@@ -789,7 +926,7 @@ export default function RecordDetail() {
                                 <button type="submit" className="btn" style={{ flex: 1, padding: '0.8rem', fontSize: '1rem' }}>
                                     {editingActionId ? 'حفظ التعديلات' : 'إضافة مرحلة'}
                                 </button>
-                                <button type="button" className="btn" style={{ flex: 1, background: 'rgba(255,255,255,0.1)', padding: '0.8rem', fontSize: '1rem' }} onClick={() => setShowActionModal(false)}>إلغاء</button>
+                                <button type="button" className="btn" style={{ flex: 1, background: 'var(--surface-2)', padding: '0.8rem', fontSize: '1rem' }} onClick={() => setShowActionModal(false)}>إلغاء</button>
                             </div>
                         </form>
                     </div>

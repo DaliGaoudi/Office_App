@@ -5,3 +5,7 @@ server/.env
 **/.env
 database_v3.sqlite
 server/database_v3.sqlite
+
+# Local tooling / generated artifacts (not part of the webapp)
+.claude/
+graphify-out/
