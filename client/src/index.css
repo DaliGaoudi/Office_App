@@ -1,49 +1,96 @@
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
+/*
+ * Design system: Linear-inspired structure, recolored to the brand's
+ * red (#c62828) + gold (#c9a227) identity. Both dark and light themes.
+ *
+ * Linear principles applied:
+ *  - Surface ladder (canvas -> surface-1 -> surface-2) carries hierarchy.
+ *  - 1px hairline borders instead of heavy glass blur / drop shadows.
+ *  - Single chromatic accent (red), gold used scarcely as a prestige mark.
+ *  - Tighter radii (8px controls / 12px cards) and a calm interaction feel.
+ */
 :root {
-  /* Common Brand Colors */
-  --primary: #c62828;
-  --primary-hover: #8e0000;
-  --accent-gold: #c9a227;
-  
-  /* Status Colors (Default Dark) */
-  --status-success: #2e7d32;
-  --status-success-bg: rgba(46, 125, 50, 0.15);
-  --status-warning: #f9a825;
-  --status-warning-bg: rgba(249, 168, 37, 0.15);
-  --status-error: #d32f2f;
-  --status-error-bg: rgba(211, 47, 47, 0.15);
+  /* Brand accent (red) — the single chromatic accent. */
+  --primary: #e0383b;          /* lifted on near-black for legibility */
+  --primary-hover: #ee4f52;
+  --primary-press: #c62828;    /* exact brand red as the pressed/anchor tone */
+  --primary-rgb: 224, 56, 59;
+  --accent-gold: #d2ac3a;      /* prestige mark — scarce */
 
-  /* Semantic Variables - DARK (Default) */
-  --bg-main: #121212;
-  --bg-gradient: linear-gradient(180deg, #121212 0%, #1e1e1e 100%);
-  --sidebar-bg: #1a1a1a;
-  --surface: #1e1e1e;
-  --border: #2c2c2c;
-  --text-main: #ffffff;
-  --text-muted: #b0b0b0;
-  --text-soft: #8a8a8a;
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-  --nav-active-bg: rgba(198, 40, 40, 0.1);
+  /* Radius scale (Linear) */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-pill: 9999px;
+
+  /* Status Colors (Dark) */
+  --status-success: #3fb950;
+  --status-success-bg: rgba(63, 185, 80, 0.14);
+  --status-warning: #e3b341;
+  --status-warning-bg: rgba(227, 179, 65, 0.14);
+  --status-error: #e5484d;
+  --status-error-bg: rgba(229, 72, 77, 0.14);
+  --error: #e5484d;
+
+  /* Surface ladder — DARK (default). Near-black canvas with faint warm tint. */
+  --bg-main: #0b0b0c;          /* canvas */
+  --bg: #0b0b0c;               /* alias used by some pages */
+  --bg-gradient: #0b0b0c;
+  --sidebar-bg: #08080a;       /* nav sits one step below canvas */
+  --surface: #151517;          /* surface-1 — cards, panels */
+  --surface-2: #1c1c1f;        /* surface-2 — lifted/hovered */
+  --card-bg: #151517;          /* alias of surface-1 */
+  --border: #26262b;           /* hairline */
+  --card-border: #26262b;      /* alias of hairline */
+
+  /* Ink */
+  --text-main: #f7f7f8;
+  --text: #f7f7f8;             /* alias */
+  --text-muted: #9b9da4;
+  --text-soft: #6b6d74;
+
+  --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 8px 28px rgba(0, 0, 0, 0.45);
+  --nav-active-bg: rgba(224, 56, 59, 0.12);
 }
 
 [data-theme='light'] {
-  --bg-main: #f7f7f7;
-  --bg-gradient: linear-gradient(180deg, #f7f7f7 0%, #e0e0e0 100%);
-  --sidebar-bg: #ffffff;
-  --surface: #ffffff;
-  --border: #e0e0e0;
-  --text-main: #1a1a1a;
-  --text-muted: #555555;
-  --text-soft: #8a8a8a;
-  --glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  --nav-active-bg: #fdecec; /* Light Red BG for selected item */
+  /* Brand red rendered at full strength on light surfaces. */
+  --primary: #c62828;
   --primary-hover: #a61b1b;
+  --primary-press: #8e0000;
+  --primary-rgb: 198, 40, 40;
+  --accent-gold: #b08a1e;
+
+  /* Surface ladder — LIGHT. Warm off-white canvas, white cards. */
+  --bg-main: #fbfbfa;          /* canvas */
+  --bg: #fbfbfa;
+  --bg-gradient: #fbfbfa;
+  --sidebar-bg: #ffffff;
+  --surface: #ffffff;          /* surface-1 */
+  --surface-2: #f5f5f4;        /* surface-2 */
+  --card-bg: #ffffff;
+  --border: #e7e7e4;           /* hairline */
+  --card-border: #e7e7e4;
+
+  --text-main: #18181a;
+  --text: #18181a;
+  --text-muted: #5c5f66;
+  --text-soft: #8a8d93;
+
+  --glass-shadow: 0 1px 2px rgba(16, 18, 22, 0.06), 0 8px 24px rgba(16, 18, 22, 0.05);
+  --nav-active-bg: #fbeaea;    /* light red wash for selected item */
 
   /* Light Theme Status Colors */
-  --status-success-bg: #e8f5e9;
-  --status-warning-bg: #fff8e1;
-  --status-error-bg: #fdecec;
+  --status-success: #1a7f37;
+  --status-success-bg: #e6f4ea;
+  --status-warning: #9a6700;
+  --status-warning-bg: #fff4d6;
+  --status-error: #cf222e;
+  --status-error-bg: #fce8e9;
+  --error: #cf222e;
 }
 
 * {
@@ -62,21 +109,28 @@ body {
   display: flex;
   direction: rtl; /* Full RTL Support */
   transition: background 0.3s, color 0.3s;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Glassmorphism Utilities */
+/* Tabular figures for money/numerics (accounting, facturation) */
+table, .tnum, input[type='number'] {
+  font-feature-settings: 'tnum';
+}
+
+/*
+ * Card surface — flattened from glassmorphism to Linear's surface-1 panel:
+ * a charcoal/white surface lifted by a single hairline border, minimal shadow.
+ */
 .glass {
   background: var(--surface);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: var(--r-lg);
   box-shadow: var(--glass-shadow);
 }
 
 .glass-panel {
   background: var(--sidebar-bg);
-  backdrop-filter: blur(16px);
   border-left: 1px solid var(--border);
 }
 
@@ -84,6 +138,7 @@ body {
 h1, h2, h3 {
   font-weight: 700; /* Bolder for Arabic */
   margin-bottom: 0.5rem;
+  letter-spacing: -0.01em; /* gentle negative tracking on headlines */
 }
 
 p {
@@ -182,18 +237,24 @@ p {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.8rem 1rem;
-  border-radius: 12px;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--r-md);
   color: var(--text-muted);
   text-decoration: none;
   font-weight: 500;
-  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.nav-link:hover, .nav-link.active {
+.nav-link:hover {
+  background: var(--surface-2);
+  color: var(--text-main);
+}
+
+.nav-link.active {
   background: var(--nav-active-bg);
   color: var(--primary);
-  box-shadow: inset -4px 0 0 var(--accent-gold); /* Gold prestige accent on active */
+  box-shadow: inset -3px 0 0 var(--accent-gold); /* Gold prestige accent on active */
 }
 
 .main-content {
