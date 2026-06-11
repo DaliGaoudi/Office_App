@@ -6,7 +6,7 @@ export default function AIAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'مرحباً! أنا مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟' }
+    { role: 'assistant', content: 'مرحباً! أنا مساعدك الذكي. يمكنني البحث في الملفات، تلخيص الوثائق المرفقة، إنشاء محضر أو جهة اتصال، وإدارة المواعيد. كيف أساعدك؟' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -158,7 +158,7 @@ export default function AIAssistant() {
                 type="text" 
                 value={input} 
                 onChange={e => setInput(e.target.value)}
-                placeholder="اسأل سؤالاً..."
+                placeholder="اسأل، أو اطلب تلخيص وثائق ملف..."
                 style={{ paddingRight: '3rem' }}
                 disabled={loading}
               />

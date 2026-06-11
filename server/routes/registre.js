@@ -4,6 +4,7 @@ const db = require('../db');
 
 const authenticate = require('../middleware/auth');
 const { logActivity } = require('../utils/logger');
+const { createRecord } = require('../services/records');
 
 // ── TVA cache (refreshed from settings table) ──────────────────────────────
 let cachedTVA = 19; // default — overridden on first DB read
@@ -114,77 +115,8 @@ router.get('/:id', authenticate, async (req, res) => {
 // Create Record
 router.post('/', authenticate, async (req, res) => {
     try {
-        const allColumns = [
-            'id_r', 'montant_partiel1', 'montant_partiel2', 'inscri', 'delimitation', 'poste', 'autre',
-            'nom_cl1', 'nom_cl2', 'de_part', 'ref', 'cl1_profession', 'cl1_adresse', 'cl1_avocat',
-            'cl1_tel', 'cl1_adressepersonnel', 'cl2_profession', 'cl2_adresse', 'cl2_avocat', 'cl2_tel',
-            'cl2_adressepersonnel', 'fin_date', 'remarque', 'date_reg', 'date_inscri', 'origine',
-            'exemple', 'imprimer', 'orientation', 'mobilite', 'version_bureau', 'TVA', 'salaire',
-            'acompte', 'resume', 'date_ajout', 'id_user', 'id_so', 'status', 'date_s', 'nombre',
-            'tribunal', 'resultat', 'tel2_cl1', 'tel2_cl2',
-            'service_petitioner_name', 'service_petitioner_contact', 'date_echeance'
-        ];
-
-        const finalRecord = {};
-        
-        // 1. Auto-increment ref if not provided
-        if (!req.body.ref) {
-            const maxRefRow = await db.get(`SELECT MAX(ref) as max_ref FROM clients_record WHERE id_so = ?`, [req.user.id_so]);
-            finalRecord.ref = (parseInt(maxRefRow?.max_ref) || 0) + 1;
-        } else {
-            finalRecord.ref = req.body.ref;
-        }
-
-        // 2. Calculate date_echeance (date_reg + 5 days)
-        const date_reg = req.body.date_reg || new Date().toISOString().split('T')[0];
-        if (!req.body.date_echeance && date_reg) {
-            try {
-                const d = new Date(date_reg);
-                if (!isNaN(d.getTime())) {
-                    d.setDate(d.getDate() + 5);
-                    finalRecord.date_echeance = d.toISOString().split('T')[0];
-                }
-            } catch (e) {
-                console.error("Error calculating date_echeance:", e);
-            }
-        }
-
-        allColumns.forEach(col => {
-            if (finalRecord[col] !== undefined) return; // already set (ref or date_echeance)
-            
-            const val = req.body[col];
-            if (val !== undefined && val !== null && val !== '') {
-                finalRecord[col] = val;
-            } else {
-                if (col === 'id_user') finalRecord[col] = req.user.id;
-                else if (col === 'id_so') finalRecord[col] = req.user.id_so;
-                else if (col === 'date_ajout') finalRecord[col] = new Date().toLocaleString('fr-FR');
-                else if (col === 'status') finalRecord[col] = 'has_deposit';
-                else if (['id_r'].includes(col)) {
-                    // handled by Postgres
-                } else if (['nom_cl1', 'nom_cl2', 'de_part', 'date_reg', 'remarque', 'date_s', 'nombre', 'tribunal', 'resultat', 'service_petitioner_name', 'service_petitioner_contact', 'date_echeance', 'date_inscri'].includes(col)) {
-                    finalRecord[col] = finalRecord[col] || '';
-                } else {
-                    finalRecord[col] = '0';
-                }
-            }
-        });
-
-        const keys = Object.keys(finalRecord).filter(k => finalRecord[k] !== undefined);
-        const values = keys.map(k => finalRecord[k]);
-        const placeholders = keys.map(() => '?').join(',');
-
-        const quotedKeys = keys.map(k => `"${k}"`);
-        let query = `INSERT INTO clients_record (${quotedKeys.join(',')}) VALUES (${placeholders})`;
-        if (process.env.POSTGRES_URL) {
-            query += ` RETURNING id_r`;
-        }
-        
-        const result = await db.run(query, values);
-        
-        await logActivity(req.user, 'CREATE', 'RECORD', `إضافة ملف عام جديد عدد ${finalRecord.ref}`);
-
-        res.json({ id_r: result.lastID, ...finalRecord });
+        const record = await createRecord(req.user, req.body);
+        res.json(record);
     } catch (err) {
         console.error('INSERT ERROR:', err.message);
         res.status(500).json({ error: err.message });
