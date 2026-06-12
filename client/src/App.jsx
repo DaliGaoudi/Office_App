@@ -40,7 +40,7 @@ const Sidebar = ({ isOpen, closeMenu }) => {
       <div className={`sidebar glass-panel ${isOpen ? 'open' : ''}`}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', padding: '0 1rem' }}>
           <img src={logo} alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-          <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>Mourad Gaoudi Law Office</h2>
+          <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>Bailiff Office Suite</h2>
         </div>
         
         <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>

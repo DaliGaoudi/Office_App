@@ -320,7 +320,7 @@ export default function BillModal({ record, actions = [], records = [], onClose 
                   Office of Maître
                 </div>
                 <div style={{ fontSize: '17pt', fontWeight: 700, marginTop: '2px' }}>
-                  Mourad Gaoudi
+                  Sami Ben Hassine
                 </div>
                 <div style={{ fontSize: '12pt', fontWeight: 500, marginTop: '4px' }}>
                   Bailiff in Sousse

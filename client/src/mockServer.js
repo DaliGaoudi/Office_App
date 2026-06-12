@@ -85,13 +85,44 @@ export function makeServer({ environment = "development" } = {}) {
         return { user: schema.users.first().attrs };
       });
 
-      // Dashboard Stats
-      this.get("/dashboard/stats", (schema) => {
+      // Dashboard Stats — full shape consumed by Dashboard.jsx (demo data)
+      this.get("/dashboard/stats", () => {
         return {
-          activeCases: schema.records.where({ status: 'in_progress' }).models.length,
-          todayAppointments: schema.events.all().models.length,
-          weekDeadlines: 5,
-          monthCompleted: schema.records.where({ status: 'completed' }).models.length
+          metrics: { activeCount: 142, dueToday: 5, dueWeek: 18, completedMonth: 37 },
+          recentCases: [
+            { id_r: 1, ref: 2041, nom_cl1: "National Agricultural Bank", de_part: "Mohamed Ben Salah", status: "in_progress", date_echeance: "2026-06-18" },
+            { id_r: 2, ref: 2039, nom_cl1: "Al Amane Insurance Co.", de_part: "Sami Ayari", status: "not_started", date_echeance: "2026-06-15" },
+            { id_r: 3, ref: 2035, nom_cl1: "Al Nour Trading Co.", de_part: "Yasmine Trading LLC", status: "finished", date_echeance: "2026-06-05" },
+            { id_r: 4, ref: 2030, nom_cl1: "Ali Ben Omar", de_part: "Nizar Trabelsi", status: "in_progress", date_echeance: "2026-06-22" },
+            { id_r: 5, ref: 2028, nom_cl1: "Tunisian Electricity & Gas (STEG)", de_part: "Sabah Bakery", status: "not_started", date_echeance: "2026-06-13" },
+            { id_r: 6, ref: 2021, nom_cl1: "National Trade Office", de_part: "Hossine Mansouri", status: "finished", date_echeance: "2026-05-29" },
+            { id_r: 7, ref: 2018, nom_cl1: "Carthage Real Estate", de_part: "Imed Gharbi", status: "in_progress", date_echeance: "2026-06-20" },
+            { id_r: 8, ref: 2012, nom_cl1: "Mediterranean Bank", de_part: "Olfa Ben Youssef", status: "finished", date_echeance: "2026-06-02" },
+          ],
+          tasksQueue: [
+            { id_r: 11, ref: 2041, nom_cl1: "National Agricultural Bank", de_part: "Mohamed Ben Salah", date_echeance: "2026-06-12" },
+            { id_r: 12, ref: 2028, nom_cl1: "Tunisian Electricity & Gas", de_part: "Sabah Bakery", date_echeance: "2026-06-13" },
+            { id_r: 13, ref: 2039, nom_cl1: "Al Amane Insurance Co.", de_part: "Sami Ayari", date_echeance: "2026-06-15" },
+          ],
+          deadlines: [
+            { id_even: 1, start: "2026-06-13", title: "Execution hearing", time_even: "09:30", tribunal_even: "Court of First Instance, Sousse" },
+            { id_even: 2, start: "2026-06-15", title: "Writ service", time_even: "11:00", tribunal_even: "Cantonal Court, Monastir" },
+            { id_even: 3, start: "2026-06-18", title: "Enforcement seizure", time_even: "14:15", tribunal_even: "Court of First Instance, Sousse" },
+            { id_even: 4, start: "2026-06-22", title: "Property inspection", time_even: "10:00", tribunal_even: "Grombalia" },
+          ],
+          calendarDeadlines: [
+            { id_even: 1, ref: 2028, nom_cl1: "Tunisian Electricity & Gas", date_echeance: "2026-06-13" },
+            { id_even: 2, ref: 2039, nom_cl1: "Al Amane Insurance Co.", date_echeance: "2026-06-15" },
+            { id_even: 3, ref: 2041, nom_cl1: "National Agricultural Bank", date_echeance: "2026-06-18" },
+            { id_even: 4, ref: 2030, nom_cl1: "Ali Ben Omar", date_echeance: "2026-06-22" },
+          ],
+          payments: { expected: 85000, collected: 52300 },
+          timeline: [
+            { type: "case", action: "Writ created", date: "Today 14:20", title: "Execution writ #2041 — National Agricultural Bank" },
+            { type: "payment", action: "Payment recorded", date: "Today 11:05", title: "Partial settlement 1,250 TND — case #2035" },
+            { type: "case", action: "Status updated", date: "Yesterday 16:40", title: "Case #2030 → In Progress" },
+            { type: "payment", action: "Invoice issued", date: "Yesterday 09:15", title: "Fee invoice — Al Nour Trading Co." },
+          ],
         };
       });
 
