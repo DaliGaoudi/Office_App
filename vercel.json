@@ -27,6 +27,10 @@
       "destination": "/client/static/$1"
     },
     {
+      "source": "/scan-bridge-setup.zip",
+      "destination": "/client/scan-bridge-setup.zip"
+    },
+    {
        "source": "/((?!api/).*)",
        "destination": "/client/index.html"
     }

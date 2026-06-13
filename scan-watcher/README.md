@@ -27,6 +27,12 @@ browser ──uploads image to the open record (normal API)──▶ web app
 
 ### Setup (one time, on each PC with a scanner) — recommended
 
+You don't need to copy this folder between PCs. In the web app, open
+**الإعدادات** (Settings) → **«تنزيل أداة المسح الضوئي»** to download
+`scan-bridge-setup.zip`, then **Extract All**. (Regenerate that zip with
+`make-zip.ps1` after changing any script here, and commit it — Vercel can't build
+it.)
+
 1. **Install Node.js 18+** and make sure the scanner's Windows driver is installed
    (it must appear under *Settings → Bluetooth & devices → Printers & scanners*).
 2. **Double-click `install-autostart.cmd` once.** This makes the bridge start

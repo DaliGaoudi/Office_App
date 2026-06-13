@@ -361,7 +361,7 @@ export default function RecordDetail() {
             // A network/TypeError almost always means the bridge isn't running.
             const offline = err instanceof TypeError;
             alert(offline
-                ? 'تعذّر الوصول إلى الماسح الضوئي.\nإن كانت هذه أول مرة على هذا الجهاز، شغّل ملف "install-autostart.cmd" مرة واحدة لتفعيل الربط تلقائيًا، وتأكّد من توصيل الماسح الضوئي.'
+                ? 'تعذّر الوصول إلى الماسح الضوئي.\nإن كانت هذه أول مرة على هذا الجهاز، نزّل «أداة المسح الضوئي» من صفحة الإعدادات وشغّل install-autostart.cmd مرة واحدة، وتأكّد من توصيل الماسح الضوئي.'
                 : ('خطأ في المسح الضوئي: ' + err.message));
         } finally {
             setIsScanning(false);

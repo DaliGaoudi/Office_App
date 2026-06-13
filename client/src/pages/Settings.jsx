@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Save, CheckCircle, AlertCircle, Percent } from 'lucide-react';
+import { Settings as SettingsIcon, Save, CheckCircle, AlertCircle, Percent, ScanLine, Download } from 'lucide-react';
 
 import API_BASE from '../config';
 
@@ -141,6 +141,30 @@ export default function Settings() {
                 </div>
               )}
             </form>
+          </div>
+
+          {/* Scanner setup card */}
+          <div className="glass" style={{ padding: '2rem', marginBottom: '1.5rem' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '0.5rem', color: 'var(--primary)' }}>
+              <ScanLine size={18} style={{ marginLeft: '0.4rem', verticalAlign: 'middle' }} />
+              أداة المسح الضوئي المباشر
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.7 }}>
+              لتفعيل زر «مسح ضوئي مباشر» داخل الملفات، ثبّت أداة الربط على هذا الجهاز مرة واحدة:
+              نزّل الحزمة، فك الضغط، ثم شغّل{' '}
+              <code style={{ background: 'rgba(var(--primary-rgb),0.08)', padding: '1px 5px', borderRadius: '4px' }}>install-autostart.cmd</code>.
+              بعدها يعمل المسح تلقائياً في الخلفية عند كل تشغيل للجهاز.
+              <br />
+              يتطلب تثبيت <strong>Node.js</strong> وتعريف الماسح الضوئي على هذا الجهاز.
+            </p>
+            <a
+              href="/scan-bridge-setup.zip"
+              download
+              className="btn"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', padding: '0.75rem 1.25rem' }}
+            >
+              <Download size={18} /> تنزيل أداة المسح الضوئي
+            </a>
           </div>
 
           {/* Info card */}
