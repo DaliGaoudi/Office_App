@@ -26,6 +26,10 @@ async function ensureTable() {
             created_at  TIMESTAMPTZ DEFAULT NOW()
         )
     `);
+    // When Vercel Blob isn't configured, the file bytes are stored here instead
+    // and served back via GET /api/attachments/file/:id. Added defensively for
+    // tables created before this column existed.
+    await db.run(`ALTER TABLE attachments ADD COLUMN IF NOT EXISTS data BYTEA`);
     // Tracks which record each user currently has open, so an automatic scan
     // (uploaded by the local watcher agent) lands on the right record.
     await db.run(`
@@ -39,31 +43,76 @@ async function ensureTable() {
     tableReady = true;
 }
 
-// Shared: upload a buffer to Blob and record it against a record.
+// Shared: persist a buffer and record it against a record.
+// Uses Vercel Blob when BLOB_READ_WRITE_TOKEN is set; otherwise falls back to
+// storing the bytes in Postgres and serving them via GET /api/attachments/file/:id.
 async function storeAttachment({ buffer, originalname, mimetype, size, record_type, record_id, uploaded_by }) {
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
-        throw new Error('Blob storage is not configured (missing BLOB_READ_WRITE_TOKEN).');
-    }
-    const safeName = originalname.replace(/[^\w.\-]+/g, '_');
-    const blobPath = `${record_type}/${record_id}/${Date.now()}-${safeName}`;
-    const blob = await put(blobPath, buffer, { access: 'public', contentType: mimetype });
+    const useBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
+    let blob_url = null;
+    if (useBlob) {
+        const safeName = originalname.replace(/[^\w.\-]+/g, '_');
+        const blobPath = `${record_type}/${record_id}/${Date.now()}-${safeName}`;
+        const blob = await put(blobPath, buffer, { access: 'public', contentType: mimetype });
+        blob_url = blob.url;
+    }
+
+    // blob_url is NOT NULL in the schema; for the DB-stored case we insert a
+    // placeholder and rewrite it with the row id once we have it.
     const result = await db.run(
-        `INSERT INTO attachments (record_type, record_id, filename, mimetype, size, blob_url, uploaded_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-        [record_type, String(record_id), originalname, mimetype, size, blob.url, uploaded_by || null]
+        `INSERT INTO attachments (record_type, record_id, filename, mimetype, size, blob_url, uploaded_by, data)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+        [record_type, String(record_id), originalname, mimetype, size, blob_url || 'pending', uploaded_by || null, useBlob ? null : buffer]
     );
+    const id = result.lastID;
+
+    if (!useBlob) {
+        blob_url = `/api/attachments/file/${id}`;
+        await db.run(`UPDATE attachments SET blob_url = ? WHERE id = ?`, [blob_url, id]);
+    }
+
     return {
-        id: result.lastID,
+        id,
         record_type,
         record_id: String(record_id),
         filename: originalname,
         mimetype,
         size,
-        blob_url: blob.url,
+        blob_url,
         uploaded_by: uploaded_by || null,
     };
 }
+
+/**
+ * GET /api/attachments/file/:id
+ * Serve a DB-stored attachment's bytes (used when Vercel Blob isn't configured).
+ * Public by design — mirrors the public-access Vercel Blob URLs.
+ * NOTE: must be declared before "/:recordType/:recordId" so it isn't shadowed.
+ */
+router.get('/file/:id', async (req, res) => {
+    try {
+        await ensureTable();
+        const row = await db.get(`SELECT filename, mimetype, data FROM attachments WHERE id = ?`, [req.params.id]);
+        if (!row || !row.data) return res.status(404).send('Not found');
+
+        // node-postgres returns BYTEA as a Buffer; tolerate a hex string too.
+        let buf = row.data;
+        if (!Buffer.isBuffer(buf)) {
+            buf = typeof buf === 'string'
+                ? Buffer.from(buf.replace(/^\\x/, ''), 'hex')
+                : Buffer.from(buf);
+        }
+
+        res.set('Content-Type', row.mimetype || 'application/octet-stream');
+        // Filenames may be non-ASCII (Arabic); use RFC5987 encoding.
+        res.set('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(row.filename || 'document')}`);
+        res.set('Cache-Control', 'private, max-age=3600');
+        res.send(buf);
+    } catch (e) {
+        console.error('Serve attachment failed:', e);
+        res.status(500).send('Failed to load file.');
+    }
+});
 
 /**
  * GET /api/attachments/:recordType/:recordId

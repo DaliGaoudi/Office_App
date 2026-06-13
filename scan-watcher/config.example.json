@@ -1,0 +1,15 @@
+{
+  "_comment_bridge": "Settings for bridge.js (on-demand scanning from the web app). All optional.",
+  "BRIDGE_PORT": 17171,
+  "SCANNER_NAME": "",
+  "SCAN_DPI": 200,
+  "SCAN_FORMAT": "jpeg",
+
+  "_comment_watcher": "Settings for watcher.js (the older scan-to-folder mode). Only needed if you use watcher.js.",
+  "API_BASE": "https://your-app.vercel.app/api",
+  "WATCH_FOLDER": "C:\\Users\\Public\\Scans",
+  "MOVE_PROCESSED_TO": "C:\\Users\\Public\\Scans\\_uploaded",
+  "TOKEN": "PASTE_A_LONG_LIVED_JWT_FOR_THE_OFFICE_USER_HERE",
+  "EXTENSIONS": [".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif"],
+  "STABLE_MS": 2000
+}

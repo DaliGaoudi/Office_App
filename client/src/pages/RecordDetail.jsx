@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Printer, Save, Check, Plus, Trash2, FileText, Activity, Milestone, UploadCloud, Receipt } from 'lucide-react';
+import { ArrowLeft, Printer, Save, Check, Plus, Trash2, FileText, Activity, Milestone, UploadCloud, Receipt, ScanLine } from 'lucide-react';
 import { formatAmount, STATUS_MAP } from '../utils/formatters';
 import API_BASE from '../config';
 import AutocompleteInput from '../components/AutocompleteInput';
@@ -35,7 +35,12 @@ export default function RecordDetail() {
     // Scanned documents (attachments)
     const [attachments, setAttachments] = useState([]);
     const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+    const [isScanning, setIsScanning] = useState(false);
     const docInputRef = useRef(null);
+
+    // The local Scan Bridge runs on the office PC and talks to the scanner.
+    // Overridable per-machine via localStorage('scanBridgeUrl').
+    const BRIDGE_URL = localStorage.getItem('scanBridgeUrl') || 'http://127.0.0.1:17171';
 
     const fetchRecord = useCallback(async () => {
         if (isNew) {
@@ -320,6 +325,49 @@ export default function RecordDetail() {
         if (docInputRef.current) docInputRef.current.value = '';
     };
 
+    // ── Direct scan ──
+    // Asks the local Scan Bridge to drive the scanner, then uploads the returned
+    // image to this record. No manual file picking, no scanner button press.
+    const handleDirectScan = async () => {
+        setIsScanning(true);
+        try {
+            const scanRes = await fetch(`${BRIDGE_URL}/scan`, { method: 'POST' });
+            if (!scanRes.ok) {
+                const info = await scanRes.json().catch(() => ({}));
+                throw new Error(info.error || 'تعذّر المسح الضوئي');
+            }
+            const blob = await scanRes.blob();
+            const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+
+            const token = localStorage.getItem('token');
+            const fd = new FormData();
+            fd.append('file', blob, `scan-${Date.now()}.${ext}`);
+            fd.append('record_type', type);
+            fd.append('record_id', id);
+
+            const up = await fetch(`${API_BASE}/attachments`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: fd
+            });
+            const result = await up.json();
+            if (result.success) {
+                await fetchAttachments();
+            } else {
+                alert('فشل رفع المستند: ' + (result.error || ''));
+            }
+        } catch (err) {
+            console.error('Direct scan error:', err);
+            // A network/TypeError almost always means the bridge isn't running.
+            const offline = err instanceof TypeError;
+            alert(offline
+                ? 'تعذّر الوصول إلى الماسح الضوئي.\nتأكّد من تشغيل برنامج الربط "Scan Bridge" على هذا الجهاز ومن توصيل الماسح الضوئي.'
+                : ('خطأ في المسح الضوئي: ' + err.message));
+        } finally {
+            setIsScanning(false);
+        }
+    };
+
     const handleDeleteAttachment = async (attId) => {
         if (!confirm('هل تريد حذف هذا المستند؟')) return;
         const token = localStorage.getItem('token');
@@ -490,14 +538,28 @@ export default function RecordDetail() {
                                             <button
                                                 type="button"
                                                 className="btn-primary"
-                                                disabled={isUploadingDoc}
-                                                onClick={() => docInputRef.current && docInputRef.current.click()}
+                                                disabled={isScanning || isUploadingDoc}
+                                                onClick={handleDirectScan}
                                                 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                                             >
-                                                {isUploadingDoc ? 'جاري الرفع...' : <><UploadCloud size={18} /> رفع مستند ممسوح</>}
+                                                {isScanning ? 'جاري المسح الضوئي...' : <><ScanLine size={18} /> مسح ضوئي مباشر</>}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={isScanning || isUploadingDoc}
+                                                onClick={() => docInputRef.current && docInputRef.current.click()}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                                    padding: '0.6rem 1.1rem', borderRadius: '10px',
+                                                    border: '1px solid var(--card-border)', background: 'transparent',
+                                                    color: 'var(--text-main)', cursor: 'pointer', fontFamily: 'inherit',
+                                                    fontWeight: 600, fontSize: '0.9rem'
+                                                }}
+                                            >
+                                                {isUploadingDoc ? 'جاري الرفع...' : <><UploadCloud size={18} /> رفع ملف</>}
                                             </button>
                                             <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                                                امسح المستند بالماسح الضوئي ثم ارفع الملف (PDF أو صورة)
+                                                اضغط «مسح ضوئي مباشر» ليقوم الماسح بالمسح تلقائيًا، أو ارفع ملفًا موجودًا (PDF أو صورة)
                                             </span>
                                         </div>
 
