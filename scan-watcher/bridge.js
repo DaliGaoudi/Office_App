@@ -111,9 +111,20 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify({ error: 'Not found' }));
 });
 
+// Record our PID so uninstall-autostart.cmd can stop the hidden instance.
+const PID_FILE = path.join(__dirname, 'bridge.pid');
+
 server.listen(PORT, '127.0.0.1', () => {
+    try { fs.writeFileSync(PID_FILE, String(process.pid)); } catch (e) { /* non-fatal */ }
     console.log(`Scan bridge listening on http://127.0.0.1:${PORT}`);
     console.log('  POST /scan  → trigger the scanner, returns the image');
     console.log('  GET  /ping  → health check');
     if (SCANNER) console.log(`  Preferred scanner: "${SCANNER}"`);
 });
+
+function shutdown() {
+    try { fs.unlinkSync(PID_FILE); } catch (e) { /* already gone */ }
+    process.exit(0);
+}
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

@@ -25,18 +25,25 @@ browser ◀─────────── image ─────────�
 browser ──uploads image to the open record (normal API)──▶ web app
 ```
 
-### Setup (one time, on each PC with a scanner)
+### Setup (one time, on each PC with a scanner) — recommended
 
 1. **Install Node.js 18+** and make sure the scanner's Windows driver is installed
    (it must appear under *Settings → Bluetooth & devices → Printers & scanners*).
-2. **Start it:** double-click `start-bridge.cmd` (or run `node bridge.js`).
-   Leave that window open while scanning.
+2. **Double-click `install-autostart.cmd` once.** This makes the bridge start
+   *hidden in the background* every time you log in — nothing to open by hand. No
+   admin rights needed. (Run `uninstall-autostart.cmd` to undo it.)
 3. In the web app, open any record → **المستندات** tab → **«مسح ضوئي مباشر»**.
+   The scanner scans and the page is attached.
 
-### Always-on at login (optional)
+> **Why a local helper at all?** A web page can't talk to a USB/WIA scanner or
+> launch a program on your PC — browsers sandbox that for security. The bridge is
+> a tiny local server the page asks to do the scan. Auto-start just keeps it
+> always running so clicking the button is all you ever do.
 
-Put a shortcut to `start-bridge.cmd` in the Startup folder:
-press **Win+R**, type `shell:startup`, Enter, and drop a shortcut there.
+### Run it manually instead (no auto-start)
+
+- Hidden (no window): double-click `bridge-hidden.vbs`.
+- With a visible log window: double-click `start-bridge.cmd` (or `node bridge.js`).
 
 ### Settings (optional `config.json`)
 
