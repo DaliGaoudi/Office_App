@@ -15,21 +15,12 @@ set "LAUNCHER=%STARTUP%\OfficeScanBridge.vbs"
 echo.
 echo Installing Scan Bridge auto-start...
 echo   Bridge folder: %DIR%
-
-where node >nul 2>nul
-if errorlevel 1 (
-    echo.
-    echo [X] Node.js is not installed on this PC.
-    echo     Install it from https://nodejs.org/  then run this installer again.
-    echo.
-    pause
-    exit /b 1
-)
+echo   (Uses built-in Windows PowerShell - no Node.js or admin needed.)
 
 REM Generate a hidden launcher in the Startup folder with the absolute path baked in.
 > "%LAUNCHER%" echo Set sh = CreateObject("WScript.Shell"^)
 >>"%LAUNCHER%" echo sh.CurrentDirectory = "%DIR%"
->>"%LAUNCHER%" echo sh.Run "node bridge.js", 0, False
+>>"%LAUNCHER%" echo sh.Run "powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""%DIR%\bridge.ps1""", 0, False
 if errorlevel 1 (
     echo [X] Could not write to the Startup folder.
     pause

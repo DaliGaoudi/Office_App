@@ -13,16 +13,17 @@ $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
 $root = Split-Path -Parent $here
 
-# Files the office PC needs. Deliberately excludes config.json (secrets),
+# Files the office PC needs. The bridge runs on built-in PowerShell, so the
+# Node files (bridge.js, watcher.js) are NOT shipped here — they stay in the
+# repo for advanced Node-based setups. Excludes config.json (secrets),
 # bridge.pid, make-zip.ps1 and the zip itself.
 $include = @(
-    'bridge.js',
+    'bridge.ps1',
     'scan.ps1',
     'bridge-hidden.vbs',
     'install-autostart.cmd',
     'uninstall-autostart.cmd',
     'start-bridge.cmd',
-    'watcher.js',
     'config.example.json',
     'README.md'
 )

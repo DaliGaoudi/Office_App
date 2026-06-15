@@ -364,7 +364,10 @@ export default function RecordDetail() {
     const handleScanPage = async () => {
         setIsScanning(true);
         try {
-            const scanRes = await fetch(`${BRIDGE_URL}/scan`, { method: 'POST' });
+            // For local testing without a scanner: set localStorage.scanMock = '1'
+            // and the bridge returns a generated test page.
+            const scanUrl = `${BRIDGE_URL}/scan` + (localStorage.getItem('scanMock') === '1' ? '?mock=1' : '');
+            const scanRes = await fetch(scanUrl, { method: 'POST' });
             if (!scanRes.ok) {
                 const info = await scanRes.json().catch(() => ({}));
                 throw new Error(info.error || 'تعذّر المسح الضوئي');

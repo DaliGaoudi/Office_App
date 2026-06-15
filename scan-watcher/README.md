@@ -3,10 +3,11 @@
 Two ways to get scanned paper into the web app without picking files by hand.
 Pick **one** (the Bridge is the recommended one):
 
-| | Scan Bridge (`bridge.js`) ⭐ | Scan Watcher (`watcher.js`) |
+| | Scan Bridge (`bridge.ps1`) ⭐ | Scan Watcher (`watcher.js`) |
 |---|---|---|
-| Trigger | Press **«مسح ضوئي مباشر»** in the web app | Press the **Scan** button on the device |
+| Trigger | Press **«مسح صفحة»** in the web app | Press the **Scan** button on the device |
 | Scanner control | The app drives the scanner (Windows WIA) | Scanner saves to a folder, watcher uploads it |
+| Runtime | **Built-in PowerShell — no install** | Needs Node.js installed |
 | Auth | None — talks only to your browser | Needs a long-lived login token |
 | Best for | A USB/flatbed scanner on the same PC as the browser | A network scanner shared by many PCs |
 
@@ -33,13 +34,14 @@ You don't need to copy this folder between PCs. In the web app, open
 `make-zip.ps1` after changing any script here, and commit it — Vercel can't build
 it.)
 
-1. **Install Node.js 18+** and make sure the scanner's Windows driver is installed
-   (it must appear under *Settings → Bluetooth & devices → Printers & scanners*).
+1. Make sure the scanner's Windows driver is installed (it must appear under
+   *Settings → Bluetooth & devices → Printers & scanners*). **No Node.js or admin
+   rights needed** — the bridge runs on the PowerShell already built into Windows.
 2. **Double-click `install-autostart.cmd` once.** This makes the bridge start
-   *hidden in the background* every time you log in — nothing to open by hand. No
-   admin rights needed. (Run `uninstall-autostart.cmd` to undo it.)
-3. In the web app, open any record → **المستندات** tab → **«مسح ضوئي مباشر»**.
-   The scanner scans and the page is attached.
+   *hidden in the background* every time you log in — nothing to open by hand.
+   (Run `uninstall-autostart.cmd` to undo it.)
+3. In the web app, open any record → **المستندات** tab → **«مسح صفحة»** for each
+   page, then **«حفظ PDF»**. The pages are combined and attached as one PDF.
 
 > **Why a local helper at all?** A web page can't talk to a USB/WIA scanner or
 > launch a program on your PC — browsers sandbox that for security. The bridge is
@@ -49,7 +51,7 @@ it.)
 ### Run it manually instead (no auto-start)
 
 - Hidden (no window): double-click `bridge-hidden.vbs`.
-- With a visible log window: double-click `start-bridge.cmd` (or `node bridge.js`).
+- With a visible log window: double-click `start-bridge.cmd`.
 
 ### Settings (optional `config.json`)
 
@@ -62,6 +64,19 @@ Copy `config.example.json` → `config.json` and set any of:
 
 The app requests `POST /scan` per page; `?dpi=<n>` and `?gray=1` override the
 defaults for that scan.
+
+### Testing without a scanner (mock mode)
+
+To exercise the whole flow on a PC that has no scanner, make the bridge return a
+generated test page instead of driving WIA:
+
+- **Bridge side:** set `"SCAN_MOCK": true` in `config.json`, or request `/scan?mock=1`.
+- **Web app side:** in the browser console run `localStorage.scanMock = '1'` — the
+  scan button then appends `?mock=1`. Set it back with `localStorage.removeItem('scanMock')`.
+
+This lets you verify scan → compress → multi-page → PDF → upload end-to-end. Run
+the app locally with the server on `:3001` and `npm run dev` (the client proxies
+`/api`), point the scan button at the local bridge, and scan a few mock pages.
 
 ### Notes & troubleshooting
 
@@ -80,6 +95,10 @@ defaults for that scan.
 ---
 
 ## Scan Watcher (scan-to-folder mode)
+
+> Advanced/optional. This mode is **Node-based** and is **not** included in the
+> downloaded `scan-bridge-setup.zip`; grab `watcher.js` from the project repo if
+> you need it.
 
 Makes scanning automatic the other way around: configure the scanner software to
 **Scan to folder**, and the watcher uploads each new file to whatever record the
