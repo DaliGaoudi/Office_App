@@ -1,3 +1,7 @@
+// Load server/.env for local development. On Vercel the env vars are injected by
+// the platform (no .env file), and dotenv won't override already-set vars.
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');

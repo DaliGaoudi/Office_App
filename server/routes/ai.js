@@ -15,15 +15,27 @@ const pdfParse = require('pdf-parse');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB limit
 
-// Initialize OpenAI client for OpenRouter
-const openai = new OpenAI({
-    baseURL: "https://openrouter.ai/api/v1",
-    apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
-    defaultHeaders: {
-        "HTTP-Referer": "https://study-hd.vercel.app", // Optional
-        "X-Title": "Study HD Office App", // Optional
+// Lazily create the OpenAI/OpenRouter client so the server can boot WITHOUT an
+// API key. AI routes then fail only when actually used, instead of crashing the
+// whole server at startup (e.g. during local development without a key).
+let _openai = null;
+function getOpenAI() {
+    if (!_openai) {
+        const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
+        if (!apiKey) {
+            throw new Error('AI is not configured on the server (set OPENROUTER_API_KEY or OPENAI_API_KEY).');
+        }
+        _openai = new OpenAI({
+            baseURL: "https://openrouter.ai/api/v1",
+            apiKey,
+            defaultHeaders: {
+                "HTTP-Referer": "https://study-hd.vercel.app", // Optional
+                "X-Title": "Study HD Office App", // Optional
+            }
+        });
     }
-});
+    return _openai;
+}
 
 /**
  * AI Tool: Search Acts
@@ -189,7 +201,7 @@ async function extractAttachmentText(att) {
         }
         if (att.mimetype && att.mimetype.startsWith('image/')) {
             const dataUrl = `data:${att.mimetype};base64,${buffer.toString('base64')}`;
-            const vision = await openai.chat.completions.create({
+            const vision = await getOpenAI().chat.completions.create({
                 model: "openai/gpt-4o-mini",
                 messages: [
                     { role: "system", content: "استخرج كامل النص المطبوع المقروء من هذه الوثيقة (محضر عدلي تونسي). تجاهل الكتابة باليد. أعد النص فقط دون شرح." },
@@ -440,7 +452,7 @@ router.post('/chat', authenticate, async (req, res) => {
             }
         ];
 
-        const response = await openai.chat.completions.create({
+        const response = await getOpenAI().chat.completions.create({
             model: "openai/gpt-4o-mini",
             messages: [
                 {
@@ -506,7 +518,7 @@ router.post('/chat', authenticate, async (req, res) => {
                 });
             }
 
-            const secondResponse = await openai.chat.completions.create({
+            const secondResponse = await getOpenAI().chat.completions.create({
                 model: "openai/gpt-4o-mini",
                 messages: [
                     { role: "system", content: "Réponds à l'utilisateur avec une synthèse claire des données ou confirme les changements." },
@@ -598,7 +610,7 @@ router.post('/extract', authenticate, upload.single('file'), async (req, res) =>
             return res.status(400).json({ error: "Type de fichier non supporté. Envoyez un PDF ou une image." });
         }
 
-        const response = await openai.chat.completions.create({
+        const response = await getOpenAI().chat.completions.create({
             model: "openai/gpt-4o-mini", // Very capable for OCR and JSON parsing
             messages: messages,
             response_format: { type: "json_object" }
