@@ -18,7 +18,8 @@ param(
     [Parameter(Mandatory = $true)][string]$Out,
     [string]$Format = "jpeg",
     [string]$Device = "",
-    [int]$Dpi = 200,
+    [int]$Dpi = 150,
+    [switch]$Gray,
     [switch]$Dialog
 )
 
@@ -76,7 +77,11 @@ if ($Dialog) {
 
     Set-WiaProp $item.Properties 6147 $Dpi   # horizontal resolution (DPI)
     Set-WiaProp $item.Properties 6148 $Dpi   # vertical resolution (DPI)
-    Set-WiaProp $item.Properties 6146 1      # current intent: 1 = color
+    if ($Gray) {
+        Set-WiaProp $item.Properties 6146 2  # current intent: 2 = grayscale
+    } else {
+        Set-WiaProp $item.Properties 6146 1  # current intent: 1 = color
+    }
 
     $image = $item.Transfer($fmt)
 }

@@ -1,12 +1,43 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer, Save, Check, Plus, Trash2, FileText, Activity, Milestone, UploadCloud, Receipt, ScanLine } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { formatAmount, STATUS_MAP } from '../utils/formatters';
 import API_BASE from '../config';
 import AutocompleteInput from '../components/AutocompleteInput';
 import BillModal from '../components/BillModal';
 
 const API = API_BASE;
+
+// Scanned pages come off the scanner as large near-lossless JPEGs. We downscale
+// and re-encode them in the browser before bundling into a PDF, which cuts a
+// ~12MB page down to a few hundred KB.
+const SCAN_MAX_EDGE = 2000;       // px on the long side
+const SCAN_JPEG_QUALITY = 0.72;
+
+function compressScan(blob) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(blob);
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            let w = img.naturalWidth, h = img.naturalHeight;
+            const scale = Math.min(1, SCAN_MAX_EDGE / Math.max(w, h));
+            w = Math.round(w * scale);
+            h = Math.round(h * scale);
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff';            // flatten any alpha to white
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve({ dataUrl: canvas.toDataURL('image/jpeg', SCAN_JPEG_QUALITY), w, h });
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('تعذّرت معالجة الصورة الممسوحة')); };
+        img.src = url;
+    });
+}
 
 export default function RecordDetail() {
     const { type, id } = useParams();
@@ -36,6 +67,8 @@ export default function RecordDetail() {
     const [attachments, setAttachments] = useState([]);
     const [isUploadingDoc, setIsUploadingDoc] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
+    const [scannedPages, setScannedPages] = useState([]); // pending pages for the current PDF
+    const [isSavingPdf, setIsSavingPdf] = useState(false);
     const docInputRef = useRef(null);
 
     // The local Scan Bridge runs on the office PC and talks to the scanner.
@@ -326,9 +359,9 @@ export default function RecordDetail() {
     };
 
     // ── Direct scan ──
-    // Asks the local Scan Bridge to drive the scanner, then uploads the returned
-    // image to this record. No manual file picking, no scanner button press.
-    const handleDirectScan = async () => {
+    // Asks the local Scan Bridge to scan one page, compresses it, and adds it to
+    // the pending batch. Pages are combined into a single PDF on save.
+    const handleScanPage = async () => {
         setIsScanning(true);
         try {
             const scanRes = await fetch(`${BRIDGE_URL}/scan`, { method: 'POST' });
@@ -337,11 +370,52 @@ export default function RecordDetail() {
                 throw new Error(info.error || 'تعذّر المسح الضوئي');
             }
             const blob = await scanRes.blob();
-            const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+            const page = await compressScan(blob);
+            setScannedPages(prev => [...prev, page]);
+        } catch (err) {
+            console.error('Scan page error:', err);
+            // A network/TypeError almost always means the bridge isn't running.
+            const offline = err instanceof TypeError;
+            alert(offline
+                ? 'تعذّر الوصول إلى الماسح الضوئي.\nإن كانت هذه أول مرة على هذا الجهاز، نزّل «أداة المسح الضوئي» من صفحة الإعدادات وشغّل install-autostart.cmd مرة واحدة، وتأكّد من توصيل الماسح الضوئي.'
+                : ('خطأ في المسح الضوئي: ' + err.message));
+        } finally {
+            setIsScanning(false);
+        }
+    };
+
+    const removeScannedPage = (idx) => setScannedPages(prev => prev.filter((_, i) => i !== idx));
+
+    // Name the file after the record's number, e.g. 9050.pdf. Append -2, -3… if
+    // a file with that name is already attached.
+    const buildPdfFilename = () => {
+        const base = (String(record?.ref || id).trim() || 'مستند').replace(/[\\/:*?"<>|]+/g, '_');
+        const existing = new Set(attachments.map(a => a.filename));
+        let name = `${base}.pdf`;
+        for (let n = 2; existing.has(name); n++) name = `${base}-${n}.pdf`;
+        return name;
+    };
+
+    // Combine the scanned pages into one PDF and upload it to this record.
+    const handleSavePdf = async () => {
+        if (scannedPages.length === 0) return;
+        setIsSavingPdf(true);
+        try {
+            const pdf = new jsPDF({ unit: 'pt', format: 'a4', compress: true });
+            const pageW = pdf.internal.pageSize.getWidth();
+            const pageH = pdf.internal.pageSize.getHeight();
+            scannedPages.forEach((p, i) => {
+                if (i > 0) pdf.addPage();
+                const ratio = Math.min(pageW / p.w, pageH / p.h);
+                const w = p.w * ratio, h = p.h * ratio;
+                pdf.addImage(p.dataUrl, 'JPEG', (pageW - w) / 2, (pageH - h) / 2, w, h);
+            });
+            const pdfBlob = pdf.output('blob');
+            const filename = buildPdfFilename();
 
             const token = localStorage.getItem('token');
             const fd = new FormData();
-            fd.append('file', blob, `scan-${Date.now()}.${ext}`);
+            fd.append('file', pdfBlob, filename);
             fd.append('record_type', type);
             fd.append('record_id', id);
 
@@ -352,19 +426,16 @@ export default function RecordDetail() {
             });
             const result = await up.json();
             if (result.success) {
+                setScannedPages([]);
                 await fetchAttachments();
             } else {
                 alert('فشل رفع المستند: ' + (result.error || ''));
             }
         } catch (err) {
-            console.error('Direct scan error:', err);
-            // A network/TypeError almost always means the bridge isn't running.
-            const offline = err instanceof TypeError;
-            alert(offline
-                ? 'تعذّر الوصول إلى الماسح الضوئي.\nإن كانت هذه أول مرة على هذا الجهاز، نزّل «أداة المسح الضوئي» من صفحة الإعدادات وشغّل install-autostart.cmd مرة واحدة، وتأكّد من توصيل الماسح الضوئي.'
-                : ('خطأ في المسح الضوئي: ' + err.message));
+            console.error('Save PDF error:', err);
+            alert('خطأ أثناء إنشاء ملف PDF أو رفعه: ' + err.message);
         } finally {
-            setIsScanning(false);
+            setIsSavingPdf(false);
         }
     };
 
@@ -538,15 +609,15 @@ export default function RecordDetail() {
                                             <button
                                                 type="button"
                                                 className="btn-primary"
-                                                disabled={isScanning || isUploadingDoc}
-                                                onClick={handleDirectScan}
+                                                disabled={isScanning || isSavingPdf}
+                                                onClick={handleScanPage}
                                                 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                                             >
-                                                {isScanning ? 'جاري المسح الضوئي...' : <><ScanLine size={18} /> مسح ضوئي مباشر</>}
+                                                {isScanning ? 'جاري المسح الضوئي...' : <><ScanLine size={18} /> مسح صفحة</>}
                                             </button>
                                             <button
                                                 type="button"
-                                                disabled={isScanning || isUploadingDoc}
+                                                disabled={isScanning || isUploadingDoc || isSavingPdf}
                                                 onClick={() => docInputRef.current && docInputRef.current.click()}
                                                 style={{
                                                     display: 'flex', alignItems: 'center', gap: '0.5rem',
@@ -559,9 +630,59 @@ export default function RecordDetail() {
                                                 {isUploadingDoc ? 'جاري الرفع...' : <><UploadCloud size={18} /> رفع ملف</>}
                                             </button>
                                             <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                                                اضغط «مسح ضوئي مباشر» ليقوم الماسح بالمسح تلقائيًا، أو ارفع ملفًا موجودًا (PDF أو صورة)
+                                                اضغط «مسح صفحة» لكل ورقة، ثم «حفظ PDF» لدمجها في ملف واحد باسم رقم الملف. أو ارفع ملفًا موجودًا.
                                             </span>
                                         </div>
+
+                                        {scannedPages.length > 0 && (
+                                            <div className="glass" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', border: '1px solid var(--primary)' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                                                    <span style={{ fontWeight: 600, color: 'var(--primary)', fontSize: '0.9rem' }}>
+                                                        صفحات بانتظار الحفظ: {scannedPages.length} — ستُحفظ باسم {String(record?.ref || id)}.pdf
+                                                    </span>
+                                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-primary"
+                                                            disabled={isSavingPdf || isScanning}
+                                                            onClick={handleSavePdf}
+                                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                                        >
+                                                            {isSavingPdf ? 'جاري الحفظ...' : <><FileText size={16} /> حفظ PDF ({scannedPages.length})</>}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            disabled={isSavingPdf}
+                                                            onClick={() => setScannedPages([])}
+                                                            style={{
+                                                                padding: '0.5rem 1rem', borderRadius: '10px',
+                                                                border: '1px solid var(--card-border)', background: 'transparent',
+                                                                color: 'var(--text-main)', cursor: 'pointer', fontFamily: 'inherit',
+                                                                fontWeight: 600, fontSize: '0.85rem'
+                                                            }}
+                                                        >
+                                                            إلغاء
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                                    {scannedPages.map((p, idx) => (
+                                                        <div key={idx} style={{ position: 'relative', width: 80, height: 110, border: '1px solid var(--card-border)', borderRadius: 6, overflow: 'hidden', background: '#fff' }}>
+                                                            <img src={p.dataUrl} alt={`صفحة ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            <span style={{ position: 'absolute', bottom: 2, right: 4, fontSize: '0.7rem', color: '#000', background: 'rgba(255,255,255,0.85)', padding: '0 4px', borderRadius: 4 }}>{idx + 1}</span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeScannedPage(idx)}
+                                                                title="حذف الصفحة"
+                                                                style={{ position: 'absolute', top: 2, left: 2, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                                                            >
+                                                                <Trash2 size={12} />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {attachments.length === 0 ? (
                                             <div style={{ padding: '2rem', textAlign: 'center', opacity: 0.5 }}>

@@ -57,8 +57,11 @@ Copy `config.example.json` → `config.json` and set any of:
 - `BRIDGE_PORT` — default `17171` (if you change it, set `localStorage.scanBridgeUrl`
   to `http://127.0.0.1:<port>` in the browser).
 - `SCANNER_NAME` — a substring of the scanner's name, to prefer a specific device.
-- `SCAN_DPI` — default `200`.
+- `SCAN_DPI` — default `150`. The app can override per request via `/scan?dpi=`.
 - `SCAN_FORMAT` — `jpeg` (default), `png`, `tiff`, or `bmp`.
+
+The app requests `POST /scan` per page; `?dpi=<n>` and `?gray=1` override the
+defaults for that scan.
 
 ### Notes & troubleshooting
 
@@ -67,9 +70,12 @@ Copy `config.example.json` → `config.json` and set any of:
   calls from an https site are allowed (Private Network Access is handled).
 - **"No scanner found"** → the device is off or its driver isn't installed. Test
   with the built-in **Windows Fax and Scan** app first.
-- It scans **one page** (flatbed). Multi-page ADF batching isn't implemented yet.
-- The web app posts the image through the normal `/api/attachments` endpoint, so
-  storage works whether the server uses Vercel Blob or the database fallback.
+- Each `/scan` returns **one flatbed page**. The web app handles multi-page itself:
+  click **«مسح صفحة»** per page, then **«حفظ PDF»** to compress and combine them
+  into one PDF named after the record number (e.g. `9050.pdf`).
+- Compression and PDF assembly happen in the browser, so the bridge stays
+  dependency-free. The PDF is posted through the normal `/api/attachments`
+  endpoint (works with Vercel Blob or the database fallback).
 
 ---
 

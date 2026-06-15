@@ -40,7 +40,7 @@ if (fs.existsSync(CONFIG_PATH)) {
 
 const PORT    = cfg.BRIDGE_PORT || 17171;
 const SCANNER = cfg.SCANNER_NAME || '';
-const DPI     = cfg.SCAN_DPI || 200;
+const DPI     = cfg.SCAN_DPI || 150;   // 150 scans faster & smaller than 200; the app re-compresses anyway
 const FORMAT  = (cfg.SCAN_FORMAT || 'jpeg').toLowerCase();
 const SCRIPT  = path.join(__dirname, 'scan.ps1');
 
@@ -58,14 +58,15 @@ function setCors(req, res) {
     }
 }
 
-function runScan(dialog) {
+function runScan({ dialog = false, dpi = DPI, gray = false } = {}) {
     return new Promise((resolve, reject) => {
         const out = path.join(os.tmpdir(), `scan-${Date.now()}.${FORMAT}`);
         const args = [
             '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', SCRIPT,
-            '-Out', out, '-Format', FORMAT, '-Dpi', String(DPI),
+            '-Out', out, '-Format', FORMAT, '-Dpi', String(dpi),
         ];
         if (SCANNER) args.push('-Device', SCANNER);
+        if (gray) args.push('-Gray');
         if (dialog) args.push('-Dialog');
 
         execFile('powershell.exe', args, { windowsHide: true, timeout: 120000 }, (err, stdout, stderr) => {
@@ -93,10 +94,13 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (route === '/scan' && (req.method === 'POST' || req.method === 'GET')) {
-        const dialog = /[?&]dialog=1\b/.test(req.url);
-        console.log(`${new Date().toISOString()}  scan requested${dialog ? ' (dialog)' : ''}…`);
+        const q = new URL(req.url, 'http://localhost').searchParams;
+        const dialog = q.get('dialog') === '1';
+        const dpi = parseInt(q.get('dpi'), 10) || DPI;
+        const gray = q.get('gray') === '1';
+        console.log(`${new Date().toISOString()}  scan requested (dpi=${dpi}${gray ? ', gray' : ''}${dialog ? ', dialog' : ''})…`);
         try {
-            const buf = await runScan(dialog);
+            const buf = await runScan({ dialog, dpi, gray });
             console.log(`  ✓ scanned ${buf.length} bytes`);
             res.writeHead(200, { 'Content-Type': MIME[FORMAT] || 'application/octet-stream' });
             return res.end(buf);

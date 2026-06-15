@@ -2,7 +2,7 @@
   "_comment_bridge": "Settings for bridge.js (on-demand scanning from the web app). All optional.",
   "BRIDGE_PORT": 17171,
   "SCANNER_NAME": "",
-  "SCAN_DPI": 200,
+  "SCAN_DPI": 150,
   "SCAN_FORMAT": "jpeg",
 
   "_comment_watcher": "Settings for watcher.js (the older scan-to-folder mode). Only needed if you use watcher.js.",
