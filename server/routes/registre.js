@@ -41,47 +41,52 @@ module.exports.refreshTVA = refreshTVA;
 // Get all records (clients_record) with advanced search
 router.get('/', authenticate, async (req, res) => {
     try {
-        const { page = 1, limit = 50, ref, nom_cl1, de_part, date_reg, date_inscri } = req.query;
+        const { page = 1, limit = 50, ref, nom_cl1, de_part, date_reg, date_inscri, search } = req.query;
         const offset = (page - 1) * limit;
 
-        let query = `SELECT * FROM clients_record WHERE id_so::text = ?`;
-        let params = [req.user.id_so];
+        // Build the filter clause once so the list query and count query stay in
+        // sync. We accept BOTH the per-field filters (ref/nom_cl1/de_part/...) and
+        // a single free-text `search` param, so the backend works regardless of
+        // which client build is live (an older bundle that sent only `search`
+        // would otherwise be ignored here and appear to "show all").
+        let filterSql = '';
+        const filterParams = [];
 
+        if (search) {
+            filterSql += ` AND (ref::text LIKE ? OR nom_cl1 LIKE ? OR nom_cl2 LIKE ? OR de_part LIKE ?)`;
+            filterParams.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+        }
         if (ref) {
-            query += ` AND ref::text LIKE ?`;
-            params.push(`%${ref}%`);
+            filterSql += ` AND ref::text LIKE ?`;
+            filterParams.push(`%${ref}%`);
         }
         if (nom_cl1) {
-            query += ` AND (nom_cl1 LIKE ? OR nom_cl2 LIKE ?)`;
-            params.push(`%${nom_cl1}%`, `%${nom_cl1}%`);
+            filterSql += ` AND (nom_cl1 LIKE ? OR nom_cl2 LIKE ?)`;
+            filterParams.push(`%${nom_cl1}%`, `%${nom_cl1}%`);
         }
         if (de_part) {
-            query += ` AND de_part LIKE ?`;
-            params.push(`%${de_part}%`);
+            filterSql += ` AND de_part LIKE ?`;
+            filterParams.push(`%${de_part}%`);
         }
         if (date_reg) {
-            query += ` AND date_reg LIKE ?`;
-            params.push(`%${date_reg}%`);
+            filterSql += ` AND date_reg LIKE ?`;
+            filterParams.push(`%${date_reg}%`);
         }
         if (date_inscri) {
-            query += ` AND date_inscri LIKE ?`;
-            params.push(`%${date_inscri}%`);
+            filterSql += ` AND date_inscri LIKE ?`;
+            filterParams.push(`%${date_inscri}%`);
         }
+
+        let query = `SELECT * FROM clients_record WHERE id_so::text = ?${filterSql}`;
+        let params = [req.user.id_so, ...filterParams];
 
         query += ` ORDER BY ref DESC LIMIT ? OFFSET ?`;
         params.push(parseInt(limit), parseInt(offset));
 
         const rows = await db.all(query, params);
-        
-        let countQuery = `SELECT COUNT(*) as count FROM clients_record WHERE id_so::text = ?`;
-        let countParams = [req.user.id_so];
-        
-        // Re-apply same filters for count
-        if (ref) { countQuery += ` AND ref::text LIKE ?`; countParams.push(`%${ref}%`); }
-        if (nom_cl1) { countQuery += ` AND (nom_cl1 LIKE ? OR nom_cl2 LIKE ?)`; countParams.push(`%${nom_cl1}%`, `%${nom_cl1}%`); }
-        if (de_part) { countQuery += ` AND de_part LIKE ?`; countParams.push(`%${de_part}%`); }
-        if (date_reg) { countQuery += ` AND date_reg LIKE ?`; countParams.push(`%${date_reg}%`); }
-        if (date_inscri) { countQuery += ` AND date_inscri LIKE ?`; countParams.push(`%${date_inscri}%`); }
+
+        const countQuery = `SELECT COUNT(*) as count FROM clients_record WHERE id_so::text = ?${filterSql}`;
+        const countParams = [req.user.id_so, ...filterParams];
 
         const countRow = await db.get(countQuery, countParams);
         const count = parseInt(countRow.count);
