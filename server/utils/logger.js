@@ -10,9 +10,13 @@ const db = require('../db');
 async function logActivity(user, action, entity, details) {
   if (!user || !user.id) return; // Silent fail if no user (e.g. unauthenticated somehow)
   
+  // Explicit RETURNING id keeps db.run from auto-appending its generic
+  // "RETURNING id_r, id_cn, ..." clause, whose columns don't exist on
+  // audit_logs and would make every insert fail silently.
   const query = `
     INSERT INTO audit_logs (user_id, username, action, entity, details)
     VALUES (?, ?, ?, ?, ?)
+    RETURNING id
   `;
   
   try {
