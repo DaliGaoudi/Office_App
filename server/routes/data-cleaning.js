@@ -148,17 +148,22 @@ router.post('/merge', authenticate, isAdmin, async (req, res) => {
         let totalUpdated = 0;
 
         for (const merge of merges) {
-            const { oldNames, canonicalName } = merge;
-            if (!canonicalName || !oldNames || oldNames.length === 0) continue;
+            const canonicalName = (merge.canonicalName || '').trim();
+            const oldNames = Array.isArray(merge.oldNames)
+                ? merge.oldNames.map(n => (n || '').trim()).filter(Boolean)
+                : [];
+            if (!canonicalName || oldNames.length === 0) continue;
 
-            // Remove the canonical name from oldNames if it's there
-            const namesToReplace = oldNames.filter(n => n !== canonicalName);
-            if (namesToReplace.length === 0) continue;
+            // /suggestions clusters names with TRIM(nom_cl1), but the stored column
+            // often carries leading/trailing whitespace. Match on TRIM so the rows
+            // actually hit, and normalize whitespace-padded copies of the canonical
+            // name too (otherwise it re-splits into a clean + a padded variant).
+            // AND nom_cl1 <> ? skips rows already exactly equal to the clean canonical,
+            // so totalUpdated reflects rows actually changed.
+            const placeholders = oldNames.map(() => '?').join(',');
+            const query = `UPDATE clients_record SET nom_cl1 = ? WHERE TRIM(nom_cl1) IN (${placeholders}) AND nom_cl1 <> ?`;
 
-            const placeholders = namesToReplace.map(() => '?').join(',');
-            const query = `UPDATE clients_record SET nom_cl1 = ? WHERE nom_cl1 IN (${placeholders})`;
-            
-            const result = await db.run(query, [canonicalName, ...namesToReplace]);
+            const result = await db.run(query, [canonicalName, ...oldNames, canonicalName]);
             totalUpdated += result.changes || 0;
         }
 
