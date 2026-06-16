@@ -702,6 +702,7 @@ tr:hover {
 .badge-amber { background: var(--status-warning-bg); color: var(--status-warning); }
 .badge-gray { background: rgba(128, 128, 128, 0.1); color: var(--text-muted); }
 .badge-red { background: var(--status-error-bg); color: var(--status-error); }
+.badge-violet { background: rgba(139, 92, 246, 0.14); color: #8b5cf6; }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
@@ -721,4 +722,116 @@ tr:hover {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * Dashboard — "جدول الأعمال" (daily docket)
+ * Time-first layout. Colour is meaning: red = overdue, gold = due today,
+ * neutral = upcoming. The days-countdown numeral is the signature device.
+ * ────────────────────────────────────────────────────────────────────── */
+.dash { display: flex; flex-direction: column; gap: 1.5rem; }
+
+/* Command bar */
+.dash-bar {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  gap: 1rem; flex-wrap: wrap;
+}
+.dash-date { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; }
+.dash-sub {
+  color: var(--text-muted); font-size: 0.9rem; margin-top: 0.35rem;
+  display: flex; gap: 0.5rem 0.85rem; flex-wrap: wrap; align-items: center;
+}
+.dash-sub b { font-weight: 700; }
+.dash-sub .sep { color: var(--text-soft); }
+.dash-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.dash-actions .btn { padding: 0.6rem 1rem; }
+.dash-btn-ghost {
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-main);
+}
+.dash-btn-ghost:hover { background: var(--surface-2); }
+
+/* Triage strip — clickable urgency filters */
+.dash-triage { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+@media (max-width: 560px) { .dash-triage { grid-template-columns: 1fr; } }
+.triage {
+  font: inherit; text-align: start; color: var(--text-muted);
+  padding: 1rem 1.2rem; border-radius: var(--r-lg);
+  background: var(--surface); border: 1px solid var(--border);
+  cursor: pointer; display: flex; align-items: center; gap: 1rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+.triage:hover { background: var(--surface-2); }
+.triage:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.triage[aria-pressed="true"] { border-color: currentColor; background: var(--surface-2); }
+.triage-num { font-size: 2rem; font-weight: 800; line-height: 1; min-width: 2ch; text-align: center; }
+.triage-meta { display: flex; flex-direction: column; gap: 0.15rem; }
+.triage-label { font-weight: 700; color: var(--text-main); font-size: 0.95rem; }
+.triage-hint { color: var(--text-muted); font-size: 0.78rem; }
+.triage.is-overdue { color: var(--status-error); }
+.triage.is-today { color: var(--accent-gold); }
+
+/* Main grid */
+.dash-grid { display: grid; grid-template-columns: 2.3fr 1fr; gap: 1.5rem; align-items: start; }
+.dash-grid > * { min-width: 0; } /* let grid items shrink instead of overflowing on mobile */
+@media (max-width: 1024px) { .dash-grid { grid-template-columns: 1fr; } }
+.dash-rail { display: flex; flex-direction: column; gap: 1.5rem; }
+.dash-h { display: flex; align-items: center; gap: 0.5rem; font-size: 1rem; margin: 0 0 1rem; }
+
+/* Agenda */
+.agenda-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.agenda-search { position: relative; }
+.agenda-search input { padding-inline: 2.2rem 0.8rem; font-size: 0.85rem; width: 240px; max-width: 50vw; }
+.agenda-search svg { position: absolute; inset-inline-start: 0.7rem; top: 50%; transform: translateY(-50%); color: var(--text-soft); pointer-events: none; }
+.agenda-list { display: flex; flex-direction: column; content-visibility: auto; contain-intrinsic-size: 0 600px; }
+.agenda-row {
+  font: inherit; color: inherit; text-align: start;
+  display: flex; align-items: stretch; gap: 1rem; width: 100%;
+  padding: 0.8rem 0.4rem; background: transparent; cursor: pointer;
+  border: none; border-bottom: 1px solid var(--border);
+  border-inline-start: 3px solid transparent;
+  transition: background 0.12s;
+}
+.agenda-row:last-child { border-bottom: none; }
+.agenda-row:hover { background: var(--surface-subtle); }
+.agenda-row:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.agenda-row.is-overdue { border-inline-start-color: var(--status-error); }
+.agenda-row.is-today { border-inline-start-color: var(--accent-gold); }
+.count { flex-shrink: 0; width: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.count-num { font-size: 1.5rem; font-weight: 800; line-height: 1; color: var(--text-main); }
+.count-unit { font-size: 0.65rem; color: var(--text-soft); }
+.count-tag { font-size: 0.65rem; font-weight: 700; color: var(--text-soft); }
+.count.is-overdue .count-num, .count.is-overdue .count-tag { color: var(--status-error); }
+.count.is-today .count-num, .count.is-today .count-tag { color: var(--accent-gold); }
+.count.is-unknown .count-num { color: var(--text-soft); font-size: 1.1rem; }
+.agenda-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.3rem; justify-content: center; }
+.agenda-title { font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agenda-meta { font-size: 0.82rem; color: var(--text-muted); display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.agenda-ref { color: var(--text-soft); font-weight: 600; }
+.agenda-chev { align-self: center; color: var(--text-soft); flex-shrink: 0; }
+
+/* Collection */
+.collect-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.9rem; padding: 0.2rem 0; }
+.collect-row .val { font-weight: 700; }
+.collect-bar { height: 8px; background: var(--surface-inset); border-radius: var(--r-pill); overflow: hidden; margin-top: 0.7rem; }
+.collect-fill { height: 100%; background: var(--status-success); border-radius: var(--r-pill); transition: width 0.4s ease; }
+.collect-pct { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.5rem; text-align: center; }
+
+/* Appointments + activity rows */
+.mini-row { display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+.mini-row:last-child { border-bottom: none; }
+.mini-date { flex-shrink: 0; text-align: center; min-width: 42px; }
+.mini-date .d { font-size: 1.1rem; font-weight: 800; line-height: 1; }
+.mini-date .m { font-size: 0.68rem; color: var(--text-soft); text-transform: uppercase; }
+.mini-body { flex: 1; min-width: 0; }
+.mini-body h5 { font-size: 0.85rem; margin: 0 0 0.15rem; font-weight: 600; }
+.mini-body p { font-size: 0.76rem; color: var(--text-muted); margin: 0; display: flex; align-items: center; gap: 0.3rem; }
+
+/* Empty / calm states */
+.dash-empty { text-align: center; padding: 2rem 1rem; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
+.dash-empty svg { color: var(--status-success); }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade { animation: none; }
+  *, *::before, *::after { transition-duration: 0.001ms !important; }
 }

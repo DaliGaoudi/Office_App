@@ -1,497 +1,465 @@
-import { useState, useEffect } from 'react';
-import { 
-  FileText, 
-  Gavel, 
-  Users, 
-  CalendarDays, 
-  ChevronRight, 
-  ChevronLeft,
-  Clock, 
-  Activity,
-  Plus,
-  Search,
-  Filter,
-  DollarSign,
-  AlertCircle,
-  X,
-  ExternalLink,
-  MapPin,
-  CheckCircle2
+import { useState, useEffect, useMemo, useRef } from 'react';
+import {
+  Plus, Search, CalendarDays, Clock, Activity, DollarSign,
+  ChevronLeft, ChevronRight, X, ExternalLink, AlertCircle,
+  CheckCircle2, FileText, MapPin
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import API_BASE from '../config';
+import { formatAmount } from '../utils/formatters';
 
-const MiniCalendar = ({ deadlines }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDateStr, setSelectedDateStr] = useState(null);
-  
-  const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-  const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
-  
-  const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+/* ── Constants (hoisted: stable across renders) ───────────────────────── */
+const MONTHS = ['جانفي', 'فيفري', 'مارس', 'أفريل', 'ماي', 'جوان', 'جويلية', 'أوت', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+const WEEKDAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+const DAY_INITIALS = ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س'];
+const DATE_RE = /(\d{4})-(\d{2})-(\d{2})/;
 
-  const monthNames = ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-  const dayNames = ["ح", "ن", "ث", "ر", "خ", "ج", "س"];
+// Real (and legacy) status values seen in the data → label + badge class.
+const STATUS_UI = {
+  has_deposit:     { label: 'في انتظار التبليغ', cls: 'badge-violet' },
+  waiting_payment: { label: 'في انتظار الخلاص', cls: 'badge-amber' },
+  not_started:     { label: 'غير مبدأ',          cls: 'badge-gray' },
+  in_progress:     { label: 'قيد الإنجاز',       cls: 'badge-blue' },
+  finished:        { label: 'منتهي',             cls: 'badge-green' },
+  cancelled:       { label: 'ملغى',              cls: 'badge-red' },
+};
+const statusUI = (s) => STATUS_UI[s] || { label: s || 'غير محدد', cls: 'badge-gray' };
 
-  const deadlinesByDate = {};
-  deadlines?.forEach(dl => {
-    if (!dl.date_echeance) return;
-    const dateStr = dl.date_echeance.split('T')[0];
-    if (!deadlinesByDate[dateStr]) deadlinesByDate[dateStr] = [];
-    deadlinesByDate[dateStr].push(dl);
-  });
+/* ── Date helpers (defensive: some date_echeance values are malformed) ── */
+function parseDeadline(str) {
+  if (!str) return null;
+  const m = String(str).match(DATE_RE);
+  if (!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  if (y < 1990 || y > 2100 || mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  return Date.UTC(y, mo - 1, d);
+}
+function todayUTC() {
+  const n = new Date();
+  return Date.UTC(n.getFullYear(), n.getMonth(), n.getDate());
+}
+function daysUntil(str) {
+  const t = parseDeadline(str);
+  if (t === null) return null;
+  return Math.round((t - todayUTC()) / 86400000);
+}
+function relativeText(days) {
+  if (days === null) return 'بدون أجل محدد';
+  if (days < 0) return `متأخر بـ ${Math.abs(days)} يوم`;
+  if (days === 0) return 'مستحق اليوم';
+  if (days === 1) return 'غدًا';
+  return `بعد ${days} يوم`;
+}
+function shortDate(str) {
+  const t = parseDeadline(str);
+  if (t === null) return (str || '—');
+  const d = new Date(t);
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+}
 
-  const renderDays = () => {
-    const days = [];
-    for (let i = 0; i < firstDayOfMonth; i++) {
-      days.push(<div key={`empty-${i}`} style={{ padding: '0.5rem' }}></div>);
-    }
-    
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const dayDeadlines = deadlinesByDate[dateStr] || [];
-      const isToday = dateStr === new Date().toISOString().split('T')[0];
-      
-      days.push(
-        <div 
-          key={d} 
-          style={{ 
-            padding: '0.4rem', 
-            borderRadius: '8px',
-            background: selectedDateStr === dateStr ? 'var(--primary)' : isToday ? 'var(--primary-light, rgba(23, 118, 210, 0.1))' : 'transparent',
-            border: isToday && selectedDateStr !== dateStr ? '1px solid var(--primary)' : '1px solid transparent',
-            color: selectedDateStr === dateStr ? '#fff' : 'inherit',
-            cursor: dayDeadlines.length > 0 ? 'pointer' : 'default',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            position: 'relative'
-          }}
-          title={dayDeadlines.map(dl => `#${dl.ref} - ${dl.nom_cl1}`).join('\n')}
-          onClick={() => {
-            if (dayDeadlines.length > 0) {
-              setSelectedDateStr(selectedDateStr === dateStr ? null : dateStr);
-            }
-          }}
-        >
-          <span style={{ fontSize: '0.85rem', fontWeight: isToday || dayDeadlines.length > 0 ? 'bold' : 'normal' }}>{d}</span>
-          {dayDeadlines.length > 0 && (
-            <div style={{ 
-              width: '6px', 
-              height: '6px', 
-              borderRadius: '50%', 
-              background: selectedDateStr === dateStr ? '#fff' : 'var(--status-error, #ef4444)',
-              marginTop: '2px'
-            }}></div>
-          )}
-        </div>
-      );
-    }
-    return days;
-  };
+/* ── Signature device: the days-countdown numeral ─────────────────────── */
+function Countdown({ days }) {
+  const cls = days === null ? 'is-unknown' : days < 0 ? 'is-overdue' : days === 0 ? 'is-today' : 'is-soon';
+  return (
+    <span className={`count tnum ${cls}`} aria-hidden="true">
+      {days === null ? (
+        <><span className="count-num">—</span><span className="count-unit">بدون أجل</span></>
+      ) : days === 0 ? (
+        <><AlertCircle size={22} /><span className="count-tag">اليوم</span></>
+      ) : (
+        <>
+          <span className="count-num">{Math.abs(days)}</span>
+          <span className="count-unit">يوم</span>
+          <span className="count-tag">{days < 0 ? 'متأخر' : days === 1 ? 'غدًا' : 'باقٍ'}</span>
+        </>
+      )}
+    </span>
+  );
+}
+
+/* ── Agenda row ───────────────────────────────────────────────────────── */
+function AgendaRow({ item, onOpen }) {
+  const days = daysUntil(item.date_echeance);
+  const rowCls = days === null ? '' : days < 0 ? 'is-overdue' : days === 0 ? 'is-today' : '';
+  const st = statusUI(item.status);
+  const name = (item.nom_cl1 || '').trim() || '—';
+  const against = (item.de_part || '').trim();
+  return (
+    <button
+      type="button"
+      className={`agenda-row ${rowCls}`}
+      onClick={() => onOpen(item)}
+      aria-label={`ملف رقم ${item.ref}، ${name}، ${relativeText(days)}`}
+    >
+      <Countdown days={days} />
+      <span className="agenda-body">
+        <span className="agenda-title">{name}{against ? ` ضد ${against}` : ''}</span>
+        <span className="agenda-meta">
+          <span className="agenda-ref">#{item.ref}</span>
+          <span className={`badge ${st.cls}`}>{st.label}</span>
+          <span>{relativeText(days)}</span>
+        </span>
+      </span>
+      <ChevronLeft className="agenda-chev" size={18} />
+    </button>
+  );
+}
+
+/* ── Triage bucket (clickable filter) ─────────────────────────────────── */
+function Triage({ kind, count, label, hint, active, onToggle }) {
+  const cls = kind === 'overdue' ? 'is-overdue' : kind === 'today' ? 'is-today' : '';
+  return (
+    <button type="button" className={`triage ${cls}`} aria-pressed={active} onClick={() => onToggle(kind)}>
+      <span className="triage-num tnum">{count}</span>
+      <span className="triage-meta">
+        <span className="triage-label">{label}</span>
+        <span className="triage-hint">{hint}</span>
+      </span>
+    </button>
+  );
+}
+
+/* ── Mini calendar (month shape of file deadlines) ────────────────────── */
+function MiniCalendar({ deadlines, onPick }) {
+  const [cursor, setCursor] = useState(() => new Date());
+  const [picked, setPicked] = useState(null);
+
+  const byDate = useMemo(() => {
+    const map = {};
+    (deadlines || []).forEach((dl) => {
+      const t = parseDeadline(dl.date_echeance);
+      if (t === null) return;
+      const d = new Date(t);
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+      (map[key] = map[key] || []).push(dl);
+    });
+    return map;
+  }, [deadlines]);
+
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const todayKey = new Date().toISOString().split('T')[0];
+
+  const cells = [];
+  for (let i = 0; i < firstWeekday; i++) cells.push(<div key={`e${i}`} />);
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const has = byDate[key]?.length > 0;
+    const isToday = key === todayKey;
+    const isPicked = key === picked;
+    cells.push(
+      <button
+        key={d}
+        type="button"
+        disabled={!has}
+        onClick={() => { setPicked(isPicked ? null : key); }}
+        aria-label={has ? `${d} ${MONTHS[month]} — ${byDate[key].length} ملف` : `${d} ${MONTHS[month]}`}
+        style={{
+          padding: '0.35rem 0', borderRadius: '8px', border: '1px solid transparent',
+          background: isPicked ? 'var(--primary)' : isToday ? 'var(--nav-active-bg)' : 'transparent',
+          borderColor: isToday && !isPicked ? 'var(--accent-gold)' : 'transparent',
+          color: isPicked ? '#fff' : 'inherit', cursor: has ? 'pointer' : 'default',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+          font: 'inherit', fontWeight: isToday || has ? 700 : 400,
+        }}
+      >
+        <span style={{ fontSize: '0.85rem' }}>{d}</span>
+        {has && (
+          <span style={{
+            width: 6, height: 6, borderRadius: '50%',
+            background: isPicked ? '#fff' : 'var(--status-error)',
+          }} />
+        )}
+      </button>
+    );
+  }
 
   return (
-    <div style={{ padding: '0.5rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <button onClick={prevMonth} className="btn-icon" style={{ padding: '0.3rem' }}><ChevronRight size={16}/></button>
-        <strong style={{ fontSize: '0.95rem' }}>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</strong>
-        <button onClick={nextMonth} className="btn-icon" style={{ padding: '0.3rem' }}><ChevronLeft size={16}/></button>
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+        <button className="btn-icon" style={{ width: 32, height: 32 }} onClick={() => setCursor(new Date(year, month - 1, 1))} aria-label="الشهر السابق"><ChevronRight size={16} /></button>
+        <strong style={{ fontSize: '0.95rem' }}>{MONTHS[month]} {year}</strong>
+        <button className="btn-icon" style={{ width: 32, height: 32 }} onClick={() => setCursor(new Date(year, month + 1, 1))} aria-label="الشهر التالي"><ChevronLeft size={16} /></button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.25rem', textAlign: 'center' }}>
-        {dayNames.map(day => <div key={day} style={{ fontSize: '0.75rem', color: 'var(--text-soft)', fontWeight: 'bold', paddingBottom: '0.5rem' }}>{day}</div>)}
-        {renderDays()}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: '0.2rem', textAlign: 'center' }}>
+        {DAY_INITIALS.map((d, i) => <div key={i} style={{ fontSize: '0.72rem', color: 'var(--text-soft)', fontWeight: 700, paddingBottom: '0.3rem' }}>{d}</div>)}
+        {cells}
       </div>
-      
-      {/* Legend */}
-      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', justifyContent: 'center', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--status-error, #ef4444)' }}></div>
-          أجل قريب
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-          <div style={{ width: '12px', height: '12px', borderRadius: '4px', background: 'var(--primary-light, rgba(23, 118, 210, 0.1))', border: '1px solid var(--primary)' }}></div>
-          اليوم
-        </div>
-      </div>
-
-      {/* Selected Date Details */}
-      {selectedDateStr && deadlinesByDate[selectedDateStr] && (
-        <div className="animate-fade" style={{ marginTop: '1rem', padding: '1rem', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-            <h4 style={{ fontSize: '0.85rem', color: 'var(--primary)', margin: 0 }}>
-              ملفات يوم {new Date(selectedDateStr).toLocaleDateString('fr-FR')}
-            </h4>
-            <button className="btn-icon" onClick={() => setSelectedDateStr(null)} style={{ padding: '0.2rem' }}><X size={14} /></button>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto' }}>
-            {deadlinesByDate[selectedDateStr].map(dl => (
-              <div key={dl.id_r} style={{ padding: '0.5rem', background: 'var(--surface-subtle)', borderRadius: '6px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border)' }}>
-                <div>
-                  <span style={{ fontWeight: 'bold', color: 'var(--text-main)', marginRight: '0.3rem' }}>#{dl.ref}</span>
-                  <span style={{ color: 'var(--text-soft)' }}>{dl.nom_cl1}</span>
-                </div>
-              </div>
+      {picked && byDate[picked] && (
+        <div className="animate-fade" style={{ marginTop: '0.9rem', padding: '0.75rem', background: 'var(--surface-inset)', borderRadius: '8px' }}>
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>آجال {shortDate(picked)}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', maxHeight: 160, overflowY: 'auto' }}>
+            {byDate[picked].map((dl) => (
+              <button key={dl.id_r} type="button" onClick={() => onPick?.(dl)}
+                style={{ font: 'inherit', textAlign: 'start', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.45rem 0.6rem', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', gap: '0.4rem' }}>
+                <span className="agenda-ref">#{dl.ref}</span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(dl.nom_cl1 || '').trim()}</span>
+              </button>
             ))}
           </div>
         </div>
       )}
     </div>
   );
-};
+}
 
-export default function Dashboard() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedCase, setSelectedCase] = useState(null); // For Quick View Drawer
-  const navigate = useNavigate();
+/* ── Right-rail cards ─────────────────────────────────────────────────── */
+function CollectionCard({ payments }) {
+  const expected = payments?.expected || 0;
+  const collected = payments?.collected || 0;
+  const pct = expected > 0 ? Math.min(100, Math.round((collected / expected) * 100)) : 0;
+  return (
+    <section className="glass" style={{ padding: '1.25rem' }} aria-label="التحصيل هذا الشهر">
+      <h3 className="dash-h"><DollarSign size={18} style={{ color: 'var(--status-success)' }} /> التحصيل هذا الشهر</h3>
+      <div className="collect-row"><span>المتوقّع</span><span className="val tnum">{formatAmount(expected)} د.ت</span></div>
+      <div className="collect-row"><span>المُحصّل</span><span className="val tnum" style={{ color: 'var(--status-success)' }}>{formatAmount(collected)} د.ت</span></div>
+      <div className="collect-bar"><div className="collect-fill" style={{ width: `${pct}%` }} /></div>
+      <div className="collect-pct">{pct}% من المتوقّع</div>
+    </section>
+  );
+}
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const fetchStats = async () => {
-    setLoading(true);
-    const token = localStorage.getItem('token');
-    try {
-      const res = await fetch(`${API_BASE}/dashboard/stats`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const json = await res.json();
-      setData(json);
-    } catch (e) {
-      console.error(e);
-    }
-    setLoading(false);
-  };
-
-  const filteredCases = data?.recentCases?.filter(c => {
-    const matchesSearch = c.nom_cl1?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          c.de_part?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          c.ref?.toString().includes(searchTerm);
-    const matchesFilter = filterStatus === 'all' || c.status === filterStatus;
-    return matchesSearch && matchesFilter;
-  }) || [];
-
-  const MetricCard = ({ title, value, label, icon: Icon, color }) => (
-    <div className="glass" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-      <div style={{ padding: '0.75rem', borderRadius: '12px', background: `${color}15`, color: color }}>
-        <Icon size={22} />
-      </div>
-      <div>
-        <h4 style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>{title}</h4>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
-          <span style={{ fontSize: '1.25rem', fontWeight: '700' }}>{value}</span>
-          <span style={{ fontSize: '0.7rem', color: 'var(--text-soft)' }}>{label}</span>
+function AppointmentsCard({ items }) {
+  return (
+    <section className="glass" style={{ padding: '1.25rem' }} aria-label="مواعيد هذا الأسبوع">
+      <h3 className="dash-h"><CalendarDays size={18} style={{ color: 'var(--primary)' }} /> مواعيد هذا الأسبوع</h3>
+      {(!items || items.length === 0) ? (
+        <p style={{ fontSize: '0.85rem', margin: 0 }}>لا مواعيد قادمة هذا الأسبوع</p>
+      ) : items.map((ev) => (
+        <div className="mini-row" key={ev.id_even}>
+          <div className="mini-date"><div className="d tnum">{new Date(ev.start).getDate() || '—'}</div><div className="m">{MONTHS[new Date(ev.start).getMonth()] || ''}</div></div>
+          <div className="mini-body">
+            <h5>{ev.title || 'موعد'}</h5>
+            <p><Clock size={12} /> {ev.time_even || '—'}{ev.place ? <> <MapPin size={12} /> {ev.place}</> : ''}</p>
+          </div>
         </div>
+      ))}
+    </section>
+  );
+}
+
+function ActivityCard({ items }) {
+  return (
+    <section className="glass" style={{ padding: '1.25rem' }} aria-label="آخر النشاطات">
+      <h3 className="dash-h"><Activity size={18} style={{ color: 'var(--text-soft)' }} /> آخر النشاطات</h3>
+      {(!items || items.length === 0) ? (
+        <p style={{ fontSize: '0.85rem', margin: 0 }}>لا نشاط حديث</p>
+      ) : items.map((it, i) => (
+        <div className="mini-row" key={i}>
+          <div className="mini-body">
+            <h5>{it.action}</h5>
+            <p>{(it.title || '').trim()} • {shortDate(it.date)}</p>
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+/* ── Quick-view drawer ────────────────────────────────────────────────── */
+function CaseDrawer({ item, onClose, onOpen }) {
+  const closeRef = useRef(null);
+  useEffect(() => { closeRef.current?.focus(); }, []);
+  const days = daysUntil(item.date_echeance);
+  const st = statusUI(item.status);
+  return (
+    <div role="dialog" aria-modal="true" aria-label="عرض سريع للملف"
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', justifyContent: 'flex-start' }}
+      onClick={onClose}>
+      <div className="animate-fade" onClick={(e) => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: 440, height: '100vh', background: 'var(--surface)', borderInlineEnd: '1px solid var(--border)', padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', boxShadow: 'var(--glass-shadow)', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ margin: 0 }}>عرض سريع للملف</h2>
+          <button ref={closeRef} className="btn-icon" onClick={onClose} aria-label="إغلاق"><X size={20} /></button>
+        </div>
+
+        <div style={{ padding: '1rem', borderRadius: 'var(--r-lg)', background: 'var(--nav-active-bg)', border: '1px solid var(--primary)' }}>
+          <div className="agenda-ref" style={{ fontSize: '0.8rem' }}>#{item.ref}</div>
+          <h3 style={{ margin: '0.4rem 0' }}>{(item.nom_cl1 || '—').trim()}</h3>
+          {(item.de_part || '').trim() && <p style={{ margin: 0 }}>ضد {item.de_part.trim()}</p>}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <Field label="الحالة"><span className={`badge ${st.cls}`}>{st.label}</span></Field>
+          <Field label="الأجل">
+            <span style={{ color: days !== null && days < 0 ? 'var(--status-error)' : days === 0 ? 'var(--accent-gold)' : 'inherit', fontWeight: 600 }}>
+              {shortDate(item.date_echeance)} — {relativeText(days)}
+            </span>
+          </Field>
+          <Field label="تاريخ التسجيل"><span>{item.date_reg || '—'}</span></Field>
+          <Field label="المبلغ الإجمالي"><span className="tnum" style={{ fontSize: '1.15rem', fontWeight: 700 }}>{formatAmount(item.salaire)} د.ت</span></Field>
+          {(item.remarque || '').trim() && (
+            <Field label="ملاحظات"><p style={{ margin: 0, fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{item.remarque}</p></Field>
+          )}
+        </div>
+
+        <button className="btn" style={{ marginTop: 'auto' }} onClick={() => onOpen(item)}>
+          <ExternalLink size={18} /> معاينة كاملة وتعديل
+        </button>
       </div>
     </div>
   );
+}
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem' }}>جاري التحميل...</div>;
+function Field({ label, children }) {
+  return (
+    <div className="form-group">
+      <label>{label}</label>
+      <div style={{ fontSize: '0.95rem' }}>{children}</div>
+    </div>
+  );
+}
+
+/* ── Page ─────────────────────────────────────────────────────────────── */
+export default function Dashboard() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [bucket, setBucket] = useState('all'); // all | overdue | today | week
+  const [selected, setSelected] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE}/dashboard/stats`, { headers: { Authorization: `Bearer ${token}` } });
+        const json = await res.json();
+        if (alive) setData(json);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  // Esc closes the drawer.
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (e) => { if (e.key === 'Escape') setSelected(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selected]);
+
+  const agenda = data?.agenda || [];
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return agenda.filter((c) => {
+      const d = daysUntil(c.date_echeance);
+      const inBucket =
+        bucket === 'all' ? true :
+        bucket === 'overdue' ? (d !== null && d < 0) :
+        bucket === 'today' ? (d === 0) :
+        (d !== null && d > 0);
+      if (!inBucket) return false;
+      if (!q) return true;
+      return (c.nom_cl1 || '').toLowerCase().includes(q)
+        || (c.nom_cl2 || '').toLowerCase().includes(q)
+        || (c.de_part || '').toLowerCase().includes(q)
+        || String(c.ref || '').includes(q);
+    });
+  }, [agenda, search, bucket]);
+
+  if (loading) {
+    return <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem', color: 'var(--text-muted)' }}>جاري التحميل…</div>;
+  }
+
+  const t = data?.triage || { overdue: 0, today: 0, week: 0 };
+  const now = new Date();
+  const dateLabel = `${WEEKDAYS[now.getDay()]} ${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+  const toggle = (k) => setBucket((b) => (b === k ? 'all' : k));
 
   return (
-    <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      
-      {/* ── Quick Actions (Top) ── */}
-      <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-        <button className="btn" onClick={() => navigate('/record/registre/new')}>
-          <Plus size={18} /> محضر جديد
-        </button>
-        <button className="btn" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-main)' }}>
-          <FileText size={18} /> إنشاء مستند
-        </button>
-        <button className="btn" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-main)' }}>
-          <DollarSign size={18} /> تسجيل دفع
-        </button>
-      </div>
+    <div dir="rtl">
+    <div className="dash animate-fade">
 
-      {/* ── 1. Metrics Grid ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-        <MetricCard 
-          title="الملفات النشطة" 
-          value={data?.metrics?.activeCount} 
-          label="ملف" 
-          icon={Gavel} 
-          color="var(--primary)" 
-        />
-        <MetricCard 
-          title="مواعيد اليوم" 
-          value={data?.metrics?.dueToday} 
-          label="مهمة" 
-          icon={Clock} 
-          color="var(--accent-gold)" 
-        />
-        <MetricCard 
-          title="هذا الأسبوع" 
-          value={data?.metrics?.dueWeek} 
-          label="موعد" 
-          icon={CalendarDays} 
-          color="#8b5cf6" 
-        />
-        <MetricCard 
-          title="إنجازات الشهر" 
-          value={data?.metrics?.completedMonth} 
-          label="منتهي" 
-          icon={CheckCircle2} 
-          color="var(--status-success)" 
-        />
-      </div>
-
-      <div className="dashboard-main-grid">
-        
-        {/* ── Left Column: Cases & Tasks ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          
-          {/* 2. Cases Management Table */}
-          <div className="glass" style={{ padding: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <FileText size={20} style={{ color: 'var(--primary)' }} /> إدارة الملفات
-              </h3>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <div style={{ position: 'relative' }}>
-                  <Search size={16} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-soft)' }} />
-                  <input 
-                    type="text" 
-                    placeholder="بحث في الملفات..." 
-                    style={{ paddingRight: '2.2rem', fontSize: '0.85rem', width: '200px' }}
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <select 
-                  style={{ width: 'auto', fontSize: '0.85rem' }}
-                  value={filterStatus}
-                  onChange={e => setFilterStatus(e.target.value)}
-                >
-                  <option value="all">كل الحالات</option>
-                  <option value="not_started">غير مبدأ</option>
-                  <option value="in_progress">قيد الإنجاز</option>
-                  <option value="finished">مكتمل</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>المرجع</th>
-                    <th>الطالب</th>
-                    <th className="hide-on-mobile">المطلوب ضده</th>
-                    <th>الحالة</th>
-                    <th className="hide-on-mobile">تاريخ الأجل</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCases.map(c => (
-                    <tr key={c.id_r} onClick={() => setSelectedCase(c)} style={{ cursor: 'pointer' }}>
-                      <td style={{ fontWeight: '600' }}>#{c.ref}</td>
-                      <td>{c.nom_cl1}</td>
-                      <td className="hide-on-mobile">{c.de_part}</td>
-                      <td>
-                        <span className={`badge badge-${c.status === 'finished' ? 'green' : c.status === 'not_started' ? 'red' : 'amber'}`}>
-                          {c.status === 'finished' ? 'مكتمل' : c.status === 'not_started' ? 'جديد' : 'قيد الإنجاز'}
-                        </span>
-                      </td>
-                      <td className="hide-on-mobile" style={{ color: new Date(c.date_echeance) < new Date() ? 'var(--primary)' : 'inherit' }}>
-                        {c.date_echeance ? new Date(c.date_echeance).toLocaleDateString('fr-FR') : '--'}
-                      </td>
-                      <td><ChevronRight size={18} style={{ opacity: 0.3 }} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* 4. Tasks / Actions Queue */}
-          <div className="glass" style={{ padding: '1.5rem' }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <Activity size={20} style={{ color: 'var(--accent-gold)' }} /> قائمة المهام (To-Do)
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-              {data?.tasksQueue?.map(task => (
-                <div key={task.id_r} className="glass" style={{ padding: '1rem', background: 'var(--surface-subtle)', borderRight: '4px solid var(--primary)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 'bold' }}>أولوية عالية</span>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-soft)' }}>#{task.ref}</span>
-                  </div>
-                  <h4 style={{ fontSize: '0.95rem', marginBottom: '0.25rem' }}>{task.nom_cl1} ضد {task.de_part}</h4>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <MapPin size={12} /> معاينة العنوان المذكور
-                  </p>
-                  <div style={{ marginTop: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--primary)' }}>متأخر: {task.date_echeance}</span>
-                    <button className="btn" style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem' }}>إنجاز</button>
-                  </div>
-                </div>
-              ))}
-            </div>
+      {/* Command bar */}
+      <div className="dash-bar">
+        <div>
+          <div className="dash-date">{dateLabel}</div>
+          <div className="dash-sub">
+            {t.overdue > 0
+              ? <span style={{ color: 'var(--status-error)' }}><b>{t.overdue}</b> ملف متأخر</span>
+              : <span style={{ color: 'var(--status-success)' }}>لا تأخير</span>}
+            <span className="sep">•</span>
+            <span><b>{t.today}</b> مستحق اليوم</span>
+            <span className="sep">•</span>
+            <span>{data?.metrics?.activeCount ?? 0} ملف نشط</span>
           </div>
         </div>
-
-        {/* ── Right Column: Deadlines & Timeline ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          
-          {/* 3. Deadlines & Calendar */}
-          <div className="glass" style={{ padding: '1.5rem' }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <CalendarDays size={20} style={{ color: 'var(--primary)' }} /> المواعيد والأجال
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {data?.deadlines?.map(dl => (
-                <div key={dl.id_even} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                  <div style={{ textAlign: 'center', minWidth: '45px' }}>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-soft)', textTransform: 'uppercase' }}>
-                      {new Date(dl.start).toLocaleDateString('fr-FR', { month: 'short' })}
-                    </div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{new Date(dl.start).getDate()}</div>
-                  </div>
-                  <div className="glass" style={{ flex: 1, padding: '0.75rem', background: 'var(--surface-subtle)' }}>
-                    <h4 style={{ fontSize: '0.85rem', marginBottom: '0.2rem' }}>{dl.title}</h4>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <Clock size={12} /> {dl.time_even || '--:--'} • {dl.tribunal_even || 'لا يوجد مكان'}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* New: Calendar Widget */}
-          <div className="glass" style={{ padding: '1.5rem' }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-              <CalendarDays size={20} style={{ color: 'var(--accent-gold)' }} /> رزنامة الآجال
-            </h3>
-            <MiniCalendar deadlines={data?.calendarDeadlines} />
-          </div>
-
-          {/* 6. Payments Summary */}
-          <div className="glass" style={{ padding: '1.5rem' }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-              <DollarSign size={20} style={{ color: 'var(--status-success)' }} /> ملخص الأداء
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                <span color="var(--text-muted)">المجموع المتوقع:</span>
-                <span style={{ fontWeight: 'bold' }}>{data?.payments?.expected?.toLocaleString()} د.ت</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                <span color="var(--text-muted)">المبالغ المحصلة:</span>
-                <span style={{ fontWeight: 'bold', color: 'var(--status-success)' }}>{data?.payments?.collected?.toLocaleString()} د.ت</span>
-              </div>
-              <div style={{ height: '4px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden', marginTop: '0.5rem' }}>
-                <div style={{ 
-                  height: '100%', 
-                  background: 'var(--status-success)', 
-                  width: `${(data?.payments?.collected / data?.payments?.expected) * 100 || 0}%` 
-                }}></div>
-              </div>
-            </div>
-          </div>
-
-          {/* 9. Activity Timeline */}
-          <div className="glass" style={{ padding: '1.5rem' }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <Activity size={20} style={{ color: 'var(--text-soft)' }} /> سجل النشاطات
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'relative' }}>
-              <div style={{ position: 'absolute', right: '7px', top: 0, bottom: 0, width: '2px', background: 'var(--border)', zIndex: 0 }}></div>
-              {data?.timeline?.map((item, idx) => (
-                <div key={idx} style={{ display: 'flex', gap: '1rem', position: 'relative', zIndex: 1 }}>
-                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: item.type === 'case' ? 'var(--primary)' : 'var(--accent-gold)', border: '4px solid var(--bg-main)' }}></div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.1rem' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>{item.action}</span>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-soft)' }}>{item.date}</span>
-                    </div>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.title}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="dash-actions">
+          <button className="btn" onClick={() => navigate('/record/registre/new')}><Plus size={18} /> محضر جديد</button>
+          <button className="btn dash-btn-ghost" onClick={() => navigate('/general')}><Search size={18} /> بحث في الدفتر</button>
+          <button className="btn dash-btn-ghost" onClick={() => navigate('/calendar')}><CalendarDays size={18} /> الرزنامة</button>
         </div>
       </div>
 
-      {/* ── Quick View Drawer Logic ── */}
-      {selectedCase && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 1000,
-          display: 'flex',
-          justifyContent: 'flex-start' /* RTL Slide from left */
-        }} onClick={() => setSelectedCase(null)}>
-          <div className="animate-fade" style={{
-            width: '100%',
-            maxWidth: '450px',
-            height: '100vh',
-            background: 'var(--surface)',
-            borderRight: '1px solid var(--border)',
-            padding: '2rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1.5rem',
-            boxShadow: 'var(--glass-shadow)'
-          }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2>عرض سريع للملف</h2>
-              <button className="btn-icon" onClick={() => setSelectedCase(null)}><X size={20} /></button>
-            </div>
+      {/* Triage strip */}
+      <div className="dash-triage">
+        <Triage kind="overdue" count={t.overdue} label="متأخرة" hint="تجاوزت الأجل" active={bucket === 'overdue'} onToggle={toggle} />
+        <Triage kind="today" count={t.today} label="اليوم" hint="مستحقة اليوم" active={bucket === 'today'} onToggle={toggle} />
+        <Triage kind="week" count={t.week} label="هذا الأسبوع" hint="خلال 7 أيام" active={bucket === 'week'} onToggle={toggle} />
+      </div>
 
-            <div style={{ padding: '1rem', borderRadius: '12px', background: 'var(--nav-active-bg)', border: '1px solid var(--primary)' }}>
-              <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 'bold' }}>#{selectedCase.ref}</div>
-              <h3 style={{ margin: '0.5rem 0' }}>{selectedCase.nom_cl1}</h3>
-              <p style={{ color: 'var(--text-muted)' }}>ضد {selectedCase.de_part}</p>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div className="form-group">
-                <label>الحالة</label>
-                <div className={`badge badge-${selectedCase.status === 'finished' ? 'green' : 'amber'}`}>
-                  {selectedCase.status === 'finished' ? 'مكتمل' : 'قيد الإنجاز'}
-                </div>
-              </div>
-              <div className="form-group">
-                <label>تاريخ التسجيل</label>
-                <div style={{ fontSize: '0.95rem' }}>{selectedCase.date_reg}</div>
-              </div>
-              <div className="form-group">
-                <label>تاريخ الأجل</label>
-                <div style={{ fontSize: '0.95rem', color: 'var(--primary)' }}>{selectedCase.date_echeance}</div>
-              </div>
-              <div className="form-group">
-                <label>المبلغ الإجمالي</label>
-                <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{selectedCase.salaire?.toLocaleString()} د.ت</div>
-              </div>
-              {selectedCase.remarque && (
-                <div className="form-group">
-                  <label>ملاحظات</label>
-                  <p style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{selectedCase.remarque}</p>
-                </div>
-              )}
-            </div>
-
-            <div style={{ marginTop: 'auto', display: 'flex', gap: '1rem' }}>
-               <button className="btn" style={{ flex: 1 }} onClick={() => navigate(`/record/registre/${selectedCase.id_r}`)}>
-                 <ExternalLink size={18} /> معاينة كاملة وتعديل
-               </button>
+      <div className="dash-grid">
+        {/* Agenda */}
+        <section className="glass" style={{ padding: '1.5rem' }} aria-label="جدول الأعمال">
+          <div className="agenda-head">
+            <h3 className="dash-h" style={{ margin: 0 }}>
+              <FileText size={20} style={{ color: 'var(--primary)' }} /> جدول الأعمال
+              {bucket !== 'all' && <button className="badge badge-gray" style={{ cursor: 'pointer', border: 'none', font: 'inherit' }} onClick={() => setBucket('all')}>عرض الكل ✕</button>}
+            </h3>
+            <div className="agenda-search">
+              <Search size={16} />
+              <input type="text" placeholder="بحث بالاسم أو الرقم…" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="بحث في جدول الأعمال" />
             </div>
           </div>
+
+          {filtered.length === 0 ? (
+            <div className="dash-empty">
+              {search ? <p>لا نتائج مطابقة لبحثك.</p>
+                : t.overdue === 0 && t.today === 0
+                  ? <><CheckCircle2 size={32} /><p>كل الملفات ضمن آجالها. لا شيء متأخر أو مستحق اليوم.</p></>
+                  : <p>لا ملفات في هذا التصنيف.</p>}
+            </div>
+          ) : (
+            <div className="agenda-list">
+              {filtered.map((item) => <AgendaRow key={item.id_r} item={item} onOpen={setSelected} />)}
+            </div>
+          )}
+
+          {t.overdue > filtered.length && bucket === 'all' && !search && (
+            <button className="btn dash-btn-ghost" style={{ width: '100%', marginTop: '1rem' }} onClick={() => navigate('/general')}>
+              عرض كل الملفات في الدفتر العام
+            </button>
+          )}
+        </section>
+
+        {/* Right rail */}
+        <div className="dash-rail">
+          <CollectionCard payments={data?.payments} />
+          <section className="glass" style={{ padding: '1.25rem' }} aria-label="رزنامة الآجال">
+            <h3 className="dash-h"><CalendarDays size={18} style={{ color: 'var(--accent-gold)' }} /> رزنامة الآجال</h3>
+            <MiniCalendar deadlines={data?.calendarDeadlines} onPick={(dl) => navigate(`/record/registre/${dl.id_r}`)} />
+          </section>
+          <AppointmentsCard items={data?.appointments} />
+          <ActivityCard items={data?.timeline} />
         </div>
+      </div>
+    </div>
+
+      {selected && (
+        <CaseDrawer
+          item={selected}
+          onClose={() => setSelected(null)}
+          onOpen={(it) => navigate(`/record/registre/${it.id_r}`)}
+        />
       )}
-
     </div>
   );
 }
