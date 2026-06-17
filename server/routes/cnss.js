@@ -1,204 +1,349 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
+const PizZip = require('pizzip');
+const Docxtemplater = require('docxtemplater');
 const db = require('../db');
 
 const authenticate = require('../middleware/auth');
 const { logActivity } = require('../utils/logger');
 
-// Get all records for CNSS
+/*
+ * CNSS module — digitises the "état de liquidation → table → publipostage" flow.
+ *
+ *   cnss          = the pursued employer ("المطلوب"): one row per company.
+ *   cnss_oeuvre   = its liquidation cards ("بطاقة الجبر"): many rows per company,
+ *                   one per quarter, each generating one "محضر إعلام بطاقة جبر".
+ *
+ * Field map (template merge field → column):
+ *   إسم_المطلوب            → cnss.nom_cl2
+ *   العنوان                → cnss.cl2_adresse (+ cl2_adresse2)
+ *   عدد_الإنخراط_بالصندوق  → cnss.numcnss
+ *   رمز_الإنخراط           → cnss.codeng
+ *   عدد_الملف              → cnss_oeuvre.nbrreg
+ *   عدد_بطاقة_الجبر        → cnss_oeuvre.numcarte
+ *   تاريخ_بطاقة_الجبر      → cnss_oeuvre.datecarte
+ *   الثلاثية               → cnss_oeuvre.semestre
+ *   المبلغ                 → cnss_oeuvre.dette
+ *   تاريخ_احتساب_الخطايا   → cnss_oeuvre.datesins
+ *   (1.5% line)            → cnss_oeuvre.pourcentage
+ */
+
+// Writable columns for the employer master record. id_cn / id_user / id_so /
+// date_ajout / id_f / nbr are managed by the server, never taken from the body.
+const CNSS_COLS = [
+    'ref', 'numcnss', 'nom_cl2', 'cl2_profession', 'cin', 'matricule_fiscal',
+    'codeng', 'cl2_adresse', 'cl2_adresse2', 'cl2_avocat', 'cl2_tel',
+    'cl2_adressepersonnel', 'title', 'tribunal', 'nombre', 'date_s', 'montant', 'status'
+];
+
+// Writable columns for a liquidation-card line.
+const OEUVRE_COLS = ['numcarte', 'datecarte', 'semestre', 'dette', 'pourcentage', 'datesins', 'nbrreg'];
+
+// Keep only known columns from a request body so LLM/-client supplied keys can
+// never reach SQL unless they are real columns.
+const pick = (body, cols) => {
+    const out = {};
+    cols.forEach(c => { if (body[c] !== undefined) out[c] = body[c]; });
+    return out;
+};
+
+// `?`-free numeric guard: db.js rewrites every literal '?' into a $n placeholder,
+// so a TRY_CAST-style regex must not contain one. '^[0-9.]+$' is enough to keep
+// SUM(dette) from throwing on blank / non-numeric values.
+const SUM_DETTE = sub =>
+    `COALESCE((SELECT SUM(CASE WHEN o.dette ~ '^[0-9.]+$' THEN o.dette::numeric ELSE 0 END)
+               FROM cnss_oeuvre o WHERE o.id_cn = ${sub}), 0)`;
+
+// ───────── "محضر إعلام بطاقة جبر" generation (publipostage replacement) ─────────
+// Built once from Assets/template.docx by scripts/build_cnss_template.js.
+const TEMPLATE_PATH = path.join(__dirname, '..', 'assets', 'template_cnss.docx');
+
+// Map a company + one of its cards onto the template's tags.
+const buildActRecord = (company, card) => ({
+    num_dossier: card.nbrreg || '',
+    code_inscription: company.codeng || '',
+    num_affiliation: company.numcnss || '',
+    nom_matloub: company.nom_cl2 || '',
+    adresse: [company.cl2_adresse, company.cl2_adresse2].filter(Boolean).join(' '),
+    date_carte: card.datecarte || '',
+    num_carte: card.numcarte || '',
+    trimestre: card.semestre || '',
+    montant: card.dette || '',
+    date_penalite: card.datesins || '',
+});
+
+// Render one Word document containing `acts` (1 → single act, N → one per page).
+const renderActs = (acts) => {
+    const zip = new PizZip(fs.readFileSync(TEMPLATE_PATH));
+    const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+    doc.render({ acts });
+    return doc.getZip().generate({ type: 'nodebuffer' });
+};
+
+const sendDocx = (res, buf, filename) => {
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buf);
+};
+
+// ───────────────────────────── Companies (المطلوب) ─────────────────────────────
+
+// List companies with their card count and total debt.
 router.get('/', authenticate, async (req, res) => {
     try {
-        const { page = 1, limit = 50, nom_ste, num_cnss, num_affaire } = req.query;
+        const { page = 1, limit = 50, nom_cl2, numcnss, ref } = req.query;
         const offset = (parseInt(page) - 1) * parseInt(limit);
 
-        let query = `SELECT * FROM cnss WHERE id_so = ?`;
-        let params = [req.user.id_so];
+        const where = ['c.id_so = ?'];
+        const params = [req.user.id_so];
+        if (nom_cl2) { where.push('c.nom_cl2 LIKE ?'); params.push(`%${nom_cl2}%`); }
+        if (numcnss) { where.push('c.numcnss LIKE ?'); params.push(`%${numcnss}%`); }
+        if (ref)     { where.push('c.ref::text LIKE ?'); params.push(`%${ref}%`); }
+        const cond = where.join(' AND ');
 
-        if (nom_ste) {
-            query += ` AND nom_ste LIKE ?`;
-            params.push(`%${nom_ste}%`);
-        }
-        if (num_cnss) {
-            query += ` AND num_cnss LIKE ?`;
-            params.push(`%${num_cnss}%`);
-        }
-        if (num_affaire) {
-            query += ` AND num_affaire LIKE ?`;
-            params.push(`%${num_affaire}%`);
-        }
+        const rows = await db.all(
+            `SELECT c.*,
+                    (SELECT COUNT(*) FROM cnss_oeuvre o WHERE o.id_cn = c.id_cn) AS card_count,
+                    ${SUM_DETTE('c.id_cn')} AS total_dette
+             FROM cnss c
+             WHERE ${cond}
+             ORDER BY c.id_cn DESC
+             LIMIT ? OFFSET ?`,
+            [...params, parseInt(limit), parseInt(offset)]
+        );
 
-        query += ` ORDER BY num_affaire DESC LIMIT ? OFFSET ?`;
-        params.push(parseInt(limit), parseInt(offset));
-
-        const rows = await db.all(query, params);
-        
-        let countQuery = `SELECT COUNT(*) as count FROM cnss WHERE id_so = ?`;
-        let countParams = [req.user.id_so];
-        
-        if (nom_ste) { countQuery += ` AND nom_ste LIKE ?`; countParams.push(`%${nom_ste}%`); }
-        if (num_cnss) { countQuery += ` AND num_cnss LIKE ?`; countParams.push(`%${num_cnss}%`); }
-        if (num_affaire) { countQuery += ` AND num_affaire LIKE ?`; countParams.push(`%${num_affaire}%`); }
-
-        const countRow = await db.get(countQuery, countParams);
+        const countRow = await db.get(`SELECT COUNT(*) AS count FROM cnss c WHERE ${cond}`, params);
         const count = parseInt(countRow.count);
 
-        res.json({
-            data: rows,
-            total: count,
-            page: parseInt(page),
-            totalPages: Math.ceil(count / limit)
-        });
+        res.json({ data: rows, total: count, page: parseInt(page), totalPages: Math.ceil(count / limit) });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Get Record By ID
-router.get('/:id', authenticate, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const row = await db.get(`SELECT * FROM cnss WHERE id_cn = ? AND id_so = ?`, [id, req.user.id_so]);
-        if (row) {
-            await logActivity(req.user, 'VIEW', 'RECORD', `عرض ملف CNSS عدد ${row.num_affaire || id}`);
-        }
-        res.json(row);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Create CNSS Record
-router.post('/', authenticate, async (req, res) => {
-    try {
-        const record = req.body;
-        record.id_user = req.user.id;
-        record.id_so = req.user.id_so;
-        if (!record.status) record.status = 'has_deposit';
-        
-        const keys = Object.keys(record);
-        const values = Object.values(record);
-        const placeholders = keys.map(() => '?').join(',');
-
-        let query = `INSERT INTO cnss (${keys.join(',')}) VALUES (${placeholders})`;
-        if (process.env.POSTGRES_URL) {
-            query += ` RETURNING id_cn`;
-        }
-        
-        const result = await db.run(query, values);
-        
-        await logActivity(req.user, 'CREATE', 'RECORD', `إضافة ملف CNSS جديد عدد ${record.num_affaire}`);
-
-        res.json({ id_cn: result.lastID, ...record });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Update CNSS Record
-router.put('/:id', authenticate, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const record = req.body;
-        
-        delete record.id_cn;
-        delete record.id_user;
-        delete record.id_so;
-
-        const keys = Object.keys(record);
-        const values = Object.values(record);
-        
-        if (keys.length === 0) return res.json({ success: true });
-
-        const setString = keys.map(k => `${k} = ?`).join(', ');
-        const query = `UPDATE cnss SET ${setString} WHERE id_cn = ? AND id_so = ?`;
-        
-        values.push(id, req.user.id_so);
-        
-        await db.run(query, values);
-        
-        await logActivity(req.user, 'UPDATE', 'RECORD', `تعديل ملف CNSS (ID: ${id})`);
-
-        res.json({ success: true, updatedID: id });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Update Status Only
-router.patch('/:id/status', authenticate, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status } = req.body;
-        if (!status) return res.status(400).json({ error: 'Status is required' });
-
-        await db.run(`UPDATE cnss SET status = ? WHERE id_cn = ? AND id_so = ?`, 
-            [status, id, req.user.id_so]);
-        res.json({ success: true, status });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Facturation CNSS — filterable billing list with montant total
+// Billing list — companies with their total debt, filterable.
 router.get('/facturation/list', authenticate, async (req, res) => {
     try {
-        const { nom_ste, num_cnss, num_affaire, date_debut, date_fin } = req.query;
+        const { nom_cl2, numcnss, ref } = req.query;
+        const where = ['c.id_so = ?'];
+        const params = [req.user.id_so];
+        if (nom_cl2) { where.push('c.nom_cl2 LIKE ?'); params.push(`%${nom_cl2}%`); }
+        if (numcnss) { where.push('c.numcnss LIKE ?'); params.push(`%${numcnss}%`); }
+        if (ref)     { where.push('c.ref::text LIKE ?'); params.push(`%${ref}%`); }
+        const cond = where.join(' AND ');
 
-        let ws = ['c.id_so = ?'];
-        let ps = [req.user.id_so];
-        if (nom_ste)    { ws.push('c.nom_ste LIKE ?');    ps.push('%'+nom_ste+'%'); }
-        if (num_cnss)   { ws.push('c.num_cnss LIKE ?');   ps.push('%'+num_cnss+'%'); }
-        if (num_affaire){ ws.push('c.num_affaire LIKE ?'); ps.push('%'+num_affaire+'%'); }
-        if (date_debut && date_fin) { ws.push('o.date_o BETWEEN ? AND ?'); ps.push(date_debut, date_fin); }
-        
-        const condition = ws.join(' AND ');
-        const query = `SELECT c.id_cn, c.nom_ste, c.num_affaire, c.num_cnss, c.status, 
-                              COALESCE(SUM(CAST(o.montant AS ${castType})), 0) AS total_montant 
-                       FROM cnss AS c LEFT JOIN cnss_oeuvre AS o ON o.id_cn::text = c.id_cn::text 
-                       WHERE ${condition} GROUP BY c.id_cn ORDER BY c.num_affaire DESC`;
-
-        const rows = await db.all(query, ps);
-        const grandTotal = rows.reduce((sum, r) => sum + (parseFloat(r.total_montant) || 0), 0);
+        const rows = await db.all(
+            `SELECT c.id_cn, c.ref, c.nom_cl2, c.numcnss, c.status,
+                    ${SUM_DETTE('c.id_cn')} AS total_montant
+             FROM cnss c WHERE ${cond} ORDER BY c.id_cn DESC`,
+            params
+        );
+        const grandTotal = rows.reduce((s, r) => s + (parseFloat(r.total_montant) || 0), 0);
         res.json({ data: rows, total: Math.round(grandTotal * 1000) / 1000, count: rows.length });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-router.get('/facturation/list', authenticate, async (req, res) => {
+// One company plus its liquidation cards.
+router.get('/:id', authenticate, async (req, res) => {
     try {
-        const { ref, de_part, date_debut, date_fin, page = 1, limit = 50 } = req.query;
-        const offset = (parseInt(page) - 1) * parseInt(limit);
-        const l = parseInt(limit);
+        const id = parseInt(req.params.id, 10);
+        const company = await db.get(`SELECT * FROM cnss WHERE id_cn = ? AND id_so = ?`, [id, req.user.id_so]);
+        if (!company) return res.status(404).json({ error: 'Dossier non trouvé.' });
 
-        let query = `SELECT c.*, o.id as action_id, o.type_operation, o.salaire as action_salaire, o."TVA" as action_tva, o.total as action_total, o.date_o
-                      FROM cnss c 
-                      LEFT JOIN cnss_oeuvre o ON c.id_cn::text = o.id_cn::text 
-                      WHERE c.id_so = ?`;
-        let params = [req.user.id_so];
+        const cards = await db.all(
+            `SELECT * FROM cnss_oeuvre WHERE id_cn = ? AND id_so = ? ORDER BY id_cn_oe ASC`,
+            [id, req.user.id_so]
+        );
 
-        if (ref)      { query += ` AND c.num_affaire::text LIKE ?`; params.push(`%${ref}%`); }
-        if (de_part)  { query += ` AND c.nom_ste LIKE ?`;           params.push(`%${de_part}%`); }
-        if (date_debut && date_fin) { query += ` AND o.date_o BETWEEN ? AND ?`; params.push(date_debut, date_fin); }
-
-        query += ` ORDER BY c.id_cn DESC LIMIT ? OFFSET ?`;
-        const rows = await db.all(query, [...params, l, offset]);
-        res.json({ data: (rows || []), page: parseInt(page) });
+        await logActivity(req.user, 'VIEW', 'RECORD', `عرض ملف CNSS عدد ${company.ref || id}`);
+        res.json({ ...company, cards });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Delete CNSS Record (with cascading cleanup of actions)
+// Create a company.
+router.post('/', authenticate, async (req, res) => {
+    try {
+        const data = pick(req.body, CNSS_COLS);
+        data.id_user = req.user.id;
+        data.id_so = req.user.id_so;
+        data.date_ajout = new Date().toLocaleString('fr-FR');
+        if (!data.status) data.status = 'has_deposit';
+
+        // Auto-number ref when the client didn't supply one.
+        if (data.ref === undefined || data.ref === '') {
+            const m = await db.get(`SELECT MAX(ref) AS m FROM cnss WHERE id_so = ?`, [req.user.id_so]);
+            data.ref = (parseInt(m && m.m) || 0) + 1;
+        }
+
+        // id_cn has no DB sequence default on this (legacy-ported) table, so assign
+        // it explicitly. Works whether or not scripts/fix_cnss_sequences.js was run.
+        const nextId = await db.get(`SELECT COALESCE(MAX(id_cn), 0) + 1 AS n FROM cnss`);
+        data.id_cn = nextId.n;
+
+        const keys = Object.keys(data);
+        const placeholders = keys.map(() => '?').join(',');
+        const r = await db.get(
+            `INSERT INTO cnss (${keys.map(k => `"${k}"`).join(',')}) VALUES (${placeholders}) RETURNING id_cn`,
+            keys.map(k => data[k])
+        );
+
+        await logActivity(req.user, 'CREATE', 'RECORD', `إضافة ملف CNSS جديد عدد ${data.ref}`);
+        res.json({ id_cn: r.id_cn, ...data });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update a company.
+router.put('/:id', authenticate, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        const data = pick(req.body, CNSS_COLS);
+        if (Object.keys(data).length === 0) return res.json({ success: true });
+
+        const setStr = Object.keys(data).map(k => `"${k}" = ?`).join(', ');
+        const vals = [...Object.values(data), id, req.user.id_so];
+        await db.run(`UPDATE cnss SET ${setStr} WHERE id_cn = ? AND id_so = ?`, vals);
+
+        await logActivity(req.user, 'UPDATE', 'RECORD', `تعديل ملف CNSS (ID: ${id})`);
+        res.json({ success: true, updatedID: id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update status only.
+router.patch('/:id/status', authenticate, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        const { status } = req.body;
+        if (!status) return res.status(400).json({ error: 'Status is required' });
+
+        await db.run(`UPDATE cnss SET status = ? WHERE id_cn = ? AND id_so = ?`, [status, id, req.user.id_so]);
+        res.json({ success: true, status });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete a company and all of its cards.
 router.delete('/:id', authenticate, async (req, res) => {
     try {
-        const { id } = req.params;
-        await db.run('DELETE FROM cnss_oeuvre WHERE id_cn::text = ? AND id_so::text = ?', [id, req.user.id_so]);
-        await db.run('DELETE FROM cnss WHERE id_cn::text = ? AND id_so::text = ?', [id, req.user.id_so]);
-        
-        await logActivity(req.user, 'DELETE', 'RECORD', `حذف ملف CNSS (ID: ${id})`);
+        const id = parseInt(req.params.id, 10);
+        await db.run(`DELETE FROM cnss_oeuvre WHERE id_cn = ? AND id_so = ?`, [id, req.user.id_so]);
+        await db.run(`DELETE FROM cnss WHERE id_cn = ? AND id_so = ?`, [id, req.user.id_so]);
 
+        await logActivity(req.user, 'DELETE', 'RECORD', `حذف ملف CNSS (ID: ${id})`);
         res.json({ success: true, deletedID: id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ───────────────────── Generate the act(s) as Word (.docx) ─────────────────────
+
+// One card → one "محضر إعلام بطاقة جبر".
+router.get('/cards/:cardId/act.docx', authenticate, async (req, res) => {
+    try {
+        const cardId = parseInt(req.params.cardId, 10);
+        const card = await db.get(`SELECT * FROM cnss_oeuvre WHERE id_cn_oe = ? AND id_so = ?`, [cardId, req.user.id_so]);
+        if (!card) return res.status(404).json({ error: 'بطاقة الجبر غير موجودة.' });
+        const company = await db.get(`SELECT * FROM cnss WHERE id_cn = ? AND id_so = ?`, [card.id_cn, req.user.id_so]);
+        if (!company) return res.status(404).json({ error: 'الملف غير موجود.' });
+
+        const buf = renderActs([buildActRecord(company, card)]);
+        await logActivity(req.user, 'PRINT', 'RECORD', `توليد محضر إعلام بطاقة جبر (بطاقة ${card.numcarte || cardId})`);
+        sendDocx(res, buf, `act_${cardId}.docx`);
+    } catch (err) {
+        console.error('act.docx error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// All of a company's cards → one document, one act per page (publipostage).
+router.get('/:id/acts.docx', authenticate, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        const company = await db.get(`SELECT * FROM cnss WHERE id_cn = ? AND id_so = ?`, [id, req.user.id_so]);
+        if (!company) return res.status(404).json({ error: 'الملف غير موجود.' });
+        const cards = await db.all(`SELECT * FROM cnss_oeuvre WHERE id_cn = ? AND id_so = ? ORDER BY id_cn_oe ASC`, [id, req.user.id_so]);
+        if (!cards.length) return res.status(400).json({ error: 'لا توجد بطاقات لتوليد محاضرها.' });
+
+        const buf = renderActs(cards.map(c => buildActRecord(company, c)));
+        await logActivity(req.user, 'PRINT', 'RECORD', `توليد ${cards.length} محضر للملف ${company.nom_cl2 || id}`);
+        sendDocx(res, buf, `acts_${id}.docx`);
+    } catch (err) {
+        console.error('acts.docx error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ──────────────────────── Liquidation cards (بطاقة الجبر) ────────────────────────
+
+// Add a card to a company.
+router.post('/:id/cards', authenticate, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        const owner = await db.get(`SELECT id_cn FROM cnss WHERE id_cn = ? AND id_so = ?`, [id, req.user.id_so]);
+        if (!owner) return res.status(404).json({ error: 'Dossier non trouvé.' });
+
+        const data = pick(req.body, OEUVRE_COLS);
+        data.id_cn = id;
+        data.id_user = req.user.id;
+        data.id_so = req.user.id_so;
+        data.date_ajout = new Date().toLocaleString('fr-FR');
+        if (data.pourcentage === undefined || data.pourcentage === '') data.pourcentage = '1.5';
+
+        // id_cn_oe has no DB sequence default on this (legacy-ported) table.
+        const nextId = await db.get(`SELECT COALESCE(MAX(id_cn_oe), 0) + 1 AS n FROM cnss_oeuvre`);
+        data.id_cn_oe = nextId.n;
+
+        const keys = Object.keys(data);
+        const placeholders = keys.map(() => '?').join(',');
+        const r = await db.get(
+            `INSERT INTO cnss_oeuvre (${keys.map(k => `"${k}"`).join(',')}) VALUES (${placeholders}) RETURNING id_cn_oe`,
+            keys.map(k => data[k])
+        );
+
+        await logActivity(req.user, 'CREATE', 'RECORD', `إضافة بطاقة جبر للملف (ID: ${id})`);
+        res.json({ id_cn_oe: r.id_cn_oe, ...data });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update a card.
+router.put('/cards/:cardId', authenticate, async (req, res) => {
+    try {
+        const cardId = parseInt(req.params.cardId, 10);
+        const data = pick(req.body, OEUVRE_COLS);
+        if (Object.keys(data).length === 0) return res.json({ success: true });
+
+        const setStr = Object.keys(data).map(k => `"${k}" = ?`).join(', ');
+        const vals = [...Object.values(data), cardId, req.user.id_so];
+        await db.run(`UPDATE cnss_oeuvre SET ${setStr} WHERE id_cn_oe = ? AND id_so = ?`, vals);
+
+        await logActivity(req.user, 'UPDATE', 'RECORD', `تعديل بطاقة جبر (ID: ${cardId})`);
+        res.json({ success: true, updatedID: cardId });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete a card.
+router.delete('/cards/:cardId', authenticate, async (req, res) => {
+    try {
+        const cardId = parseInt(req.params.cardId, 10);
+        await db.run(`DELETE FROM cnss_oeuvre WHERE id_cn_oe = ? AND id_so = ?`, [cardId, req.user.id_so]);
+
+        await logActivity(req.user, 'DELETE', 'RECORD', `حذف بطاقة جبر (ID: ${cardId})`);
+        res.json({ success: true, deletedID: cardId });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

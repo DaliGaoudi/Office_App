@@ -632,4 +632,68 @@ router.post('/extract', authenticate, upload.single('file'), async (req, res) =>
     }
 });
 
+// Extract the fields of a CNSS "État de Liquidation" (the bilingual coercion-card
+// paper) so they can prefill a CNSS company + its first liquidation card. Mirrors
+// /extract but with a CNSS-specific prompt and field schema.
+router.post('/extract-cnss', authenticate, upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu." });
+
+        const file = req.file;
+        const mimeType = file.mimetype;
+
+        const prompt = `أنت مساعد متخصص في قراءة وثيقة "État de Liquidation" الصادرة عن الصندوق الوطني للضمان الاجتماعي التونسي (CNSS). الوثيقة ثنائية اللغة (فرنسية/عربية).
+
+استخرج الحقول التالية وأعدها بصيغة JSON فقط — دون أي شرح:
+- nom_cl2: اسم المؤجر/المطلوب (يظهر بعد عبارة "l'employeur"، مثل: SARL DICIMOOV).
+- cl2_adresse: عنوان المؤجر (الأسطر الواقعة تحت الاسم).
+- numcnss: رقم الانخراط بالصندوق — يظهر بعد "affilié sous le numéro". إذا كان مكوّناً من جزأين مثل "612555 00" فأعد الجزء الأول فقط هنا (612555).
+- codeng: الرمز الملحق برقم الانخراط (الجزء الثاني، مثل 00). إن لم يوجد فاتركه "".
+- numcarte: عدد بطاقة الجبر — يظهر أعلى يمين الوثيقة بعد "بطاقة جبر عدد" (مثل 4621400216).
+- datecarte: تاريخ البطاقة كما هو (مثل 21-05-2026).
+- semestre: الثلاثية — حوّل "trimestre X de l'année YYYY" إلى الصيغة "0X/YYYY" (مثال: trimestre 4 / année 2021 ← "04/2021").
+- dette: المبلغ المطلوب — يظهر بعد "payer le montant de" (مثل "2 959,306"). أعده كرقم عشري بنقطة، دون مسافات أو فواصل (2959.306).
+
+قواعد مهمة: تجاهل أي نص مكتوب باليد. لا تخترع قيمًا؛ اترك الحقل "" إن لم تجده.
+
+صيغة الإجابة (JSON فقط):
+{ "nom_cl2":"", "cl2_adresse":"", "numcnss":"", "codeng":"", "numcarte":"", "datecarte":"", "semestre":"", "dette":"" }`;
+
+        const messages = [{ role: "system", content: prompt }];
+
+        if (mimeType === 'application/pdf') {
+            const pdfData = await pdfParse(file.buffer);
+            messages.push({ role: "user", content: `Voici le texte extrait du document:\n\n${pdfData.text}` });
+        } else if (mimeType.startsWith('image/')) {
+            const dataUrl = `data:${mimeType};base64,${file.buffer.toString('base64')}`;
+            messages.push({
+                role: "user",
+                content: [
+                    { type: "text", text: "Extrais les champs de cet état de liquidation au format JSON demandé." },
+                    { type: "image_url", image_url: { url: dataUrl } }
+                ]
+            });
+        } else {
+            return res.status(400).json({ error: "Type de fichier non supporté. Envoyez un PDF ou une image." });
+        }
+
+        const response = await getOpenAI().chat.completions.create({
+            model: "openai/gpt-4o-mini",
+            messages,
+            response_format: { type: "json_object" }
+        });
+
+        try {
+            const parsed = JSON.parse(response.choices[0].message.content);
+            res.json({ success: true, data: parsed });
+        } catch (e) {
+            console.error("CNSS extract: invalid JSON:", response.choices[0].message.content);
+            res.status(500).json({ error: "L'IA a retourné un format invalide." });
+        }
+    } catch (err) {
+        console.error("CNSS Extraction Error:", err);
+        res.status(500).json({ error: err.message || "Erreur d'extraction IA." });
+    }
+});
+
 module.exports = router;

@@ -250,6 +250,7 @@ import Dashboard from './pages/Dashboard';
 import RegistreGeneral from './pages/RegistreGeneral';
 import RegistreExecution from './pages/RegistreExecution';
 import RegistreCNSS from './pages/RegistreCNSS';
+import RegistreCNSSDetail from './pages/RegistreCNSSDetail';
 import Telephone from './pages/Telephone';
 import Calendar from './pages/Calendar';
 import RecordDetail from './pages/RecordDetail';
@@ -308,6 +309,8 @@ function App() {
                   <Route path="/general" element={<RegistreGeneral />} />
                   <Route path="/execution" element={<RegistreExecution />} />
                   <Route path="/cnss" element={<RegistreCNSS />} />
+                  <Route path="/cnss/new" element={<RegistreCNSSDetail />} />
+                  <Route path="/cnss/:id" element={<RegistreCNSSDetail />} />
                   <Route path="/telephone" element={<Telephone />} />
                   <Route path="/calendar" element={<Calendar />} />
                   <Route path="/record/:type/:id" element={<RecordDetail />} />

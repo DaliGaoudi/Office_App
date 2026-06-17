@@ -9,3 +9,6 @@ server/database_v3.sqlite
 # Local tooling / generated artifacts (not part of the webapp)
 .claude/
 graphify-out/
+
+# Database backups (contain real data — never commit)
+server/backups/

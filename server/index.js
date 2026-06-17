@@ -44,6 +44,7 @@ app.use('/api/data-cleaning', require('./routes/data-cleaning'));
 app.use('/api/audit', require('./routes/audit'));
 app.use('/api/accounting', require('./routes/accounting'));
 app.use('/api/attachments', require('./routes/attachments'));
+app.use('/api/backup', require('./routes/backup'));
 
 // Settings — after update, flush TVA cache in registre
 app.use('/api/settings', (req, res, next) => {
