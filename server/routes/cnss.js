@@ -2,12 +2,29 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
+const multer = require('multer');
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
 const db = require('../db');
 
 const authenticate = require('../middleware/auth');
 const { logActivity } = require('../utils/logger');
+const { extractCnssFromFile } = require('../services/cnssExtract');
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+// "تاريخ احتساب الخطايا" = 16th of the month after the quarter ends.
+// semestre is "Q/YYYY" e.g. "04/2021". Mirror of the client-side helper.
+const deriveDatesins = (semestre) => {
+    const m = /^\s*(\d{1,2})\s*\/\s*(\d{4})\s*$/.exec(semestre || '');
+    if (!m) return '';
+    const q = parseInt(m[1], 10);
+    let y = parseInt(m[2], 10);
+    const monthAfter = { 1: '04', 2: '07', 3: '10', 4: '01' }[q];
+    if (!monthAfter) return '';
+    if (q === 4) y += 1;
+    return `16/${monthAfter}/${y}`;
+};
 
 /*
  * CNSS module — digitises the "état de liquidation → table → publipostage" flow.
@@ -143,6 +160,70 @@ router.get('/facturation/list', authenticate, async (req, res) => {
         const grandTotal = rows.reduce((s, r) => s + (parseFloat(r.total_montant) || 0), 0);
         res.json({ data: rows, total: Math.round(grandTotal * 1000) / 1000, count: rows.length });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Upload or scan an "État de Liquidation": extract its fields and create the
+// record automatically. If a company with the same CNSS number already exists,
+// the card is added to it (so multiple cards group under one «مطلوب»).
+router.post('/scan', authenticate, upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: 'Aucun fichier reçu.' });
+
+        const d = await extractCnssFromFile(req.file.buffer, req.file.mimetype);
+        if (!d || (!d.nom_cl2 && !d.numcnss && !d.numcarte)) {
+            return res.status(422).json({ error: 'تعذّر استخراج بيانات كافية من البطاقة. جرّب صورة/مسحاً أوضح.' });
+        }
+
+        // Find-or-create the company by CNSS affiliation number.
+        let company = null;
+        if (d.numcnss) {
+            company = await db.get(
+                `SELECT * FROM cnss WHERE numcnss = ? AND id_so = ? ORDER BY id_cn DESC LIMIT 1`,
+                [String(d.numcnss), req.user.id_so]
+            );
+        }
+        let createdCompany = false;
+        if (!company) {
+            const m = await db.get(`SELECT MAX(ref) AS m FROM cnss WHERE id_so = ?`, [req.user.id_so]);
+            const nid = await db.get(`SELECT COALESCE(MAX(id_cn), 0) + 1 AS n FROM cnss`);
+            const compData = {
+                id_cn: nid.n,
+                ref: (parseInt(m && m.m) || 0) + 1,
+                nom_cl2: d.nom_cl2 || '', numcnss: d.numcnss || '', codeng: d.codeng || '',
+                cl2_adresse: d.cl2_adresse || '', status: 'has_deposit',
+                id_user: req.user.id, id_so: req.user.id_so, date_ajout: new Date().toLocaleString('fr-FR'),
+            };
+            const ck = Object.keys(compData);
+            company = await db.get(
+                `INSERT INTO cnss (${ck.map(k => `"${k}"`).join(',')}) VALUES (${ck.map(() => '?').join(',')}) RETURNING *`,
+                ck.map(k => compData[k])
+            );
+            createdCompany = true;
+        }
+
+        // Create the liquidation card.
+        const noe = await db.get(`SELECT COALESCE(MAX(id_cn_oe), 0) + 1 AS n FROM cnss_oeuvre`);
+        const cardData = {
+            id_cn_oe: noe.n,
+            numcarte: d.numcarte || '', datecarte: d.datecarte || '', semestre: d.semestre || '',
+            dette: d.dette || '', pourcentage: '1.5', datesins: deriveDatesins(d.semestre), nbrreg: '',
+            id_cn: company.id_cn, id_user: req.user.id, id_so: req.user.id_so,
+            date_ajout: new Date().toLocaleString('fr-FR'),
+        };
+        const ok = Object.keys(cardData);
+        const card = await db.get(
+            `INSERT INTO cnss_oeuvre (${ok.map(k => `"${k}"`).join(',')}) VALUES (${ok.map(() => '?').join(',')}) RETURNING *`,
+            ok.map(k => cardData[k])
+        );
+
+        await logActivity(req.user, 'CREATE', 'RECORD',
+            `إنشاء بطاقة جبر من مسح/رفع (${card.numcarte || ''}) للمطلوب ${company.nom_cl2 || company.id_cn}`);
+
+        res.json({ success: true, id_cn: company.id_cn, id_cn_oe: card.id_cn_oe, createdCompany, extracted: d });
+    } catch (err) {
+        console.error('cnss /scan error:', err);
         res.status(500).json({ error: err.message });
     }
 });

@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Edit, Printer, Trash2 } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Search, Plus, Edit, Printer, Trash2, UploadCloud, ScanLine } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Pagination from '../components/Pagination';
 import AutocompleteInput from '../components/AutocompleteInput';
@@ -9,6 +9,9 @@ import API_BASE from '../config';
 
 const API = `${API_BASE}/cnss`;
 
+// The local Scan Bridge on the office PC drives the scanner (see scan-watcher/).
+const BRIDGE_URL = localStorage.getItem('scanBridgeUrl') || 'http://127.0.0.1:17171';
+
 // CNSS amounts (dette) are decimal dinars stored as strings ("2959.306"), NOT
 // the integer millimes the general registers use — so format directly.
 const fmtDinar = (v) => {
@@ -16,6 +19,29 @@ const fmtDinar = (v) => {
   if (isNaN(n)) return '0,000';
   return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3, useGrouping: true }).format(n);
 };
+
+// Scanned pages are large near-lossless JPEGs; downscale before the 10MB upload.
+const SCAN_MAX_EDGE = 2000, SCAN_JPEG_QUALITY = 0.72;
+function compressImage(blob) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(blob);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const scale = Math.min(1, SCAN_MAX_EDGE / Math.max(w, h));
+      w = Math.round(w * scale); h = Math.round(h * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('فشل ضغط الصورة')), 'image/jpeg', SCAN_JPEG_QUALITY);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('تعذّرت معالجة الصورة')); };
+    img.src = url;
+  });
+}
 
 export default function RegistreCNSS() {
   const navigate = useNavigate();
@@ -29,6 +55,9 @@ export default function RegistreCNSS() {
 
   const [filters, setFilters]       = useState({ nom_cl2: '', numcnss: '', ref: '' });
   const [activeFilters, setActiveFilters] = useState({});
+
+  const [processing, setProcessing] = useState(null); // message while extracting/creating
+  const fileInputRef = useRef(null);
 
   const fetchRecords = useCallback(async (pg = page, lim = limit, flt = activeFilters) => {
     setLoading(true);
@@ -91,16 +120,87 @@ export default function RegistreCNSS() {
     }
   };
 
+  // Send a card image/PDF to the server, which extracts it and auto-creates the
+  // record, then jump to the new record for review + act generation.
+  const submitCardFile = async (fileOrBlob, filename) => {
+    setProcessing('جاري قراءة البطاقة وإنشاء الملف…');
+    const token = localStorage.getItem('token');
+    const fd = new FormData();
+    fd.append('file', fileOrBlob, filename || 'card.jpg');
+    try {
+      const res = await fetch(`${API}/scan`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        navigate(`/cnss/${json.id_cn}`);
+      } else {
+        alert('تعذّر إنشاء الملف: ' + (json.error || res.status));
+      }
+    } catch (e) {
+      console.error(e);
+      alert('خطأ في الاتصال بالخادم');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const payload = file.type.startsWith('image/') ? await compressImage(file) : file;
+      await submitCardFile(payload, file.name);
+    } catch (err) {
+      alert('خطأ في معالجة الملف: ' + err.message);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleScan = async () => {
+    setProcessing('جاري المسح الضوئي…');
+    try {
+      const scanUrl = `${BRIDGE_URL}/scan` + (localStorage.getItem('scanMock') === '1' ? '?mock=1' : '');
+      const scanRes = await fetch(scanUrl, { method: 'POST' });
+      if (!scanRes.ok) { const info = await scanRes.json().catch(() => ({})); throw new Error(info.error || 'تعذّر المسح الضوئي'); }
+      const blob = await compressImage(await scanRes.blob());
+      await submitCardFile(blob, 'scan.jpg');
+    } catch (err) {
+      console.error('Scan error:', err);
+      const offline = err instanceof TypeError;
+      setProcessing(null);
+      alert(offline
+        ? 'تعذّر الوصول إلى الماسح الضوئي.\nنزّل «أداة المسح الضوئي» من الإعدادات وشغّلها مرة واحدة، وتأكّد من توصيل الجهاز.'
+        : ('خطأ في المسح الضوئي: ' + err.message));
+    }
+  };
+
   return (
     <div className="animate-fade">
+      {/* ── Processing overlay (extraction + auto-create) ── */}
+      {processing && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="glass" style={{ padding: '2rem 3rem', textAlign: 'center', direction: 'rtl' }}>
+            <div style={{ width: 36, height: 36, margin: '0 auto 1rem', border: '3px solid var(--card-border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'cnss-spin 0.8s linear infinite' }} />
+            <div style={{ fontSize: '1rem', color: 'var(--primary)' }}>{processing}</div>
+          </div>
+          <style dangerouslySetInnerHTML={{ __html: '@keyframes cnss-spin { to { transform: rotate(360deg); } }' }} />
+        </div>
+      )}
+
       {/* ── Toolbar ── */}
       <div className="topbar" style={{ marginBottom: '1rem' }}>
         <h2 style={{ color: 'var(--primary)' }}>ملفات الضمان الاجتماعي (CNSS)</h2>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="btn" onClick={() => window.print()}><Printer size={18} /> طباعة</button>
-          <button className="btn" onClick={() => navigate('/cnss/new')}>
-            <Plus size={18} /> إضافة مطلوب
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*,application/pdf" onChange={handleUpload} />
+          <button className="btn" disabled={!!processing} style={{ background: 'var(--primary)' }} onClick={handleScan}>
+            <ScanLine size={18} /> مسح بطاقة جبر
           </button>
+          <button className="btn" disabled={!!processing} onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+            <UploadCloud size={18} /> رفع بطاقة جبر
+          </button>
+          <button className="btn" style={{ background: 'var(--surface-2)' }} onClick={() => navigate('/cnss/new')}>
+            <Plus size={18} /> إضافة يدوية
+          </button>
+          <button className="btn" style={{ background: 'var(--surface-2)' }} onClick={() => window.print()}><Printer size={18} /> طباعة</button>
         </div>
       </div>
 
