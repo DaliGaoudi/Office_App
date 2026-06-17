@@ -77,7 +77,12 @@ router.get('/', authenticate, async (req, res) => {
             filterParams.push(`%${date_inscri}%`);
         }
 
-        let query = `SELECT * FROM clients_record WHERE id_so::text = ?${filterSql}`;
+        // The general and execution registers share clients_record; exclude
+        // execution rows (is_execution = TRUE) so they don't leak into general
+        // results. General rows have is_execution FALSE or NULL, hence IS NOT TRUE.
+        const baseWhere = `WHERE id_so::text = ? AND (is_execution IS NOT TRUE)${filterSql}`;
+
+        let query = `SELECT * FROM clients_record ${baseWhere}`;
         let params = [req.user.id_so, ...filterParams];
 
         query += ` ORDER BY ref DESC LIMIT ? OFFSET ?`;
@@ -85,7 +90,7 @@ router.get('/', authenticate, async (req, res) => {
 
         const rows = await db.all(query, params);
 
-        const countQuery = `SELECT COUNT(*) as count FROM clients_record WHERE id_so::text = ?${filterSql}`;
+        const countQuery = `SELECT COUNT(*) as count FROM clients_record ${baseWhere}`;
         const countParams = [req.user.id_so, ...filterParams];
 
         const countRow = await db.get(countQuery, countParams);
