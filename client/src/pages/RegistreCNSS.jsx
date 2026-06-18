@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, Plus, Edit, Printer, Trash2, UploadCloud, ScanLine } from 'lucide-react';
+import { Search, Plus, Edit, Printer, Trash2, UploadCloud, ScanLine, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Pagination from '../components/Pagination';
 import AutocompleteInput from '../components/AutocompleteInput';
@@ -173,6 +173,28 @@ export default function RegistreCNSS() {
     }
   };
 
+  // Generate the «محضر إعلام بطاقة جبر» for a company straight from the table —
+  // all of its cards in one Word file (one act per page).
+  const generateActs = async (item) => {
+    if (!Number(item.card_count)) { alert('لا توجد بطاقات جبر لهذا المطلوب لتوليد محضرها.'); return; }
+    setProcessing('جاري توليد المحضر…');
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API}/${item.id_cn}/acts.docx`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); alert('فشل توليد المحضر: ' + (e.error || res.status)); return; }
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement('a');
+      a.href = url; a.download = `محاضر_${item.nom_cl2 || item.id_cn}.docx`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert('خطأ في الاتصال بالخادم');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
   return (
     <div className="animate-fade">
       {/* ── Processing overlay (extraction + auto-create) ── */}
@@ -265,6 +287,12 @@ export default function RegistreCNSS() {
                       })()}
                     </td>
                     <td className="no-print" style={{ display: 'flex', gap: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => generateActs(item)}
+                        title={Number(item.card_count) ? 'توليد المحضر (Word)' : 'لا توجد بطاقات جبر'}
+                        disabled={!Number(item.card_count) || !!processing}
+                        style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: Number(item.card_count) ? 'pointer' : 'not-allowed', opacity: Number(item.card_count) ? 1 : 0.35 }}>
+                        <FileText size={18} />
+                      </button>
                       <button onClick={() => navigate(`/cnss/${item.id_cn}`)}
                         title="تعديل"
                         style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer' }}>
