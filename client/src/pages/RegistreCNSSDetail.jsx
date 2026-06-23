@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Check, Plus, Trash2, Edit, UploadCloud, FileText, Printer } from 'lucide-react';
+import { ArrowLeft, Save, Check, Plus, Trash2, Edit, UploadCloud, FileText, Printer, ScanLine } from 'lucide-react';
 import { STATUS_MAP } from '../utils/formatters';
 import API_BASE from '../config';
 import AutocompleteInput from '../components/AutocompleteInput';
+import { compressImage, scanCardFromBridge, createRecordFromCard } from '../utils/cnssScan';
 
 const API = `${API_BASE}/cnss`;
 
@@ -53,6 +54,11 @@ export default function RegistreCNSSDetail() {
 
   const [isAILoading, setIsAILoading] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Scanning/uploading the NEXT بطاقة جبر — auto-creates its own record and jumps
+  // there, so the user can keep digitising cards without going back to the list.
+  const [creatingFromCard, setCreatingFromCard] = useState(null);
+  const newCardInputRef = useRef(null);
 
   const fetchData = useCallback(async () => {
     if (isNew) return;
@@ -212,6 +218,48 @@ export default function RegistreCNSSDetail() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // ── Scan / upload the NEXT بطاقة جبر → auto-create a new record ──
+  // Mirrors the list page so the user can keep scanning cards back-to-back.
+  const submitNewCard = async (fileOrBlob, filename) => {
+    setCreatingFromCard('جاري قراءة البطاقة وإنشاء الملف…');
+    try {
+      const newId = await createRecordFromCard(fileOrBlob, filename);
+      navigate(`/cnss/${newId}`);
+    } catch (e) {
+      console.error(e);
+      alert('تعذّر إنشاء الملف: ' + e.message);
+    } finally {
+      setCreatingFromCard(null);
+    }
+  };
+
+  const handleScanNewCard = async () => {
+    setCreatingFromCard('جاري المسح الضوئي…');
+    try {
+      const blob = await scanCardFromBridge();
+      await submitNewCard(blob, 'scan.jpg');
+    } catch (err) {
+      console.error('Scan error:', err);
+      const offline = err instanceof TypeError;
+      setCreatingFromCard(null);
+      alert(offline
+        ? 'تعذّر الوصول إلى الماسح الضوئي.\nنزّل «أداة المسح الضوئي» من الإعدادات وشغّلها مرة واحدة، وتأكّد من توصيل الجهاز.'
+        : ('خطأ في المسح الضوئي: ' + err.message));
+    }
+  };
+
+  const handleUploadNewCard = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const payload = file.type.startsWith('image/') ? await compressImage(file) : file;
+      await submitNewCard(payload, file.name);
+    } catch (err) {
+      alert('خطأ في معالجة الملف: ' + err.message);
+    }
+    if (e.target) e.target.value = '';
+  };
+
   // ── Generate the "محضر إعلام بطاقة جبر" Word document ──
   const downloadBlob = (blob, filename) => {
     const url = URL.createObjectURL(blob);
@@ -254,6 +302,17 @@ export default function RegistreCNSSDetail() {
 
   return (
     <div className="animate-fade" dir="rtl">
+      {/* ── Processing overlay (scanning the next card → auto-create) ── */}
+      {creatingFromCard && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="glass" style={{ padding: '2rem 3rem', textAlign: 'center', direction: 'rtl' }}>
+            <div style={{ width: 36, height: 36, margin: '0 auto 1rem', border: '3px solid var(--card-border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'cnss-spin 0.8s linear infinite' }} />
+            <div style={{ fontSize: '1rem', color: 'var(--primary)' }}>{creatingFromCard}</div>
+          </div>
+          <style dangerouslySetInnerHTML={{ __html: '@keyframes cnss-spin { to { transform: rotate(360deg); } }' }} />
+        </div>
+      )}
+
       {/* ── Toolbar ── */}
       <div className="topbar no-print" style={{ marginBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -264,8 +323,21 @@ export default function RegistreCNSSDetail() {
             {isNew ? 'مطلوب جديد' : `المطلوب #${company.ref}`} {company.nom_cl2 && <span style={{ opacity: 0.7, fontSize: '0.9em' }}>— {company.nom_cl2}</span>}
           </h2>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*,application/pdf" onChange={handleFileUpload} />
+          {!isNew && (
+            <>
+              <input type="file" ref={newCardInputRef} style={{ display: 'none' }} accept="image/*,application/pdf" onChange={handleUploadNewCard} />
+              <button className="btn" style={{ background: 'var(--primary)' }} onClick={handleScanNewCard} disabled={!!creatingFromCard}
+                title="مسح بطاقة جبر جديدة وإنشاء ملف مطلوب جديد">
+                <ScanLine size={18} /> مسح بطاقة جبر تالية
+              </button>
+              <button className="btn" onClick={() => newCardInputRef.current && newCardInputRef.current.click()} disabled={!!creatingFromCard}
+                title="رفع بطاقة جبر جديدة وإنشاء ملف مطلوب جديد">
+                <UploadCloud size={18} /> رفع بطاقة جبر تالية
+              </button>
+            </>
+          )}
           <button className="btn" style={{ background: 'var(--card-bg)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
             onClick={() => fileInputRef.current && fileInputRef.current.click()} disabled={isAILoading}>
             {isAILoading ? 'جاري القراءة...' : <><UploadCloud size={18} /> مسح ذكي لحالة التصفية</>}

@@ -6,11 +6,9 @@ import AutocompleteInput from '../components/AutocompleteInput';
 import { STATUS_MAP } from '../utils/formatters';
 
 import API_BASE from '../config';
+import { compressImage, scanCardFromBridge, createRecordFromCard } from '../utils/cnssScan';
 
 const API = `${API_BASE}/cnss`;
-
-// The local Scan Bridge on the office PC drives the scanner (see scan-watcher/).
-const BRIDGE_URL = localStorage.getItem('scanBridgeUrl') || 'http://127.0.0.1:17171';
 
 // CNSS amounts (dette) are decimal dinars stored as strings ("2959.306"), NOT
 // the integer millimes the general registers use — so format directly.
@@ -19,29 +17,6 @@ const fmtDinar = (v) => {
   if (isNaN(n)) return '0,000';
   return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3, useGrouping: true }).format(n);
 };
-
-// Scanned pages are large near-lossless JPEGs; downscale before the 10MB upload.
-const SCAN_MAX_EDGE = 2000, SCAN_JPEG_QUALITY = 0.72;
-function compressImage(blob) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(blob);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      let w = img.naturalWidth, h = img.naturalHeight;
-      const scale = Math.min(1, SCAN_MAX_EDGE / Math.max(w, h));
-      w = Math.round(w * scale); h = Math.round(h * scale);
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
-      ctx.drawImage(img, 0, 0, w, h);
-      canvas.toBlob(b => b ? resolve(b) : reject(new Error('فشل ضغط الصورة')), 'image/jpeg', SCAN_JPEG_QUALITY);
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('تعذّرت معالجة الصورة')); };
-    img.src = url;
-  });
-}
 
 export default function RegistreCNSS() {
   const navigate = useNavigate();
@@ -124,20 +99,12 @@ export default function RegistreCNSS() {
   // record, then jump to the new record for review + act generation.
   const submitCardFile = async (fileOrBlob, filename) => {
     setProcessing('جاري قراءة البطاقة وإنشاء الملف…');
-    const token = localStorage.getItem('token');
-    const fd = new FormData();
-    fd.append('file', fileOrBlob, filename || 'card.jpg');
     try {
-      const res = await fetch(`${API}/scan`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        navigate(`/cnss/${json.id_cn}`);
-      } else {
-        alert('تعذّر إنشاء الملف: ' + (json.error || res.status));
-      }
+      const id = await createRecordFromCard(fileOrBlob, filename);
+      navigate(`/cnss/${id}`);
     } catch (e) {
       console.error(e);
-      alert('خطأ في الاتصال بالخادم');
+      alert('تعذّر إنشاء الملف: ' + e.message);
     } finally {
       setProcessing(null);
     }
@@ -158,10 +125,7 @@ export default function RegistreCNSS() {
   const handleScan = async () => {
     setProcessing('جاري المسح الضوئي…');
     try {
-      const scanUrl = `${BRIDGE_URL}/scan` + (localStorage.getItem('scanMock') === '1' ? '?mock=1' : '');
-      const scanRes = await fetch(scanUrl, { method: 'POST' });
-      if (!scanRes.ok) { const info = await scanRes.json().catch(() => ({})); throw new Error(info.error || 'تعذّر المسح الضوئي'); }
-      const blob = await compressImage(await scanRes.blob());
+      const blob = await scanCardFromBridge();
       await submitCardFile(blob, 'scan.jpg');
     } catch (err) {
       console.error('Scan error:', err);
