@@ -325,19 +325,6 @@ export default function RegistreCNSSDetail() {
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*,application/pdf" onChange={handleFileUpload} />
-          {!isNew && (
-            <>
-              <input type="file" ref={newCardInputRef} style={{ display: 'none' }} accept="image/*,application/pdf" onChange={handleUploadNewCard} />
-              <button className="btn" style={{ background: 'var(--primary)' }} onClick={handleScanNewCard} disabled={!!creatingFromCard}
-                title="مسح بطاقة جبر جديدة وإنشاء ملف مطلوب جديد">
-                <ScanLine size={18} /> مسح بطاقة جبر تالية
-              </button>
-              <button className="btn" onClick={() => newCardInputRef.current && newCardInputRef.current.click()} disabled={!!creatingFromCard}
-                title="رفع بطاقة جبر جديدة وإنشاء ملف مطلوب جديد">
-                <UploadCloud size={18} /> رفع بطاقة جبر تالية
-              </button>
-            </>
-          )}
           <button className="btn" style={{ background: 'var(--card-bg)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
             onClick={() => fileInputRef.current && fileInputRef.current.click()} disabled={isAILoading}>
             {isAILoading ? 'جاري القراءة...' : <><UploadCloud size={18} /> مسح ذكي لحالة التصفية</>}
@@ -403,7 +390,18 @@ export default function RegistreCNSSDetail() {
               <Plus size={20} />
               <h3 style={{ margin: 0 }}>بطاقات الجبر</h3>
             </div>
-            <button className="btn no-print" onClick={openNewCard}><Plus size={18} /> إضافة بطاقة</button>
+            <div className="no-print" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <input type="file" ref={newCardInputRef} style={{ display: 'none' }} accept="image/*,application/pdf" onChange={handleUploadNewCard} />
+              <button className="btn" style={{ background: 'var(--primary)' }} onClick={handleScanNewCard} disabled={!!creatingFromCard}
+                title="مسح بطاقة جبر جديدة وإنشاء ملف مطلوب جديد">
+                <ScanLine size={18} /> مسح بطاقة جبر تالية
+              </button>
+              <button className="btn" onClick={() => newCardInputRef.current && newCardInputRef.current.click()} disabled={!!creatingFromCard}
+                title="رفع بطاقة جبر جديدة وإنشاء ملف مطلوب جديد">
+                <UploadCloud size={18} /> رفع بطاقة جبر تالية
+              </button>
+              <button className="btn" onClick={openNewCard}><Plus size={18} /> إضافة بطاقة</button>
+            </div>
           </div>
 
           <div className="table-container">
