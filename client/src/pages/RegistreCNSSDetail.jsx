@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Check, Plus, Trash2, Edit, UploadCloud, FileText, Printer, ScanLine } from 'lucide-react';
+import { ArrowLeft, Save, Check, Plus, Trash2, Edit, UploadCloud, FileText, Printer, ScanLine, ChevronDown, ChevronLeft } from 'lucide-react';
 import { STATUS_MAP } from '../utils/formatters';
 import API_BASE from '../config';
 import AutocompleteInput from '../components/AutocompleteInput';
@@ -30,7 +30,48 @@ export function deriveDatesins(semestre) {
 }
 
 const EMPTY_COMPANY = { ref: '', nom_cl2: '', cl2_adresse: '', cl2_adresse2: '', numcnss: '', codeng: '', cl2_profession: '', tribunal: '', status: 'has_deposit' };
-const EMPTY_CARD = { numcarte: '', datecarte: '', semestre: '', dette: '', pourcentage: '1.5', datesins: '', nbrreg: '' };
+
+// Per-act fee statement, split into two billing sections. Amounts are whole
+// millimes (1 د.ت = 1000 مليم). VAT (أ ق م) is applied to the الأجور section only.
+//   الأجور  → VAT-bearing base.
+//   مصاريف  → no VAT.
+const AJR_FIELDS = [
+  { k: 'fee_original', l: 'أصل المحضر' },
+  { k: 'fee_counterparts', l: 'النظائر' },
+  { k: 'fee_legal_copy', l: 'النسخة القانونية' },
+  { k: 'fee_office_copy', l: 'النسخة المكتبية' },
+  { k: 'fee_movement', l: 'التوجه' },
+  { k: 'fee_copies', l: 'نسخ الأوراق' },
+];
+const EXP_FIELDS = [
+  { k: 'fee_travel', l: 'التنقل' },
+  { k: 'fee_registration', l: 'التسجيل' },
+  { k: 'fee_stamp', l: 'الترسيم' },
+  { k: 'fee_post', l: 'البريد' },
+];
+// All manual-input fee columns (the VAT line fee_aqm is derived, not typed).
+const FEE_KEYS = [...AJR_FIELDS, ...EXP_FIELDS].map((f) => f.k);
+const DEFAULT_VAT_RATE = '19';
+const toMillimes = (v) => parseInt(String(v || '').replace(/[^\d]/g, ''), 10) || 0;
+const sumKeys = (form, fields) => fields.reduce((s, f) => s + toMillimes(form[f.k]), 0);
+// vat_rate is a percentage; blank/invalid → 19% default.
+const vatRateOf = (form) => {
+  const raw = String(form.vat_rate ?? '').replace(',', '.').trim();
+  if (raw === '') return parseFloat(DEFAULT_VAT_RATE);
+  const n = parseFloat(raw);
+  return isNaN(n) ? parseFloat(DEFAULT_VAT_RATE) : n;
+};
+const ajrTotalMillimes = (form) => sumKeys(form, AJR_FIELDS);
+const expTotalMillimes = (form) => sumKeys(form, EXP_FIELDS);
+const vatMillimes = (form) => Math.round(ajrTotalMillimes(form) * vatRateOf(form) / 100);
+const grandTotalMillimes = (form) => ajrTotalMillimes(form) + vatMillimes(form) + expTotalMillimes(form);
+// millimes → "D DDD,MMM" (Tunisian dinars; comma = millime decimal).
+const formatDinar = (millimes) =>
+  String(Math.floor(millimes / 1000)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ',' + String(millimes % 1000).padStart(3, '0');
+
+const EMPTY_CARD = { numcarte: '', datecarte: '', semestre: '', dette: '', pourcentage: '1.5', datesins: '', nbrreg: '',
+  vat_rate: DEFAULT_VAT_RATE,
+  ...Object.fromEntries(FEE_KEYS.map((k) => [k, ''])) };
 
 export default function RegistreCNSSDetail() {
   const { id } = useParams();
@@ -47,6 +88,7 @@ export default function RegistreCNSSDetail() {
   const [showCardModal, setShowCardModal]   = useState(false);
   const [editingCardId, setEditingCardId]   = useState(null);
   const [cardForm, setCardForm]             = useState(EMPTY_CARD);
+  const [showFees, setShowFees]             = useState(false);
 
   // When creating a new company from an AI-scanned paper, keep the extracted
   // card aside and save it automatically right after the company is created.
@@ -140,13 +182,16 @@ export default function RegistreCNSSDetail() {
   const saveCard = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
+    // fee_aqm (VAT) is derived from the الأجور subtotal × vat_rate — persist the
+    // computed value so the stored row matches what the act renders.
+    const payload = { ...cardForm, fee_aqm: String(vatMillimes(cardForm)), vat_rate: String(vatRateOf(cardForm)) };
     try {
       const res = await fetch(
         editingCardId ? `${API}/cards/${editingCardId}` : `${API}/${id}/cards`,
         {
           method: editingCardId ? 'PUT' : 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify(cardForm)
+          body: JSON.stringify(payload)
         }
       );
       if (res.ok) { setShowCardModal(false); fetchData(); }
@@ -473,6 +518,84 @@ export default function RegistreCNSSDetail() {
                     style={{ width: '100%', padding: '0.6rem', borderRadius: '8px' }} />
                 </div>
               ))}
+
+              {/* ── الأجور — the act's fee statement (collapsed by default) ── */}
+              <div style={{ gridColumn: 'span 2', borderTop: '1px solid var(--card-border)', paddingTop: '0.9rem', marginTop: '0.25rem' }}>
+                <button type="button" onClick={() => setShowFees((v) => !v)}
+                  style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--primary)', fontWeight: 600 }}>
+                    {showFees ? <ChevronDown size={18} /> : <ChevronLeft size={18} />} الأجور
+                  </span>
+                  <span style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                    المجموع <strong style={{ color: 'var(--primary)' }} dir="ltr">{formatDinar(grandTotalMillimes(cardForm))}</strong> د.ت
+                  </span>
+                </button>
+
+                {showFees && (() => {
+                  const ajr = ajrTotalMillimes(cardForm);
+                  const vat = vatMillimes(cardForm);
+                  const exp = expTotalMillimes(cardForm);
+                  const sectionHeader = (label) => (
+                    <div style={{ padding: '0.4rem 0.85rem', fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary)', background: 'var(--surface-2)', borderBottom: '1px solid var(--card-border)' }}>{label}</div>
+                  );
+                  const feeRow = (f) => {
+                    const mm = toMillimes(cardForm[f.k]);
+                    return (
+                      <div key={f.k} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.3rem 0.85rem', borderBottom: '1px solid var(--card-border)' }}>
+                        <label style={{ flex: 1, fontSize: '0.85rem' }}>{f.l}</label>
+                        <input type="text" inputMode="numeric" value={cardForm[f.k] || ''} placeholder="0"
+                          onChange={(e) => setCardField(f.k, e.target.value.replace(/[^\d]/g, ''))}
+                          style={{ width: 110, padding: '0.35rem 0.5rem', borderRadius: '6px', textAlign: 'center' }} />
+                        <span style={{ width: 92, textAlign: 'left', fontSize: '0.8rem', color: 'var(--text-muted)' }} dir="ltr">{mm ? formatDinar(mm) : '—'}</span>
+                      </div>
+                    );
+                  };
+                  const subtotalRow = (label, mm) => (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.85rem', borderBottom: '1px solid var(--card-border)', fontSize: '0.82rem', fontWeight: 600 }}>
+                      <span style={{ opacity: 0.85 }}>{label}</span>
+                      <span dir="ltr">{formatDinar(mm)} د.ت</span>
+                    </div>
+                  );
+                  return (
+                  <div style={{ marginTop: '0.85rem', border: '1px solid var(--card-border)', borderRadius: '10px', overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', padding: '0.35rem 0.85rem', fontSize: '0.72rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--card-border)' }}>
+                      <span style={{ flex: 1 }}>البيان</span><span style={{ width: 110, textAlign: 'center' }}>المبلغ (مليم)</span><span style={{ width: 92, textAlign: 'left' }}>د.ت</span>
+                    </div>
+
+                    {/* ── الأجور (VAT base) ── */}
+                    {sectionHeader('الأجور')}
+                    {AJR_FIELDS.map(feeRow)}
+                    {subtotalRow('مجموع الأجور', ajr)}
+
+                    {/* ── أ ق م (VAT) — rate editable, amount derived ── */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.3rem 0.85rem', borderBottom: '1px solid var(--card-border)' }}>
+                      <label style={{ flex: 1, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        أ ق م
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}>
+                          (<input type="text" inputMode="decimal" value={cardForm.vat_rate ?? ''} placeholder={DEFAULT_VAT_RATE}
+                            onChange={(e) => setCardField('vat_rate', e.target.value.replace(/[^\d.,]/g, ''))}
+                            style={{ width: 44, padding: '0.15rem 0.3rem', borderRadius: '6px', textAlign: 'center', fontSize: '0.8rem' }} />%)
+                        </span>
+                      </label>
+                      <span style={{ width: 110, textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{vat ? vat : '—'}</span>
+                      <span style={{ width: 92, textAlign: 'left', fontSize: '0.8rem', color: 'var(--text-muted)' }} dir="ltr">{vat ? formatDinar(vat) : '—'}</span>
+                    </div>
+
+                    {/* ── مصاريف (no VAT) ── */}
+                    {sectionHeader('مصاريف')}
+                    {EXP_FIELDS.map(feeRow)}
+                    {subtotalRow('مجموع المصاريف', exp)}
+
+                    {/* ── grand total ── */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.55rem 0.85rem', background: 'var(--surface-2)', fontWeight: 700 }}>
+                      <span>المجموع العام</span>
+                      <span style={{ color: 'var(--primary)' }} dir="ltr">{formatDinar(ajr + vat + exp)} د.ت</span>
+                    </div>
+                  </div>
+                  );
+                })()}
+              </div>
+
               <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
                 <button type="submit" className="btn" style={{ flex: 1 }}>{editingCardId ? 'حفظ التعديلات' : 'إضافة البطاقة'}</button>
                 <button type="button" className="btn" style={{ flex: 1, background: 'var(--surface-2)' }} onClick={() => setShowCardModal(false)}>إلغاء</button>

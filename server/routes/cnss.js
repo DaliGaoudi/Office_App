@@ -55,8 +55,12 @@ const CNSS_COLS = [
     'cl2_adressepersonnel', 'title', 'tribunal', 'nombre', 'date_s', 'montant', 'status'
 ];
 
-// Writable columns for a liquidation-card line.
-const OEUVRE_COLS = ['numcarte', 'datecarte', 'semestre', 'dette', 'pourcentage', 'datesins', 'nbrreg'];
+// Writable columns for a liquidation-card line (+ the per-act fee breakdown).
+// fee_aqm (VAT) is derived and persisted by the client so the stored row matches
+// what the act renders; vat_rate is the editable VAT percentage.
+const FEE_COLS = ['fee_post', 'fee_stamp', 'fee_registration', 'fee_travel', 'fee_aqm',
+    'fee_copies', 'fee_movement', 'fee_office_copy', 'fee_legal_copy', 'fee_counterparts', 'fee_original'];
+const OEUVRE_COLS = ['numcarte', 'datecarte', 'semestre', 'dette', 'pourcentage', 'datesins', 'nbrreg', ...FEE_COLS, 'vat_rate'];
 
 // Keep only known columns from a request body so LLM/-client supplied keys can
 // never reach SQL unless they are real columns.
@@ -77,24 +81,75 @@ const SUM_DETTE = sub =>
 // Built once from Assets/template.docx by scripts/build_cnss_template.js.
 const TEMPLATE_PATH = path.join(__dirname, '..', 'assets', 'template_cnss.docx');
 
-// Map a company + one of its cards onto the template's tags.
-const buildActRecord = (company, card) => ({
-    num_dossier: card.nbrreg || '',
-    code_inscription: company.codeng || '',
-    num_affiliation: company.numcnss || '',
-    nom_matloub: company.nom_cl2 || '',
-    adresse: [company.cl2_adresse, company.cl2_adresse2].filter(Boolean).join(' '),
-    date_carte: card.datecarte || '',
-    num_carte: card.numcarte || '',
-    trimestre: card.semestre || '',
-    montant: card.dette || '',
-    date_penalite: card.datesins || '',
-});
+// ── Per-act fee statement (أتعاب) ──
+// Amounts are stored as whole MILLIMES (1 dinar = 1000 millimes); displayed as
+// Tunisian dinars "D DDD,MMM" (comma = millime decimal).
+//   الأجور (fees/wages)  → VAT-bearing base.
+//   مصاريف (expenses)    → no VAT.
+//   fee_aqm (أ ق م)      → the VAT itself = vat_rate% × الأجور subtotal (DERIVED).
+const AJR_KEYS = ['fee_copies', 'fee_movement', 'fee_office_copy', 'fee_legal_copy', 'fee_counterparts', 'fee_original'];
+const EXP_KEYS = ['fee_travel', 'fee_registration', 'fee_stamp', 'fee_post'];
+const DEFAULT_VAT_RATE = 19;
+const groupThousands = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+const toMillimes = (v) => {
+    const n = parseInt(String(v == null ? '' : v).replace(/[^\d]/g, ''), 10);
+    return isNaN(n) ? 0 : n;
+};
+// vat_rate is a percentage; blank/invalid falls back to the 19% default.
+const vatRateOf = (card) => {
+    const raw = String(card.vat_rate == null ? '' : card.vat_rate).replace(',', '.').trim();
+    if (raw === '') return DEFAULT_VAT_RATE;
+    const n = parseFloat(raw);
+    return isNaN(n) ? DEFAULT_VAT_RATE : n;
+};
+// millimes (integer) → "D DDD,MMM" (comma = millime decimal). '' for empty/zero.
+const formatMillimes = (millimes) => {
+    if (!millimes || millimes <= 0) return '';
+    return groupThousands(Math.floor(millimes / 1000)) + ',' + String(millimes % 1000).padStart(3, '0');
+};
+// Core billing math for one card, in whole millimes.
+//   ajr = الأجور subtotal (VAT base)   vat = أ ق م = round(ajr × rate%)
+//   exp = مصاريف subtotal              total = ajr + vat + exp
+const computeFees = (card) => {
+    const ajr = AJR_KEYS.reduce((s, k) => s + toMillimes(card[k]), 0);
+    const exp = EXP_KEYS.reduce((s, k) => s + toMillimes(card[k]), 0);
+    const rate = vatRateOf(card);
+    const vat = Math.round(ajr * rate / 100);
+    return { ajr, exp, vat, rate, total: ajr + vat + exp };
+};
+
+// Map a company + one of its cards onto the template's tags (incl. the fee table).
+const buildActRecord = (company, card) => {
+    const fees = {};
+    [...AJR_KEYS, ...EXP_KEYS].forEach((k) => { fees[k] = formatMillimes(toMillimes(card[k])); });
+    // أ ق م = VAT, derived from the الأجور subtotal (never a manual input).
+    const { ajr, exp, vat, rate, total } = computeFees(card);
+    fees.fee_aqm = formatMillimes(vat);
+    fees.vat_rate = String(rate);
+    fees.fee_ajr_total = formatMillimes(ajr);     // الأجور subtotal (pre-VAT)
+    fees.fee_exp_total = formatMillimes(exp);     // مصاريف subtotal
+    fees.fee_total = formatMillimes(total);       // grand total
+
+    return {
+        num_dossier: card.nbrreg || '',
+        code_inscription: company.codeng || '',
+        num_affiliation: company.numcnss || '',
+        nom_matloub: company.nom_cl2 || '',
+        adresse: [company.cl2_adresse, company.cl2_adresse2].filter(Boolean).join(' '),
+        date_carte: card.datecarte || '',
+        num_carte: card.numcarte || '',
+        trimestre: card.semestre || '',
+        montant: card.dette || '',
+        date_penalite: card.datesins || '',
+        ...fees,
+    };
+};
 
 // Render one Word document containing `acts` (1 → single act, N → one per page).
+// nullGetter keeps any unfilled tag (e.g. a blank fee cell) from throwing.
 const renderActs = (acts) => {
     const zip = new PizZip(fs.readFileSync(TEMPLATE_PATH));
-    const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+    const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true, nullGetter: () => '' });
     doc.render({ acts });
     return doc.getZip().generate({ type: 'nodebuffer' });
 };

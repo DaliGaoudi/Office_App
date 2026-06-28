@@ -87,3 +87,7 @@ zip.file('word/document.xml', out);
 fs.mkdirSync(OUT_DIR, { recursive: true });
 fs.writeFileSync(OUT, zip.generate({ type: 'nodebuffer' }));
 console.log('Wrote', OUT);
+
+// The mail-merge source has no fee statement; splice the per-act fee table in so a
+// rebuild keeps the billing breakdown. See scripts/add_fee_table_to_template.js.
+require('./add_fee_table_to_template').addFeeTable();
