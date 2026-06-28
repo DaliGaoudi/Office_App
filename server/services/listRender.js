@@ -13,9 +13,9 @@ const { amountInWords } = require('./numberToArabicWords');
  */
 const LIST_TEMPLATE = path.join(__dirname, '..', 'assets', 'template_list.docx');
 
-// The webapp is a single office (Sousse); the list template's only office merge
-// field is {office_city}. Matches the hard-coded letterhead in template_cnss.docx.
-const OFFICE_CITY = 'سوسة';
+// Office identity ({office_*} tags) comes from the editable profile (Settings).
+// City falls back to Sousse so the header date line is never blank.
+const DEFAULT_CITY = 'سوسة';
 
 // Tunisian month names (index 1..12), as used on the bailiff's list.
 const MONTHS = ['', 'جانفي', 'فيفري', 'مارس', 'أفريل', 'ماي', 'جوان', 'جويلية', 'أوت', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -36,7 +36,8 @@ const fmtDMY = (s) => {
 const fmt = (mm) => (mm > 0 ? formatMillimes(mm) : '0,000');
 
 // Build the docxtemplater payload from joined card+company rows for one month.
-const buildListData = (joinedRows, { year, month }) => {
+// `office` carries the {office_*} letterhead fields from the saved profile.
+const buildListData = (joinedRows, { year, month }, office = {}) => {
     const y = parseInt(year, 10), mo = parseInt(month, 10);
     const inMonth = joinedRows
         .map((r) => ({ r, p: parseYMD(r.date_tabligh) }))
@@ -59,7 +60,8 @@ const buildListData = (joinedRows, { year, month }) => {
 
     const now = new Date();
     return {
-        office_city: OFFICE_CITY,
+        ...office,
+        office_city: office.office_city || DEFAULT_CITY,
         list_date: `${String(now.getDate()).padStart(2, '0')} ${MONTHS[now.getMonth() + 1]} ${now.getFullYear()}`,
         list_month: `${MONTHS[mo] || ''} ${y}`,
         rows,
@@ -69,8 +71,8 @@ const buildListData = (joinedRows, { year, month }) => {
     };
 };
 
-const renderMonthlyList = (joinedRows, opts) => {
-    const data = buildListData(joinedRows, opts);
+const renderMonthlyList = (joinedRows, opts, office) => {
+    const data = buildListData(joinedRows, opts, office);
     const zip = new PizZip(fs.readFileSync(LIST_TEMPLATE));
     const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true, nullGetter: () => '' });
     doc.render(data);

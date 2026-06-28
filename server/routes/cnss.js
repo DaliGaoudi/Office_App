@@ -12,6 +12,7 @@ const { logActivity } = require('../utils/logger');
 const { extractCnssFromFile } = require('../services/cnssExtract');
 const { AJR_KEYS, EXP_KEYS, toMillimes, formatMillimes, computeFees } = require('../services/cnssFees');
 const { renderMonthlyList, buildMonthlyGroups } = require('../services/listRender');
+const { getOfficeProfile } = require('../services/officeProfile');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -279,7 +280,8 @@ router.get('/list.docx', authenticate, async (req, res) => {
     try {
         const year = parseInt(req.query.year, 10), month = parseInt(req.query.month, 10);
         if (!year || !month) return res.status(400).json({ error: 'حدّد السنة والشهر.' });
-        const { buffer, count } = renderMonthlyList(await fetchListRows(req.user.id_so), { year, month });
+        const office = await getOfficeProfile();
+        const { buffer, count } = renderMonthlyList(await fetchListRows(req.user.id_so), { year, month }, office);
         if (!count) return res.status(404).json({ error: 'لا توجد محاضر مُبلَّغة في هذا الشهر.' });
         await logActivity(req.user, 'PRINT', 'RECORD', `توليد قائمة CNSS الشهرية ${month}/${year} (${count} محضر)`);
         sendDocx(res, buffer, `cnss_list_${year}_${month}.docx`);

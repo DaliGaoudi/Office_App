@@ -3,6 +3,33 @@ const router = express.Router();
 const db = require('../db');
 
 const authenticate = require('../middleware/auth');
+const { OFFICE_KEYS, getOfficeProfile } = require('../services/officeProfile');
+
+// ── Office profile (letterhead) ── registered before '/:key' so these two-segment
+// paths are unambiguous. Unlike the generic PUT, empty values ARE allowed here so
+// an office field can be cleared.
+router.get('/office/profile', authenticate, async (req, res) => {
+    try {
+        res.json(await getOfficeProfile());
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.put('/office/profile', authenticate, async (req, res) => {
+    try {
+        const body = req.body || {};
+        const upsert = `INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+                        ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at`;
+        for (const k of OFFICE_KEYS) {
+            if (body[k] === undefined) continue;
+            await db.run(upsert, [k, String(body[k] ?? '')]);
+        }
+        res.json(await getOfficeProfile());
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // GET all settings
 router.get('/', authenticate, async (req, res) => {
