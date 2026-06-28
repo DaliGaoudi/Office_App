@@ -69,7 +69,15 @@ const grandTotalMillimes = (form) => ajrTotalMillimes(form) + vatMillimes(form) 
 const formatDinar = (millimes) =>
   String(Math.floor(millimes / 1000)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ',' + String(millimes % 1000).padStart(3, '0');
 
-const EMPTY_CARD = { numcarte: '', datecarte: '', semestre: '', dette: '', pourcentage: '1.5', datesins: '', nbrreg: '',
+// Normalize a stored date (YYYY-MM-DD or DD/MM/YYYY) to YYYY-MM-DD for <input type="date">.
+const toISODate = (s) => {
+  s = String(s || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
+  return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : '';
+};
+
+const EMPTY_CARD = { numcarte: '', datecarte: '', date_tabligh: '', semestre: '', dette: '', pourcentage: '1.5', datesins: '', nbrreg: '',
   vat_rate: DEFAULT_VAT_RATE,
   ...Object.fromEntries(FEE_KEYS.map((k) => [k, ''])) };
 
@@ -197,6 +205,20 @@ export default function RegistreCNSSDetail() {
       if (res.ok) { setShowCardModal(false); fetchData(); }
       else { const err = await res.json(); alert('خطأ: ' + (err.error || 'فشل حفظ البطاقة')); }
     } catch (err) { console.error(err); }
+  };
+
+  // Inline edit of a single card field straight from the cards table (used for
+  // تاريخ التبليغ). Optimistic local update + persist.
+  const saveCardField = async (cardId, patch) => {
+    setCards(prev => prev.map(c => c.id_cn_oe === cardId ? { ...c, ...patch } : c));
+    const token = localStorage.getItem('token');
+    try {
+      await fetch(`${API}/cards/${cardId}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+    } catch (e) { console.error(e); }
   };
 
   const deleteCard = async (cardId) => {
@@ -458,13 +480,14 @@ export default function RegistreCNSSDetail() {
                   <th>أصل الدين (د.ت)</th>
                   <th>تاريخ البطاقة</th>
                   <th>تاريخ احتساب الخطايا</th>
+                  <th>تاريخ التبليغ</th>
                   <th>عدد الملف</th>
                   <th className="no-print">عمل</th>
                 </tr>
               </thead>
               <tbody>
                 {cards.length === 0 ? (
-                  <tr><td colSpan={7} style={{ textAlign: 'center', opacity: 0.5, padding: '2rem' }}>لا توجد بطاقات جبر — أضف بطاقة أو استعمل «المسح الذكي»</td></tr>
+                  <tr><td colSpan={8} style={{ textAlign: 'center', opacity: 0.5, padding: '2rem' }}>لا توجد بطاقات جبر — أضف بطاقة أو استعمل «المسح الذكي»</td></tr>
                 ) : cards.map(card => (
                   <tr key={card.id_cn_oe}>
                     <td style={{ fontWeight: 600 }}>{card.numcarte || '—'}</td>
@@ -472,6 +495,12 @@ export default function RegistreCNSSDetail() {
                     <td style={{ color: 'var(--primary)', fontWeight: 700 }}>{fmtDinar(card.dette)}</td>
                     <td>{card.datecarte || '—'}</td>
                     <td>{card.datesins || '—'}</td>
+                    <td>
+                      <input type="date" value={toISODate(card.date_tabligh)}
+                        onChange={(e) => saveCardField(card.id_cn_oe, { date_tabligh: e.target.value })}
+                        title="تاريخ تبليغ المحضر — يُستعمل في القائمة الشهرية"
+                        style={{ padding: '0.3rem 0.4rem', borderRadius: '6px', fontSize: '0.85rem' }} />
+                    </td>
                     <td>{card.nbrreg || '—'}</td>
                     <td className="no-print">
                       <div style={{ display: 'flex', gap: '0.5rem' }}>

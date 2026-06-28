@@ -10,6 +10,8 @@ const db = require('../db');
 const authenticate = require('../middleware/auth');
 const { logActivity } = require('../utils/logger');
 const { extractCnssFromFile } = require('../services/cnssExtract');
+const { AJR_KEYS, EXP_KEYS, toMillimes, formatMillimes, computeFees } = require('../services/cnssFees');
+const { renderMonthlyList, buildMonthlyGroups } = require('../services/listRender');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -60,7 +62,9 @@ const CNSS_COLS = [
 // what the act renders; vat_rate is the editable VAT percentage.
 const FEE_COLS = ['fee_post', 'fee_stamp', 'fee_registration', 'fee_travel', 'fee_aqm',
     'fee_copies', 'fee_movement', 'fee_office_copy', 'fee_legal_copy', 'fee_counterparts', 'fee_original'];
-const OEUVRE_COLS = ['numcarte', 'datecarte', 'semestre', 'dette', 'pourcentage', 'datesins', 'nbrreg', ...FEE_COLS, 'vat_rate'];
+// date_tabligh (تاريخ تبليغ المحضر) drives which month a card appears in on the
+// monthly CNSS billing list.
+const OEUVRE_COLS = ['numcarte', 'datecarte', 'date_tabligh', 'semestre', 'dette', 'pourcentage', 'datesins', 'nbrreg', ...FEE_COLS, 'vat_rate'];
 
 // Keep only known columns from a request body so LLM/-client supplied keys can
 // never reach SQL unless they are real columns.
@@ -81,44 +85,8 @@ const SUM_DETTE = sub =>
 // Built once from Assets/template.docx by scripts/build_cnss_template.js.
 const TEMPLATE_PATH = path.join(__dirname, '..', 'assets', 'template_cnss.docx');
 
-// ── Per-act fee statement (أتعاب) ──
-// Amounts are stored as whole MILLIMES (1 dinar = 1000 millimes); displayed as
-// Tunisian dinars "D DDD,MMM" (comma = millime decimal).
-//   الأجور (fees/wages)  → VAT-bearing base.
-//   مصاريف (expenses)    → no VAT.
-//   fee_aqm (أ ق م)      → the VAT itself = vat_rate% × الأجور subtotal (DERIVED).
-const AJR_KEYS = ['fee_copies', 'fee_movement', 'fee_office_copy', 'fee_legal_copy', 'fee_counterparts', 'fee_original'];
-const EXP_KEYS = ['fee_travel', 'fee_registration', 'fee_stamp', 'fee_post'];
-const DEFAULT_VAT_RATE = 19;
-const groupThousands = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-const toMillimes = (v) => {
-    const n = parseInt(String(v == null ? '' : v).replace(/[^\d]/g, ''), 10);
-    return isNaN(n) ? 0 : n;
-};
-// vat_rate is a percentage; blank/invalid falls back to the 19% default.
-const vatRateOf = (card) => {
-    const raw = String(card.vat_rate == null ? '' : card.vat_rate).replace(',', '.').trim();
-    if (raw === '') return DEFAULT_VAT_RATE;
-    const n = parseFloat(raw);
-    return isNaN(n) ? DEFAULT_VAT_RATE : n;
-};
-// millimes (integer) → "D DDD,MMM" (comma = millime decimal). '' for empty/zero.
-const formatMillimes = (millimes) => {
-    if (!millimes || millimes <= 0) return '';
-    return groupThousands(Math.floor(millimes / 1000)) + ',' + String(millimes % 1000).padStart(3, '0');
-};
-// Core billing math for one card, in whole millimes.
-//   ajr = الأجور subtotal (VAT base)   vat = أ ق م = round(ajr × rate%)
-//   exp = مصاريف subtotal              total = ajr + vat + exp
-const computeFees = (card) => {
-    const ajr = AJR_KEYS.reduce((s, k) => s + toMillimes(card[k]), 0);
-    const exp = EXP_KEYS.reduce((s, k) => s + toMillimes(card[k]), 0);
-    const rate = vatRateOf(card);
-    const vat = Math.round(ajr * rate / 100);
-    return { ajr, exp, vat, rate, total: ajr + vat + exp };
-};
-
 // Map a company + one of its cards onto the template's tags (incl. the fee table).
+// Fee math (computeFees/formatMillimes/AJR_KEYS/EXP_KEYS) lives in services/cnssFees.js.
 const buildActRecord = (company, card) => {
     const fees = {};
     [...AJR_KEYS, ...EXP_KEYS].forEach((k) => { fees[k] = formatMillimes(toMillimes(card[k])); });
@@ -279,6 +247,44 @@ router.post('/scan', authenticate, upload.single('file'), async (req, res) => {
         res.json({ success: true, id_cn: company.id_cn, id_cn_oe: card.id_cn_oe, createdCompany, extracted: d });
     } catch (err) {
         console.error('cnss /scan error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ───────── Monthly billing list (قائمة مصاريف محاضر تبليغ بطاقات جبر) ─────────
+// One row per بطاقة جبر whose act was delivered (تاريخ التبليغ) in the given month,
+// with the per-act fee columns + totals — the bill the office sends to CNSS.
+// Registered before '/:id' so the literal "list.docx" path isn't captured as an id.
+
+// Every card joined to its company, for the monthly list (filtered by month in
+// the render service).
+const fetchListRows = (id_so) => db.all(
+    `SELECT o.*, c.nom_cl2, c.cl2_adresse, c.cl2_adresse2, c.codeng, c.numcnss
+     FROM cnss_oeuvre o JOIN cnss c ON c.id_cn = o.id_cn
+     WHERE o.id_so = ?`,
+    [id_so]
+);
+
+// Cards grouped by delivery month, for the CNSS facturation page.
+router.get('/facturation/months', authenticate, async (req, res) => {
+    try {
+        res.json(buildMonthlyGroups(await fetchListRows(req.user.id_so)));
+    } catch (err) {
+        console.error('facturation/months error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.get('/list.docx', authenticate, async (req, res) => {
+    try {
+        const year = parseInt(req.query.year, 10), month = parseInt(req.query.month, 10);
+        if (!year || !month) return res.status(400).json({ error: 'حدّد السنة والشهر.' });
+        const { buffer, count } = renderMonthlyList(await fetchListRows(req.user.id_so), { year, month });
+        if (!count) return res.status(404).json({ error: 'لا توجد محاضر مُبلَّغة في هذا الشهر.' });
+        await logActivity(req.user, 'PRINT', 'RECORD', `توليد قائمة CNSS الشهرية ${month}/${year} (${count} محضر)`);
+        sendDocx(res, buffer, `cnss_list_${year}_${month}.docx`);
+    } catch (err) {
+        console.error('list.docx error:', err);
         res.status(500).json({ error: err.message });
     }
 });

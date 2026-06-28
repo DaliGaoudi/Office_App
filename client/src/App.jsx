@@ -255,6 +255,7 @@ import Telephone from './pages/Telephone';
 import Calendar from './pages/Calendar';
 import RecordDetail from './pages/RecordDetail';
 import Facturation from './pages/Facturation';
+import FacturationCNSS from './pages/FacturationCNSS';
 import Settings from './pages/Settings';
 import Users from './pages/Users';
 import PortalDashboard from './pages/PortalDashboard';
@@ -316,7 +317,7 @@ function App() {
                   <Route path="/record/:type/:id" element={<RecordDetail />} />
                   <Route path="/facturation/general"   element={<Facturation type="general" />} />
                   <Route path="/facturation/execution" element={<Facturation type="execution" />} />
-                  <Route path="/facturation/cnss"      element={<Facturation type="cnss" />} />
+                  <Route path="/facturation/cnss"      element={<FacturationCNSS />} />
                   <Route path="/settings"              element={<Settings />} />
                   {(user?.role === 'admin' || user?.role === 'superadmin') && (
                     <>
