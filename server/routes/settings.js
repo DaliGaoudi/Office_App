@@ -19,8 +19,11 @@ router.get('/office/profile', authenticate, async (req, res) => {
 router.put('/office/profile', authenticate, async (req, res) => {
     try {
         const body = req.body || {};
+        // The explicit `RETURNING key` stops db.run() from appending its default
+        // `RETURNING id_r, id_cn, …` — columns app_settings doesn't have.
         const upsert = `INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
-                        ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at`;
+                        ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at
+                        RETURNING key`;
         for (const k of OFFICE_KEYS) {
             if (body[k] === undefined) continue;
             await db.run(upsert, [k, String(body[k] ?? '')]);
@@ -60,8 +63,11 @@ router.put('/:key', authenticate, async (req, res) => {
         const { value } = req.body;
         if (value === undefined || value === '') return res.status(400).json({ error: 'value required' });
 
+        // `RETURNING key` keeps db.run() from appending its default id-column
+        // RETURNING, which would error on app_settings.
         const query = `INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
-                      ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at`;
+                      ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at
+                      RETURNING key`;
 
         await db.run(query, [req.params.key, String(value)]);
         res.json({ key: req.params.key, value: String(value), updated: true });
