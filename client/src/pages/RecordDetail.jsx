@@ -6,6 +6,7 @@ import { formatAmount, STATUS_MAP } from '../utils/formatters';
 import API_BASE from '../config';
 import AutocompleteInput from '../components/AutocompleteInput';
 import BillModal from '../components/BillModal';
+import { compressImage } from '../utils/cnssScan';
 
 const API = API_BASE;
 
@@ -240,14 +241,14 @@ export default function RecordDetail() {
         } catch (e) { console.error(e); }
     };
 
-    const handleFileUpload = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
+    // Send an image/PDF (uploaded file or scanned page) to the AI extractor and
+    // merge the recognized fields into the form. Shared by both the file-upload
+    // and the direct-scan smart-scan buttons.
+    const runAIExtraction = async (fileOrBlob, filename) => {
         setIsAILoading(true);
         const token = localStorage.getItem('token');
         const fd = new FormData();
-        fd.append('file', file);
+        fd.append('file', fileOrBlob, filename || fileOrBlob.name || 'scan.jpg');
 
         try {
             const res = await fetch(`${API_BASE}/ai/extract`, {
@@ -256,7 +257,7 @@ export default function RecordDetail() {
                 body: fd
             });
             const result = await res.json();
-            
+
             if (result.success && result.data) {
                 const incoming = result.data;
                 // Merge safely. Convert numbers dynamically.
@@ -294,8 +295,41 @@ export default function RecordDetail() {
             alert("خطأ في الاتصال بخادم الذكاء الاصطناعي");
         }
         setIsAILoading(false);
-        // Reset file input
+    };
+
+    const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        await runAIExtraction(file, file.name);
+        // Reset file input so the same file can be re-selected if needed.
         if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    // ── Smart scan via the local scanner ──
+    // Drives the Scan Bridge to capture one page, compresses it, then feeds it to
+    // the AI extractor — the scanner equivalent of the file-upload smart scan.
+    const handleSmartScan = async () => {
+        setIsAILoading(true);
+        let blob;
+        try {
+            const scanUrl = `${BRIDGE_URL}/scan` + (localStorage.getItem('scanMock') === '1' ? '?mock=1' : '');
+            const scanRes = await fetch(scanUrl, { method: 'POST' });
+            if (!scanRes.ok) {
+                const info = await scanRes.json().catch(() => ({}));
+                throw new Error(info.error || 'تعذّر المسح الضوئي');
+            }
+            // Downscale the near-lossless scan to stay under the 10MB upload limit.
+            blob = await compressImage(await scanRes.blob());
+        } catch (err) {
+            console.error('Smart scan error:', err);
+            const offline = err instanceof TypeError;
+            alert(offline
+                ? 'تعذّر الوصول إلى الماسح الضوئي.\nإن كانت هذه أول مرة على هذا الجهاز، نزّل «أداة المسح الضوئي» من صفحة الإعدادات وشغّل install-autostart.cmd مرة واحدة، وتأكّد من توصيل الماسح الضوئي.'
+                : ('خطأ في المسح الضوئي: ' + err.message));
+            setIsAILoading(false);
+            return;
+        }
+        await runAIExtraction(blob, 'scan.jpg');
     };
 
     // ── Scanned documents ──
@@ -535,15 +569,24 @@ export default function RecordDetail() {
                         accept="image/*,application/pdf" 
                         onChange={handleFileUpload} 
                     />
-                    <button 
-                        className="btn" 
-                        style={{ background: 'var(--card-bg)', border: '1px solid var(--primary)', color: 'var(--primary)' }} 
+                    <button
+                        className="btn"
+                        style={{ background: 'var(--card-bg)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
                         onClick={() => fileInputRef.current && fileInputRef.current.click()}
                         disabled={isAILoading}
                     >
                         {isAILoading ? 'جاري القراءة...' : <><UploadCloud size={18} /> مسح ذكي (الذكاء الاصطناعي)</>}
                     </button>
-                    
+                    <button
+                        className="btn"
+                        style={{ background: 'var(--card-bg)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
+                        onClick={handleSmartScan}
+                        disabled={isAILoading}
+                        title="مسح المحضر بالماسح الضوئي واستخراج البيانات تلقائيًا"
+                    >
+                        {isAILoading ? 'جاري القراءة...' : <><ScanLine size={18} /> مسح ذكي بالماسح الضوئي</>}
+                    </button>
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--surface-2)', padding: '0.4rem 1rem', borderRadius: '12px', border: '1px solid var(--card-border)' }}>
                         <Milestone size={16} />
                         <select 
