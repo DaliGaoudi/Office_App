@@ -593,7 +593,7 @@ router.post('/extract', authenticate, upload.single('file'), async (req, res) =>
         }
 
         const response = await getOpenAI().chat.completions.create({
-            model: "openai/gpt-4o-mini", // Very capable for OCR and JSON parsing
+            model: "google/gemini-2.5-pro", // Strong vision OCR for Arabic + financial tables
             messages: messages,
             response_format: { type: "json_object" }
         });
