@@ -31,6 +31,12 @@ const PROMPT = `أنت مساعد متخصص في قراءة وثيقة "État d
 // to e.g. "google/gemini-2.5-flash" (cheaper) or "anthropic/claude-opus-4.1".
 const MODEL = process.env.CNSS_EXTRACT_MODEL || 'google/gemini-2.5-pro';
 
+// Cap the completion. Without max_tokens OpenRouter reserves credits for the
+// model's FULL output window (65k on gemini-2.5-pro) and returns 402 whenever the
+// balance is below that, even though the answer is a ~200-token JSON object. The
+// margin covers Gemini's reasoning tokens, which count as completion tokens.
+const MAX_TOKENS = Number(process.env.CNSS_EXTRACT_MAX_TOKENS) || 4096;
+
 // Below this many characters of extracted text, a PDF is treated as scanned (no
 // text layer) and routed to the vision/OCR path instead of plain text.
 const MIN_PDF_TEXT = 40;
@@ -82,6 +88,7 @@ async function extractCnssFromFile(buffer, mimetype) {
     const response = await getOpenAI().chat.completions.create({
         model: MODEL,
         messages,
+        max_tokens: MAX_TOKENS,
         response_format: { type: "json_object" }
     });
 
