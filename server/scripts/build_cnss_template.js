@@ -33,6 +33,13 @@ const FIELD_MAP = {
     'تاريخ_احتساب_الخطايا': 'date_penalite',
 };
 
+// The authored template highlights its variable runs in yellow as a "fill this in"
+// marker. convert() drops it on the MERGEFIELD runs it rewrites, but plain-text
+// runs highlighted alongside them survive and print on every act — so strip every
+// highlight, whatever its colour.
+const stripHighlights = (xml) =>
+    xml.replace(/<w:highlight\b[^>]*\/>/g, '').replace(/<w:highlight\b[^>]*>[\s\S]*?<\/w:highlight>/g, '');
+
 function convert(xml) {
     // Index every run-element start so we can find the run that opens a field.
     const runStarts = [];
@@ -77,12 +84,17 @@ function convert(xml) {
     if (sect === -1) throw new Error('No final <w:sectPr> found to anchor the loop.');
     xml = xml.slice(0, sect) + closeLoop + xml.slice(sect);
 
-    return xml;
+    return stripHighlights(xml);
 }
 
 const zip = new PizZip(fs.readFileSync(SRC));
 const out = convert(zip.file('word/document.xml').asText());
 zip.file('word/document.xml', out);
+
+// Headers/footers carry the same stray highlights.
+Object.keys(zip.files)
+    .filter((f) => /^word\/(header|footer)\d*\.xml$/.test(f))
+    .forEach((f) => zip.file(f, stripHighlights(zip.file(f).asText())));
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
 fs.writeFileSync(OUT, zip.generate({ type: 'nodebuffer' }));

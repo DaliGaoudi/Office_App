@@ -114,13 +114,25 @@ const buildActRecord = (company, card) => {
     };
 };
 
+// The acts loop ends with this paragraph so each محضر starts on a fresh page.
+// After the LAST act it has nothing to separate, and Word renders it as a
+// trailing blank page — so the render strips the final one.
+const PAGE_BREAK_P = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+
 // Render one Word document containing `acts` (1 → single act, N → one per page).
 // nullGetter keeps any unfilled tag (e.g. a blank fee cell) from throwing.
 const renderActs = (acts) => {
     const zip = new PizZip(fs.readFileSync(TEMPLATE_PATH));
     const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true, nullGetter: () => '' });
     doc.render({ acts });
-    return doc.getZip().generate({ type: 'nodebuffer' });
+
+    const out = doc.getZip();
+    const xml = out.file('word/document.xml').asText();
+    const last = xml.lastIndexOf(PAGE_BREAK_P);
+    if (last !== -1) {
+        out.file('word/document.xml', xml.slice(0, last) + xml.slice(last + PAGE_BREAK_P.length));
+    }
+    return out.generate({ type: 'nodebuffer' });
 };
 
 const sendDocx = (res, buf, filename) => {
