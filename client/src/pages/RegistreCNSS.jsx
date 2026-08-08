@@ -96,12 +96,13 @@ export default function RegistreCNSS() {
   };
 
   // Send a card image/PDF to the server, which extracts it and auto-creates the
-  // record, then jump to the new record for review + act generation.
+  // record, then jump to the new record for review + act generation. A duplicate
+  // the user cancelled files nothing, but still opens the record already holding it.
   const submitCardFile = async (fileOrBlob, filename) => {
     setProcessing('جاري قراءة البطاقة وإنشاء الملف…');
     try {
-      const id = await createRecordFromCard(fileOrBlob, filename);
-      navigate(`/cnss/${id}`);
+      const { id_cn } = await createRecordFromCard(fileOrBlob, filename);
+      navigate(`/cnss/${id_cn}`);
     } catch (e) {
       console.error(e);
       alert('تعذّر إنشاء الملف: ' + e.message);

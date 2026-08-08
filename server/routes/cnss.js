@@ -75,6 +75,32 @@ const pick = (body, cols) => {
     return out;
 };
 
+// Scanning the same بطاقة جبر twice must not file two rows. عدد البطاقة is the
+// document's own identifier, so a card already under the same مطلوب with that
+// number is the duplicate. Compared on digits/letters only, so OCR spacing or
+// punctuation differences can't hide a match.
+const carteKey = (v) => String(v == null ? '' : v).replace(/[^0-9a-zA-Z]/g, '').toLowerCase();
+
+// The already-filed card that `numcarte` would duplicate, or null. A card with no
+// extracted number has nothing to match on and is never treated as a duplicate.
+const findDuplicateCard = async (id_cn, id_so, numcarte) => {
+    const key = carteKey(numcarte);
+    if (!key) return null;
+    const rows = await db.all(`SELECT * FROM cnss_oeuvre WHERE id_cn = ? AND id_so = ?`, [id_cn, id_so]);
+    return rows.find(r => carteKey(r.numcarte) === key) || null;
+};
+
+// What the client needs to show the "keep it or cancel" prompt.
+const duplicatePayload = (company, dup) => ({
+    duplicate: true,
+    id_cn: company.id_cn,
+    company: { ref: company.ref, nom_cl2: company.nom_cl2, numcnss: company.numcnss },
+    existing: {
+        id_cn_oe: dup.id_cn_oe, numcarte: dup.numcarte, datecarte: dup.datecarte,
+        semestre: dup.semestre, dette: dup.dette, date_tabligh: dup.date_tabligh,
+    },
+});
+
 // `?`-free numeric guard: db.js rewrites every literal '?' into a $n placeholder,
 // so a TRY_CAST-style regex must not contain one. '^[0-9.]+$' is enough to keep
 // SUM(dette) from throwing on blank / non-numeric values.
@@ -336,12 +362,25 @@ router.post('/scan', authenticate, upload.single('file'), async (req, res) => {
             createdCompany = true;
         }
 
+        const extracted = {
+            numcarte: d.numcarte || '', datecarte: d.datecarte || '', semestre: d.semestre || '',
+            dette: d.dette || '', pourcentage: '1.5', datesins: deriveDatesins(d.semestre), nbrreg: '',
+        };
+
+        // Already filed under this مطلوب? File nothing and hand the extracted card
+        // back, so the client can ask the user to keep it or cancel. Keeping re-posts
+        // it to /:id/cards with `force` — no second (paid) extraction. A company we
+        // just created has no cards, so it can't be a duplicate.
+        if (!createdCompany) {
+            const dup = await findDuplicateCard(company.id_cn, req.user.id_so, extracted.numcarte);
+            if (dup) return res.status(409).json({ ...duplicatePayload(company, dup), card: extracted });
+        }
+
         // Create the liquidation card.
         const noe = await db.get(`SELECT COALESCE(MAX(id_cn_oe), 0) + 1 AS n FROM cnss_oeuvre`);
         const cardData = {
             id_cn_oe: noe.n,
-            numcarte: d.numcarte || '', datecarte: d.datecarte || '', semestre: d.semestre || '',
-            dette: d.dette || '', pourcentage: '1.5', datesins: deriveDatesins(d.semestre), nbrreg: '',
+            ...extracted,
             id_cn: company.id_cn, id_user: req.user.id, id_so: req.user.id_so,
             date_ajout: new Date().toLocaleString('fr-FR'),
         };
@@ -543,8 +582,15 @@ router.get('/:id/acts.docx', authenticate, async (req, res) => {
 router.post('/:id/cards', authenticate, async (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
-        const owner = await db.get(`SELECT id_cn FROM cnss WHERE id_cn = ? AND id_so = ?`, [id, req.user.id_so]);
+        const owner = await db.get(`SELECT * FROM cnss WHERE id_cn = ? AND id_so = ?`, [id, req.user.id_so]);
         if (!owner) return res.status(404).json({ error: 'Dossier non trouvé.' });
+
+        // Same عدد البطاقة guard as /scan. `force` is the user's "keep it anyway"
+        // (it isn't an OEUVRE_COLS column, so it never reaches SQL).
+        if (!req.body.force) {
+            const dup = await findDuplicateCard(id, req.user.id_so, req.body.numcarte);
+            if (dup) return res.status(409).json(duplicatePayload(owner, dup));
+        }
 
         const data = pick(req.body, OEUVRE_COLS);
         data.id_cn = id;

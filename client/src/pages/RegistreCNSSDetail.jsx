@@ -4,7 +4,7 @@ import { ArrowLeft, Save, Check, Plus, Trash2, Edit, UploadCloud, FileText, Prin
 import { STATUS_MAP } from '../utils/formatters';
 import API_BASE from '../config';
 import AutocompleteInput from '../components/AutocompleteInput';
-import { compressImage, scanCardFromBridge, createRecordFromCard } from '../utils/cnssScan';
+import { compressImage, scanCardFromBridge, createRecordFromCard, duplicateMessage } from '../utils/cnssScan';
 
 const API = `${API_BASE}/cnss`;
 
@@ -81,6 +81,16 @@ const EMPTY_CARD = { numcarte: '', datecarte: '', date_tabligh: '', semestre: ''
   vat_rate: DEFAULT_VAT_RATE,
   ...Object.fromEntries(FEE_KEYS.map((k) => [k, ''])) };
 
+// Within a folder, split its cards by whether the محضر has been delivered — only
+// cards carrying a تاريخ التبليغ reach the monthly CNSS list, so "غير مُبلَّغة" is
+// the office's worklist.
+const hasTabligh = (card) => String(card.date_tabligh || '').trim() !== '';
+const TABLIGH_FILTERS = [
+  { k: 'all',     l: 'الكل',        match: () => true },
+  { k: 'with',    l: 'مُبلَّغة',      match: hasTabligh },
+  { k: 'without', l: 'غير مُبلَّغة',  match: (c) => !hasTabligh(c) },
+];
+
 export default function RegistreCNSSDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -97,6 +107,9 @@ export default function RegistreCNSSDetail() {
   const [editingCardId, setEditingCardId]   = useState(null);
   const [cardForm, setCardForm]             = useState(EMPTY_CARD);
   const [showFees, setShowFees]             = useState(false);
+
+  // Cards table filter: all / delivered (has تاريخ التبليغ) / not delivered.
+  const [tablighFilter, setTablighFilter]   = useState('all');
 
   // When creating a new company from an AI-scanned paper, keep the extracted
   // card aside and save it automatically right after the company is created.
@@ -193,15 +206,22 @@ export default function RegistreCNSSDetail() {
     // fee_aqm (VAT) is derived from the الأجور subtotal × vat_rate — persist the
     // computed value so the stored row matches what the act renders.
     const payload = { ...cardForm, fee_aqm: String(vatMillimes(cardForm)), vat_rate: String(vatRateOf(cardForm)) };
+    const send = (body) => fetch(
+      editingCardId ? `${API}/cards/${editingCardId}` : `${API}/${id}/cards`,
+      {
+        method: editingCardId ? 'PUT' : 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }
+    );
     try {
-      const res = await fetch(
-        editingCardId ? `${API}/cards/${editingCardId}` : `${API}/${id}/cards`,
-        {
-          method: editingCardId ? 'PUT' : 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }
-      );
+      let res = await send(payload);
+      // A new card whose عدد البطاقة is already on file — keep it or cancel.
+      if (res.status === 409) {
+        const info = await res.json();
+        if (!info.duplicate || !window.confirm(duplicateMessage(info))) return;
+        res = await send({ ...payload, force: 1 });
+      }
       if (res.ok) { setShowCardModal(false); fetchData(); }
       else { const err = await res.json(); alert('خطأ: ' + (err.error || 'فشل حفظ البطاقة')); }
     } catch (err) { console.error(err); }
@@ -290,8 +310,9 @@ export default function RegistreCNSSDetail() {
   const submitNewCard = async (fileOrBlob, filename) => {
     setCreatingFromCard('جاري قراءة البطاقة وإنشاء الملف…');
     try {
-      const newId = await createRecordFromCard(fileOrBlob, filename);
-      navigate(`/cnss/${newId}`);
+      const { id_cn } = await createRecordFromCard(fileOrBlob, filename);
+      if (String(id_cn) === String(id)) fetchData();   // same record — just refresh
+      else navigate(`/cnss/${id_cn}`);
     } catch (e) {
       console.error(e);
       alert('تعذّر إنشاء الملف: ' + e.message);
@@ -355,6 +376,8 @@ export default function RegistreCNSSDetail() {
   };
 
   if (loading) return <div style={{ padding: '4rem', textAlign: 'center', opacity: 0.5 }}>جاري التحميل...</div>;
+
+  const visibleCards = cards.filter(TABLIGH_FILTERS.find(f => f.k === tablighFilter).match);
 
   const fields = [
     { key: 'ref', label: 'العدد الترتيبي', placeholder: 'تلقائي', readonly: true },
@@ -453,9 +476,28 @@ export default function RegistreCNSSDetail() {
       {!isNew && (
         <div className="glass" style={{ marginTop: '1.5rem', padding: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--primary)' }}>
-              <Plus size={20} />
-              <h3 style={{ margin: 0 }}>بطاقات الجبر</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--primary)' }}>
+                <Plus size={20} />
+                <h3 style={{ margin: 0 }}>بطاقات الجبر</h3>
+              </div>
+              {/* ── تاريخ التبليغ filter ── */}
+              <div className="no-print" style={{ display: 'flex', gap: '0.25rem', padding: '0.2rem',
+                border: '1px solid var(--card-border)', borderRadius: '999px' }}>
+                {TABLIGH_FILTERS.map(f => {
+                  const on = tablighFilter === f.k;
+                  return (
+                    <button key={f.k} type="button" onClick={() => setTablighFilter(f.k)}
+                      title="تصفية بطاقات هذا الملف حسب تاريخ التبليغ"
+                      style={{ padding: '0.3rem 0.75rem', borderRadius: '999px', border: 'none', cursor: 'pointer',
+                        fontSize: '0.8rem', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                        background: on ? 'var(--primary)' : 'transparent',
+                        color: on ? '#fff' : 'var(--text-muted)' }}>
+                      {f.l} ({cards.filter(f.match).length})
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="no-print" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <input type="file" ref={newCardInputRef} style={{ display: 'none' }} accept="image/*,application/pdf" onChange={handleUploadNewCard} />
@@ -486,9 +528,13 @@ export default function RegistreCNSSDetail() {
                 </tr>
               </thead>
               <tbody>
-                {cards.length === 0 ? (
-                  <tr><td colSpan={8} style={{ textAlign: 'center', opacity: 0.5, padding: '2rem' }}>لا توجد بطاقات جبر — أضف بطاقة أو استعمل «المسح الذكي»</td></tr>
-                ) : cards.map(card => (
+                {visibleCards.length === 0 ? (
+                  <tr><td colSpan={8} style={{ textAlign: 'center', opacity: 0.5, padding: '2rem' }}>
+                    {cards.length === 0
+                      ? 'لا توجد بطاقات جبر — أضف بطاقة أو استعمل «المسح الذكي»'
+                      : 'لا توجد بطاقات مطابقة لهذه التصفية'}
+                  </td></tr>
+                ) : visibleCards.map(card => (
                   <tr key={card.id_cn_oe}>
                     <td style={{ fontWeight: 600 }}>{card.numcarte || '—'}</td>
                     <td>{card.semestre || '—'}</td>

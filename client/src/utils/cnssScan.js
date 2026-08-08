@@ -37,14 +37,51 @@ export async function scanCardFromBridge() {
   return compressImage(await scanRes.blob());
 }
 
+// ── Duplicate بطاقة جبر (same عدد البطاقة already filed under the same مطلوب) ──
+// The server refuses to file a second row and answers 409 with the card it found;
+// the user decides whether to keep the new one anyway or cancel.
+export function duplicateMessage(info) {
+  const e = info.existing || {};
+  const c = info.company || {};
+  return 'هذه البطاقة مُسجّلة من قبل في هذا الملف:\n\n'
+    + `عدد البطاقة: ${e.numcarte || '—'}\n`
+    + `الثلاثية: ${e.semestre || '—'}\n`
+    + `أصل الدين: ${e.dette || '—'} د.ت\n`
+    + (c.nom_cl2 ? `المطلوب: ${c.nom_cl2}\n` : '')
+    + '\nاضغط «موافق» لإضافتها مرة أخرى، أو «إلغاء» لإلغاء العملية.';
+}
+
+const askKeepDuplicate = (info) => window.confirm(duplicateMessage(info));
+
+// POST a card row onto a company. `force: 1` bypasses the duplicate guard.
+export async function addCard(id_cn, card) {
+  const token = localStorage.getItem('token');
+  const res = await fetch(`${API}/${id_cn}/cards`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(card),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || res.status);
+  return json;
+}
+
 // POST a بطاقة جبر image/PDF to the CNSS scan endpoint, which extracts it and
-// auto-creates the record. Returns the new id_cn (throws on failure).
-export async function createRecordFromCard(fileOrBlob, filename) {
+// auto-creates the record. Returns { id_cn, skipped } — `skipped` is true when the
+// page turned out to be a duplicate the user chose not to keep, in which case
+// id_cn still points at the record that already holds it. Throws on failure.
+export async function createRecordFromCard(fileOrBlob, filename, confirmDuplicate = askKeepDuplicate) {
   const token = localStorage.getItem('token');
   const fd = new FormData();
   fd.append('file', fileOrBlob, filename || 'card.jpg');
   const res = await fetch(`${API}/scan`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
   const json = await res.json();
-  if (res.ok && json.success) return json.id_cn;
+  if (res.ok && json.success) return { id_cn: json.id_cn, skipped: false };
+  if (res.status === 409 && json.duplicate) {
+    // Re-file the card the server already extracted — no second AI extraction.
+    if (!confirmDuplicate(json)) return { id_cn: json.id_cn, skipped: true };
+    await addCard(json.id_cn, { ...json.card, force: 1 });
+    return { id_cn: json.id_cn, skipped: false };
+  }
   throw new Error(json.error || res.status);
 }
