@@ -12,3 +12,7 @@ graphify-out/
 
 # Database backups (contain real data — never commit)
 server/backups/
+
+# Template backup written by scripts/parameterize_cnss_template.js —
+# the pristine original is recoverable from git history.
+server/assets/*.docx.bak
