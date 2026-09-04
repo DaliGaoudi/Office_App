@@ -231,6 +231,7 @@ offices must never share a database.
 | `node server/scripts/backfill_office_fields.js --url … --office-address … ` | Fill office-profile keys on an **existing** office when new `{office_*}` tags are introduced. Only writes keys that are missing/empty; prints a revert statement. |
 | `node server/scripts/migrate_add_indexes.js --url … [--dry-run]` | Add the indexes to an existing office DB (new ones get them from the provisioner). Pre-checks duplicate usernames; all reversible with `DROP INDEX`. |
 | `node server/scripts/audit_tenancy.js [--verbose]` | Lint route SQL for queries touching tenant tables without an `id_so` filter. Exits 1 on a finding — run it before every release. |
+| `node server/scripts/enroll_office.js --project <name> [--apply]` | Bring an office that **already exists** on Vercel under the control plane (§12): registers it, then writes `OFFICE_ID`/`OFFICE_SECRET`/`CONTROL_PLANE_URL` to its project. Repeat `--project` for several. Plan-only without `--apply`. |
 
 `provision_office.js` refuses to run without an explicit `--url` (never reads `server/.env`, which
 points at the live office), refuses a URL matching `POSTGRES_URL`, and refuses a database that
@@ -424,7 +425,9 @@ One password, one deployment, one list of paying customers.
 
 ### How enforcement works
 
-1. The panel registers an office and issues a **check-in secret**, shown once.
+1. The panel registers an office and issues a **check-in secret**, shown once. (For an office
+   that already exists, `enroll_office.js` does the registration *and* the wiring in one go —
+   it reads the office's public URL and name off the live deployment rather than guessing.)
 2. `create_office.js --office-secret … --control-plane …` bakes `OFFICE_ID`, `OFFICE_SECRET` and
    `CONTROL_PLANE_URL` into the new Vercel project (production target only, so preview builds of
    the shared repo don't impersonate an office).
