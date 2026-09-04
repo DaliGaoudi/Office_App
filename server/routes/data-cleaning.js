@@ -27,13 +27,13 @@ router.get('/suggestions', authenticate, isAdmin, async (req, res) => {
     try {
         // Fetch all unique client names and their counts
         const query = `
-            SELECT nom_cl1, COUNT(*) as count 
-            FROM clients_record 
-            WHERE nom_cl1 IS NOT NULL AND nom_cl1 != '' 
-            GROUP BY nom_cl1 
+            SELECT nom_cl1, COUNT(*) as count
+            FROM clients_record
+            WHERE id_so::text = ? AND nom_cl1 IS NOT NULL AND nom_cl1 != ''
+            GROUP BY nom_cl1
             ORDER BY count DESC
         `;
-        const rows = await db.all(query);
+        const rows = await db.all(query, [req.user.id_so]);
         const names = rows.map(r => r.nom_cl1.trim());
 
         if (names.length === 0) {
@@ -160,10 +160,12 @@ router.post('/merge', authenticate, isAdmin, async (req, res) => {
             // name too (otherwise it re-splits into a clean + a padded variant).
             // AND nom_cl1 <> ? skips rows already exactly equal to the clean canonical,
             // so totalUpdated reflects rows actually changed.
+            // id_so keeps the merge inside the caller's office — without it this
+            // rewrites nom_cl1 for every office sharing the database.
             const placeholders = oldNames.map(() => '?').join(',');
-            const query = `UPDATE clients_record SET nom_cl1 = ? WHERE TRIM(nom_cl1) IN (${placeholders}) AND nom_cl1 <> ?`;
+            const query = `UPDATE clients_record SET nom_cl1 = ? WHERE id_so::text = ? AND TRIM(nom_cl1) IN (${placeholders}) AND nom_cl1 <> ?`;
 
-            const result = await db.run(query, [canonicalName, ...oldNames, canonicalName]);
+            const result = await db.run(query, [canonicalName, req.user.id_so, ...oldNames, canonicalName]);
             totalUpdated += result.changes || 0;
         }
 
