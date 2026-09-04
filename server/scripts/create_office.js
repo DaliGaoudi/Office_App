@@ -292,7 +292,7 @@ async function main() {
     console.log('  ────────────────────────────────────────────────');
     console.log('\n  Next:');
     console.log('   1. Wait for the build to finish in the Vercel dashboard.');
-    console.log('   2. Open the project URL — it will show the onboarding screen.');
+    console.log(`   2. Open https://${name}.vercel.app — it will show the onboarding screen.`);
     console.log('   3. Fill in the office details and create the administrator.');
     console.log('   4. Generate one act and check the letterhead before the office uses it.\n');
 }
