@@ -59,4 +59,30 @@ function amountInWords(millimes) {
     return rem > 0 ? `${dinarPart} و ${rem} مليماً` : dinarPart;
 }
 
-module.exports = { integerToArabicWords, amountInWords };
+/*
+ * Spell a year the way the acts do: «… من سنة ستة وعشرين وألفين …» for 2026.
+ *
+ * Note this is the OBLIQUE form (عشرين, ثلاثين …), not the nominative one TENS
+ * above carries (عشرون), because the phrase follows «من سنة».
+ */
+const TENS_OBLIQUE = { 2: 'عشرين', 3: 'ثلاثين', 4: 'أربعين', 5: 'خمسين', 6: 'ستين', 7: 'سبعين', 8: 'ثمانين', 9: 'تسعين' };
+
+function yearInArabicWords(year) {
+    const y = Math.floor(Number(year) || 0);
+    // Only the 2000s are spelled this way; anything else falls back to digits so a
+    // wrong-looking year is obvious on the page rather than silently mis-worded.
+    if (y < 2000 || y > 2099) return String(y);
+
+    const rest = y % 100;
+    if (rest === 0) return 'ألفين';
+
+    const belowHundredOblique = (n) => {
+        if (n < 20) return ONES[n];
+        const t = Math.floor(n / 10), o = n % 10;
+        return o ? `${ONES[o]} و${TENS_OBLIQUE[t]}` : TENS_OBLIQUE[t];
+    };
+
+    return `${belowHundredOblique(rest)} وألفين`;
+}
+
+module.exports = { integerToArabicWords, amountInWords, yearInArabicWords };

@@ -13,6 +13,7 @@ const { extractCnssFromFile } = require('../services/cnssExtract');
 const { AJR_KEYS, EXP_KEYS, toMillimes, formatMillimes, computeFees } = require('../services/cnssFees');
 const { renderMonthlyList, buildMonthlyGroups } = require('../services/listRender');
 const { getOfficeProfile } = require('../services/officeProfile');
+const { yearInArabicWords } = require('../services/numberToArabicWords');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -233,9 +234,23 @@ function perActFooters(zip, acts, footerTpl) {
     return true;
 }
 
-// Render one Word document containing `acts` (1 → single act, N → one per page).
-// nullGetter keeps any unfilled tag (e.g. a blank fee cell) from throwing.
-const renderActs = (acts) => {
+/*
+ * Render one Word document containing `acts` (1 → single act, N → one per page).
+ *
+ * `office` carries the letterhead identity printed in the body of every محضر —
+ * the bailiff's name, address, judicial circuit and the CNSS regional bureau. These
+ * were once hardcoded in the template; they are merge tags now, so each deployment
+ * prints its own office (see services/officeProfile.js). Those tags appear both
+ * inside the {#acts} loop and in the letterhead header, so the office is supplied
+ * at both scopes below.
+ *
+ * nullGetter keeps any unfilled tag (e.g. a blank fee cell) from throwing.
+ */
+const renderActs = (records, office = {}) => {
+    const yearWords = yearInArabicWords(new Date().getFullYear());
+    // Act fields win over office fields, so a future per-act override stays possible.
+    const acts = records.map((act) => ({ ...office, year_words: yearWords, ...act }));
+
     const zip = new PizZip(fs.readFileSync(TEMPLATE_PATH));
 
     // Park the tagged fee-table footer so docxtemplater doesn't blank its {fee_*}
@@ -245,7 +260,9 @@ const renderActs = (acts) => {
     if (footerName) zip.file(footerName, EMPTY_FOOTER);
 
     const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true, nullGetter: () => '' });
-    doc.render({ acts });
+    // The office also goes in at root scope: the letterhead's {office_*} tags live in
+    // the header, which is outside the {#acts} loop and so can't see per-act values.
+    doc.render({ acts, ...office, year_words: yearWords });
 
     const out = doc.getZip();
     if (!perActFooters(out, acts, footerTpl)) {
@@ -549,7 +566,7 @@ router.get('/cards/:cardId/act.docx', authenticate, async (req, res) => {
         const company = await db.get(`SELECT * FROM cnss WHERE id_cn = ? AND id_so = ?`, [card.id_cn, req.user.id_so]);
         if (!company) return res.status(404).json({ error: 'الملف غير موجود.' });
 
-        const buf = renderActs([buildActRecord(company, card)]);
+        const buf = renderActs([buildActRecord(company, card)], await getOfficeProfile());
         await logActivity(req.user, 'PRINT', 'RECORD', `توليد محضر إعلام بطاقة جبر (بطاقة ${card.numcarte || cardId})`);
         sendDocx(res, buf, `act_${cardId}.docx`);
     } catch (err) {
@@ -567,7 +584,7 @@ router.get('/:id/acts.docx', authenticate, async (req, res) => {
         const cards = await db.all(`SELECT * FROM cnss_oeuvre WHERE id_cn = ? AND id_so = ? ORDER BY id_cn_oe ASC`, [id, req.user.id_so]);
         if (!cards.length) return res.status(400).json({ error: 'لا توجد بطاقات لتوليد محاضرها.' });
 
-        const buf = renderActs(cards.map(c => buildActRecord(company, c)));
+        const buf = renderActs(cards.map(c => buildActRecord(company, c)), await getOfficeProfile());
         await logActivity(req.user, 'PRINT', 'RECORD', `توليد ${cards.length} محضر للملف ${company.nom_cl2 || id}`);
         sendDocx(res, buf, `acts_${id}.docx`);
     } catch (err) {
@@ -649,3 +666,9 @@ router.delete('/cards/:cardId', authenticate, async (req, res) => {
 });
 
 module.exports = router;
+
+// Exposed for scripts/verify_act_render.js, which renders a throwaway act against a
+// fictitious office to prove the template still merges every {office_*} tag. Not
+// part of the HTTP surface.
+module.exports.renderActs = renderActs;
+module.exports.buildActRecord = buildActRecord;

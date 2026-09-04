@@ -16,6 +16,14 @@ const OFFICE_KEYS = [
     'office_tax_id',   // المعرّف الجبائي (MF)
     'office_rib',      // الحساب البنكي (RIB)
     'office_cnss',     // معرّف الصندوق (CNSS)
+
+    // Identity printed in the body of every محضر إعلام بطاقة جبر. These were
+    // hardcoded into template_cnss.docx until the template was parameterized, which
+    // meant a second office's acts went out under the first office's name.
+    'office_address',       // العنوان الكامل للمكتب (act body: "عنواني …")
+    'office_jurisdiction',  // الدائرة القضائية (e.g. "لمحكمة الإستئناف بسوسة")
+    'cnss_bureau',          // المكتب الجهوي للصندوق (e.g. "بسوسة الكائن بشارع الجمهورية بسوسة")
+    'cnss_region',          // جهة المدير الجهوي للشؤون الإجتماعية (e.g. "بسوسة")
 ];
 
 // Read the saved office profile; missing keys default to ''.
