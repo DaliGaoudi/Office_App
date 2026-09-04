@@ -167,15 +167,42 @@ async function createOrUpdateContact(id_so, data = {}) {
     return { success: true, id_tel: res.lastID, message: `Contact "${data.nom || data.num_tel1}" ajouté à l'annuaire.` };
 }
 
+/*
+ * Get an attachment's raw bytes.
+ *
+ * Only Blob-backed attachments have an absolute URL worth fetching. When Vercel Blob
+ * isn't configured the bytes live in Postgres and blob_url is the relative path
+ * "/api/attachments/file/:id" — passing that to fetch() throws, so this tool had been
+ * silently returning nothing for every DB-stored document. Read those straight from
+ * the table instead: no self-HTTP request, and no need to mint a signed URL.
+ */
+async function loadAttachmentBytes(att, id_so) {
+    if (/^https?:\/\//i.test(att.blob_url || '')) {
+        const resp = await fetch(att.blob_url);
+        if (!resp.ok) return null;
+        return Buffer.from(await resp.arrayBuffer());
+    }
+
+    const row = await db.get(
+        `SELECT data FROM attachments WHERE id = ? AND id_so::text = ?`, [att.id, String(id_so)]
+    );
+    if (!row || !row.data) return null;
+
+    // node-postgres returns BYTEA as a Buffer; tolerate a hex string too.
+    if (Buffer.isBuffer(row.data)) return row.data;
+    return typeof row.data === 'string'
+        ? Buffer.from(row.data.replace(/^\\x/, ''), 'hex')
+        : Buffer.from(row.data);
+}
+
 /**
  * Fetch one attachment's text content. PDFs are parsed directly; images are
  * OCR'd through the vision model. Returns '' on any failure (best-effort).
  */
-async function extractAttachmentText(att) {
+async function extractAttachmentText(att, id_so) {
     try {
-        const resp = await fetch(att.blob_url);
-        if (!resp.ok) return '';
-        const buffer = Buffer.from(await resp.arrayBuffer());
+        const buffer = await loadAttachmentBytes(att, id_so);
+        if (!buffer) return '';
 
         if (att.mimetype === 'application/pdf') {
             const data = await pdfParse(buffer);
@@ -204,16 +231,21 @@ async function extractAttachmentText(att) {
 
 /**
  * AI Tool: Read the documents attached to a case. Verifies the case belongs to
- * the user's office (the attachments table itself is not office-scoped), then
- * parses each file's text. Capped to keep within the serverless time budget.
+ * the user's office, then parses each file's text. Capped to keep within the
+ * serverless time budget.
  */
 async function readCaseDocuments(id_so, id_r) {
     const owner = await db.get(`SELECT id_r FROM clients_record WHERE id_r = ? AND id_so::text = ?`, [id_r, id_so]);
     if (!owner) return { error: "Dossier non trouvé ou accès refusé." };
 
+    // Scoped by id_so as well as the ownership check above, and by record_type:
+    // record_id alone collides across registers, so a CNSS file sharing the numeric
+    // id would have had its documents read out as if they belonged to this case.
     const rows = await db.all(
-        `SELECT id, filename, mimetype, blob_url FROM attachments WHERE record_id = ? ORDER BY created_at DESC`,
-        [String(id_r)]
+        `SELECT id, filename, mimetype, blob_url FROM attachments
+          WHERE record_id = ? AND id_so::text = ? AND record_type IN ('registre', 'execution', 'general')
+          ORDER BY created_at DESC`,
+        [String(id_r), String(id_so)]
     );
     if (rows.length === 0) return { documents: [], note: "Aucun document attaché à ce dossier." };
 
@@ -229,7 +261,7 @@ async function readCaseDocuments(id_so, id_r) {
             continue;
         }
         if (isImage) imagesUsed++;
-        let text = await extractAttachmentText(att);
+        let text = await extractAttachmentText(att, id_so);
         if (text.length > PER_DOC_CHARS) { text = text.slice(0, PER_DOC_CHARS) + '… [tronqué]'; truncated = true; }
         documents.push({ filename: att.filename, content: text || '[contenu illisible]' });
     }
