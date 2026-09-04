@@ -34,18 +34,10 @@ const parseArgs = (argv) => {
 const args = parseArgs(process.argv.slice(2));
 const DRY_RUN = Boolean(args['dry-run']);
 
-// [index name, table, DDL]. Unique first — it is the one that can legitimately fail.
-const INDEXES = [
-    ['admin_admin_username_key', 'admin_admin', `CREATE UNIQUE INDEX IF NOT EXISTS admin_admin_username_key ON admin_admin (username)`],
-    ['clients_record_id_so_idx', 'clients_record', `CREATE INDEX IF NOT EXISTS clients_record_id_so_idx ON clients_record (id_so)`],
-    ['clients_record_ref_idx', 'clients_record', `CREATE INDEX IF NOT EXISTS clients_record_ref_idx ON clients_record (ref)`],
-    ['cnss_id_so_idx', 'cnss', `CREATE INDEX IF NOT EXISTS cnss_id_so_idx ON cnss (id_so)`],
-    ['cnss_oeuvre_id_cn_idx', 'cnss_oeuvre', `CREATE INDEX IF NOT EXISTS cnss_oeuvre_id_cn_idx ON cnss_oeuvre (id_cn)`],
-    ['evenement_id_so_idx', 'evenement', `CREATE INDEX IF NOT EXISTS evenement_id_so_idx ON evenement (id_so)`],
-    ['telephone_id_so_idx', 'telephone', `CREATE INDEX IF NOT EXISTS telephone_id_so_idx ON telephone (id_so)`],
-    ['audit_logs_created_at_idx', 'audit_logs', `CREATE INDEX IF NOT EXISTS audit_logs_created_at_idx ON audit_logs (created_at DESC)`],
-    ['attachments_record_idx', 'attachments', `CREATE INDEX IF NOT EXISTS attachments_record_idx ON attachments (id_so, record_type, record_id)`],
-];
+// The list lives in services/schemaSetup.js so a new office and an existing one
+// can never drift apart. Unique first — it is the one that can legitimately fail.
+const { HARDENING_INDEXES } = require('../services/schemaSetup');
+const INDEXES = HARDENING_INDEXES.map((i) => [i.name, i.table, i.ddl]);
 
 const fail = (msg) => { console.error(`\n  ✗ ${msg}\n`); process.exit(1); };
 

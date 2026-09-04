@@ -42,8 +42,7 @@ const crypto = require('crypto');
 const { createPool } = require('@vercel/postgres');
 const { hashPassword } = require('../services/password');
 const { OFFICE_KEYS } = require('../services/officeProfile');
-
-const SCHEMA_PATH = path.join(__dirname, '..', 'schema.sql');
+const { SCHEMA_PATH, applySchema, applyIndexes } = require('../services/schemaSetup');
 
 // ── argv ────────────────────────────────────────────────────────────────────────
 const parseArgs = (argv) => {
@@ -73,21 +72,6 @@ const generatePassword = (len = 16) => {
         .map((b) => alphabet[b % alphabet.length])
         .join('');
 };
-
-// Indexes the inherited schema never had. `admin_admin` has no primary key and no
-// unique username at all today, which is how you end up with two accounts that can
-// both log in as the same person. Every table is queried by id_so on every request.
-const HARDENING_SQL = [
-    `CREATE UNIQUE INDEX IF NOT EXISTS admin_admin_username_key ON admin_admin (username)`,
-    `CREATE INDEX IF NOT EXISTS clients_record_id_so_idx ON clients_record (id_so)`,
-    `CREATE INDEX IF NOT EXISTS clients_record_ref_idx ON clients_record (ref)`,
-    `CREATE INDEX IF NOT EXISTS cnss_id_so_idx ON cnss (id_so)`,
-    `CREATE INDEX IF NOT EXISTS cnss_oeuvre_id_cn_idx ON cnss_oeuvre (id_cn)`,
-    `CREATE INDEX IF NOT EXISTS evenement_id_so_idx ON evenement (id_so)`,
-    `CREATE INDEX IF NOT EXISTS telephone_id_so_idx ON telephone (id_so)`,
-    `CREATE INDEX IF NOT EXISTS audit_logs_created_at_idx ON audit_logs (created_at DESC)`,
-    `CREATE INDEX IF NOT EXISTS attachments_record_idx ON attachments (id_so, record_type, record_id)`,
-];
 
 async function main() {
     // ── validate input ──────────────────────────────────────────────────────────
@@ -172,16 +156,12 @@ async function main() {
     if (DRY_RUN) { await pool.end(); console.log('  Dry run complete — target looks provisionable.\n'); return; }
 
     // ── 1. schema ───────────────────────────────────────────────────────────────
-    const schemaSql = fs.readFileSync(SCHEMA_PATH, 'utf8');
-    await pool.query(schemaSql);
+    await applySchema(pool);
     console.log('  ✓ schema applied');
 
     // ── 2. hardening indexes (best-effort, reported individually) ───────────────
-    for (const stmt of HARDENING_SQL) {
-        try { await pool.query(stmt); }
-        catch (e) { console.warn(`  ! index skipped (${e.message.split('\n')[0]})`); }
-    }
-    console.log('  ✓ indexes applied');
+    const appliedIndexes = await applyIndexes(pool);
+    console.log(`  ✓ ${appliedIndexes.length} index(es) applied`);
 
     if (SCHEMA_ONLY) {
         await pool.end();

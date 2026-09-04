@@ -353,3 +353,34 @@ nothing from every DB-stored document. It now loads those bytes straight from th
 > Still open: Vercel Blob uploads use `access: 'public'`, so once Blob is configured its URLs are
 > public and permanent, outside the signing scheme above. Vercel Blob now supports private
 > storage; moving to it would need signed reads and a migration of existing URLs.
+
+### Automated office creation
+
+`server/scripts/create_office.js` does everything up to the onboarding form: creates a Neon
+project, creates a Vercel project linked to this repo, sets the environment variables, triggers
+a production deployment, and applies `schema.sql` + indexes.
+
+```
+node server/scripts/create_office.js --name "ben-salah-sfax"           # prints the plan
+node server/scripts/create_office.js --name "ben-salah-sfax" --create  # provisions
+```
+
+Credentials come from the environment, never arguments (arguments land in shell history and
+process listings): `NEON_API_KEY`, `VERCEL_TOKEN`, optional `VERCEL_TEAM_ID`, and
+`OPENROUTER_API_KEY` which is copied into the new project.
+
+It deliberately creates **no accounts** — the office's own onboarding screen does that, and
+seeding an admin here would close onboarding before it appeared. `JWT_SECRET` is generated fresh
+per office: sharing one would let a token from one office be replayed against another, and
+attachment link signatures are keyed on it too.
+
+Because a run spends money it prints the plan and exits unless `--create` is passed, refuses a
+name that already exists on Vercel, and on a mid-run failure lists every resource it created with
+how to delete it — an interrupted run otherwise leaves billable things behind, unnamed.
+
+The index list lives in `services/schemaSetup.js`, shared with `provision_office.js` and
+`migrate_add_indexes.js`, so a new office and an existing one cannot drift apart.
+
+> Note this provisions Neon **directly**, so those databases are billed through your Neon account
+> rather than appearing under Vercel Storage. Offices created by hand through the Vercel
+> Marketplace integration sit in a different place; pick one and stay consistent.
