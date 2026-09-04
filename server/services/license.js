@@ -27,10 +27,22 @@ const db = require('../db');
 
 const STATE_KEY = 'license_state';
 
-// How long a verdict may be trusted. Blocked offices re-ask sooner so that a
-// customer who has just paid is back at work in minutes, not a quarter-hour.
-const ACTIVE_TTL_MS = 15 * 60 * 1000;
-const BLOCKED_TTL_MS = 3 * 60 * 1000;
+/*
+ * How long a verdict may be trusted.
+ *
+ * The control plane sets the cadence, per response, in `recheckInSeconds` — so
+ * it can be changed for every office at once by redeploying the licence server,
+ * without touching a single office. These are only the fallback for a response
+ * that omits it.
+ *
+ * The clamp is a guard, not a preference: it stops a bad or hostile value from
+ * either hammering the control plane (too low) or pinning an office to a stale
+ * verdict for a day (too high).
+ */
+const DEFAULT_ACTIVE_TTL_MS = 60 * 1000;
+const DEFAULT_BLOCKED_TTL_MS = 30 * 1000;
+const MIN_TTL_MS = 15 * 1000;
+const MAX_TTL_MS = 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 4000;
 
 const UNMANAGED = { status: 'active', managed: false, message: null, reason: null, checkedAt: null };
@@ -49,7 +61,14 @@ const isConfigured = () => {
     return Boolean(c.url && c.id && c.secret);
 };
 
-const ttlFor = (v) => (v && v.status !== 'active' ? BLOCKED_TTL_MS : ACTIVE_TTL_MS);
+const ttlFor = (v) => {
+    if (!v) return DEFAULT_ACTIVE_TTL_MS;
+    const asked = Number(v.recheckInSeconds);
+    if (Number.isFinite(asked) && asked > 0) {
+        return Math.min(MAX_TTL_MS, Math.max(MIN_TTL_MS, asked * 1000));
+    }
+    return v.status !== 'active' ? DEFAULT_BLOCKED_TTL_MS : DEFAULT_ACTIVE_TTL_MS;
+};
 const isFresh = (v) => Boolean(v && v.checkedAt && (Date.now() - v.checkedAt) < ttlFor(v));
 
 // The deployed commit, which is what identifies a build in the panel. Vercel
@@ -130,6 +149,9 @@ async function fetchVerdict() {
             message: j.message || null,
             reason: j.reason || null,
             providerContact: j.providerContact || null,
+            // Persisted with the verdict, so a cold start honours the cadence
+            // the control plane asked for rather than falling back to a default.
+            recheckInSeconds: Number(j.recheckInSeconds) || null,
             checkedAt: Date.now(),
         };
     } finally {

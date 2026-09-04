@@ -274,7 +274,8 @@ import SuspendedNotice from './components/SuspendedNotice';
 // How often a logged-in session re-asks the server for the office's service
 // status. The server answers from its own cache, so this is a cheap local call;
 // it exists so a suspension (or a reinstatement) lands without a page reload.
-const LICENSE_POLL_MS = 60 * 1000;
+// Half the server's own check-in cadence, so the screen is never the slow half.
+const LICENSE_POLL_MS = 30 * 1000;
 
 function App() {
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user')) || null);

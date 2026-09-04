@@ -50,7 +50,7 @@ const stub = http.createServer((req, res) => {
             status: verdict.status,
             message: verdict.message || null,
             providerContact: '+216 00 000 000',
-            recheckInSeconds: 900,
+            recheckInSeconds: verdict.recheckInSeconds != null ? verdict.recheckInSeconds : 60,
         }));
     });
 });
@@ -133,7 +133,32 @@ const run = async () => {
     assert.strictEqual(r.blocked, false, 'a rejected office must fail open');
     console.log('✓ a rejected/unknown office fails open');
 
-    // 7. unconfigured deployment (a local checkout) never calls home
+    // 7. the control plane owns the cadence: a short recheckInSeconds means the
+    // office re-asks that soon, which is what makes suspension land in ~a minute.
+    down = false;
+    process.env.OFFICE_SECRET = 's3cret';
+    verdict = { status: 'active', recheckInSeconds: 1 };
+    license.invalidate();
+    settings.clear();
+    await call('/api/registre', 'POST');            // caches, TTL clamped to the 15s floor
+    let n = checkins;
+    await call('/api/registre', 'POST');
+    assert.strictEqual(checkins, n, 'a fresh verdict must be reused, not re-fetched');
+
+    // Age the stored verdict past the floor and it re-asks — and picks up a
+    // suspension made in between.
+    const s = JSON.parse(settings.get('license_state'));
+    assert.strictEqual(s.recheckInSeconds, 1, 'the cadence is persisted with the verdict');
+    s.checkedAt = Date.now() - 20 * 1000;
+    settings.set('license_state', JSON.stringify(s));
+    license.invalidate();
+    verdict = { status: 'suspended', message: 'اختبار' };
+    r = await call('/api/registre', 'POST');
+    assert.strictEqual(checkins, n + 1, 'an expired verdict triggers exactly one re-check');
+    assert.strictEqual(r.blocked, true, 'the office picks up the suspension on its next check');
+    console.log('✓ the control plane sets the cadence; an expired verdict re-checks and blocks');
+
+    // 8. unconfigured deployment (a local checkout) never calls home
     delete process.env.CONTROL_PLANE_URL;
     license.invalidate();
     const before = checkins;

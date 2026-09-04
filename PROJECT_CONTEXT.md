@@ -431,7 +431,8 @@ One password, one deployment, one list of paying customers.
 2. `create_office.js --office-secret … --control-plane …` bakes `OFFICE_ID`, `OFFICE_SECRET` and
    `CONTROL_PLANE_URL` into the new Vercel project (production target only, so preview builds of
    the shared repo don't impersonate an office).
-3. The office server calls `POST /api/office/checkin` at most every 15 min (3 min while blocked),
+3. The office server calls `POST /api/office/checkin` at most once a minute (30s while blocked —
+   the cadence comes from the control plane's `recheckInSeconds`, clamped to 15s–1h office-side),
    reporting its commit and a few row counts. The verdict is cached in memory **and** in
    `app_settings.license_state`, so a cold lambda doesn't call home on every request.
 4. `server/middleware/license.js` returns **403 `office_suspended`** for everything except the
