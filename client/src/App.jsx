@@ -269,6 +269,12 @@ import DataCleaning from './pages/DataCleaning';
 import AuditLogs from './pages/AuditLogs';
 import Accounting from './pages/Accounting';
 import Onboarding from './pages/Onboarding';
+import SuspendedNotice from './components/SuspendedNotice';
+
+// How often a logged-in session re-asks the server for the office's service
+// status. The server answers from its own cache, so this is a cheap local call;
+// it exists so a suspension (or a reinstatement) lands without a page reload.
+const LICENSE_POLL_MS = 60 * 1000;
 
 function App() {
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user')) || null);
@@ -280,6 +286,10 @@ function App() {
   // configured office never flashes the onboarding screen on a slow connection.
   const [needsOnboarding, setNeedsOnboarding] = useState(null);
   const [officeLabel, setOfficeLabel] = useState(cachedOfficeLabel);
+
+  // Service status from the provider's control plane; null = unknown, which is
+  // treated exactly like "active" so the app never blocks itself by accident.
+  const [license, setLicense] = useState(null);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -298,6 +308,37 @@ function App() {
 
   // The tab title is per-deployment branding, so it follows the office name.
   useEffect(() => { document.title = officeLabel; }, [officeLabel]);
+
+  /*
+   * Service status (see server/services/license.js). Only meaningful once
+   * someone is logged in — the endpoint is authenticated, and the notice is
+   * addressed to the office, not to a stranger who found the URL.
+   *
+   * `license` stays null until the first answer, and any failure leaves it null:
+   * a network hiccup must never lock a working office out of its own app.
+   */
+  const fetchLicense = async (force) => {
+    const t = localStorage.getItem('token');
+    if (!t) return null;
+    try {
+      const res = await fetch(`${API_BASE}/license/status${force ? '?force=1' : ''}`, {
+        headers: { Authorization: `Bearer ${t}` },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      setLicense(data);
+      return data;
+    } catch {
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    if (!user) { setLicense(null); return; }
+    fetchLicense();
+    const id = setInterval(() => fetchLicense(), LICENSE_POLL_MS);
+    return () => clearInterval(id);
+  }, [user]);
 
   // Setup just finished: adopt the new name and fall through to the login screen.
   const finishOnboarding = (officeName) => {
@@ -336,6 +377,17 @@ function App() {
             <Routes>
               <Route path="*" element={<Login />} />
             </Routes>
+          ) : license && license.status !== 'active' ? (
+            /* Suspended or terminated: the notice replaces every route. Export
+               still works — see server/routes/export.js for why. */
+            <SuspendedNotice
+              status={license.status}
+              message={license.message}
+              providerContact={license.providerContact}
+              canExport={license.canExport}
+              onRetry={() => fetchLicense(true)}
+              onLogout={logout}
+            />
           ) : (
             <Layout>
               {user?.role === 'client' ? (

@@ -11,6 +11,12 @@
  *   node server/scripts/create_office.js --name "ala-gaoudi"          # plan only
  *   node server/scripts/create_office.js --name "ala-gaoudi" --create # do it
  *
+ * Register the office in the admin panel first (/admin → مكاتب الويب → مكتب
+ * جديد); it prints the full command with --office-secret and --control-plane
+ * already filled in. Those two put OFFICE_ID / OFFICE_SECRET / CONTROL_PLANE_URL
+ * into the new project, which is what makes the office suspendable later. Run
+ * without them and the office works but cannot be switched off remotely.
+ *
  * The database is provisioned through `vercel integration add neon` rather than
  * Neon's own API: once a Neon organization is created through Vercel it is
  * "managed by Vercel" and its API refuses direct project creation. Going through
@@ -182,12 +188,27 @@ async function main() {
 
     readSchema(); // fail early if schema.sql is missing, before creating anything
 
+    /*
+     * Control-plane enrolment. The office row and its secret are created in the
+     * admin panel (/admin → مكاتب الويب → مكتب جديد), which hands back the exact
+     * command to run — secret included. Without them the deployment still works,
+     * it simply cannot be suspended, so this is a warning and not an error.
+     */
+    const officeSecret = typeof args['office-secret'] === 'string' ? args['office-secret'] : null;
+    const controlPlane = (typeof args['control-plane'] === 'string' ? args['control-plane'] : process.env.CONTROL_PLANE_URL) || null;
+    const managed = Boolean(officeSecret && controlPlane);
+
     console.log('\n  New office');
     console.log(`  ├─ name        : ${name}`);
     console.log(`  ├─ Vercel repo : ${GIT_REPO} (${GIT_BRANCH})`);
     console.log(`  ├─ Vercel team : ${process.env.VERCEL_TEAM_ID || '(personal account)'}`);
     console.log(`  ├─ Vercel CLI  : ${(probe.stdout || '').trim().split('\n')[0]}`);
+    console.log(`  ├─ control plane: ${managed ? controlPlane : 'NOT SET — the office cannot be suspended remotely'}`);
     console.log(`  └─ AI key      : ${process.env.OPENROUTER_API_KEY ? 'copied from this environment' : 'NOT SET — CNSS scanning will not work'}`);
+
+    if (!managed && (officeSecret || controlPlane)) {
+        fail('--office-secret and --control-plane go together; pass both, or neither.');
+    }
 
     // ── refuse to collide with an existing Vercel project ───────────────────────
     try {
@@ -199,7 +220,7 @@ async function main() {
 
     if (!CREATE) {
         console.log('\n  PLAN ONLY — nothing created. Re-run with --create to actually provision:');
-        console.log('    1. Vercel project linked to the repo, with JWT_SECRET and OPENROUTER_API_KEY');
+        console.log(`    1. Vercel project linked to the repo, with JWT_SECRET, OPENROUTER_API_KEY${managed ? ', OFFICE_ID, OFFICE_SECRET and CONTROL_PLANE_URL' : ''}`);
         console.log('    2. Neon database via `vercel integration add neon`, connected to the project');
         console.log('    3. schema.sql + indexes applied, no accounts created');
         console.log('    4. Production deployment from the linked branch');
@@ -218,6 +239,15 @@ async function main() {
     ];
     if (process.env.OPENROUTER_API_KEY) {
         envVars.push({ key: 'OPENROUTER_API_KEY', value: process.env.OPENROUTER_API_KEY, type: 'encrypted', target: ['production', 'preview', 'development'] });
+    }
+    if (managed) {
+        // What lets the deployment call home — and so what lets it be suspended.
+        // Only production is targeted: preview builds of the shared repo must not
+        // report themselves as this office, or one office's previews would
+        // overwrite another's health and last-seen.
+        envVars.push({ key: 'CONTROL_PLANE_URL', value: controlPlane, type: 'plain', target: ['production'] });
+        envVars.push({ key: 'OFFICE_ID', value: name, type: 'plain', target: ['production'] });
+        envVars.push({ key: 'OFFICE_SECRET', value: officeSecret, type: 'encrypted', target: ['production'] });
     }
 
     const project = await api(`${VERCEL_API}/v11/projects${teamQuery()}`, {
@@ -294,7 +324,16 @@ async function main() {
     console.log('   1. Wait for the build to finish in the Vercel dashboard.');
     console.log(`   2. Open https://${name}.vercel.app — it will show the onboarding screen.`);
     console.log('   3. Fill in the office details and create the administrator.');
-    console.log('   4. Generate one act and check the letterhead before the office uses it.\n');
+    console.log('   4. Generate one act and check the letterhead before the office uses it.');
+    if (managed) {
+        console.log('   5. Log in once, then check the office reports "آخر اتصال" in the admin panel —');
+        console.log('      that is the proof it can be suspended if it ever needs to be.\n');
+    } else {
+        console.log('\n  ! This office is NOT registered with the control plane, so it cannot be');
+        console.log('    suspended for non-payment. To manage it, register it at /admin (مكاتب الويب),');
+        console.log('    then add OFFICE_ID, OFFICE_SECRET and CONTROL_PLANE_URL to its Vercel project');
+        console.log('    and redeploy.\n');
+    }
 }
 
 main().catch((e) => {

@@ -25,6 +25,10 @@ Postgres, deployed to Vercel.
   Postgres. `db.run()` auto-appends a multi-table `RETURNING` clause.
 - **Multi-tenancy:** every data query filters by `id_so` (from the JWT). Don't drop it.
 - **Writes are audit-logged** via `logActivity()` — keep new write endpoints logged.
+- **Every route sits behind `middleware/license.js`** (PROJECT_CONTEXT §12): a suspended office
+  gets 403 `office_suspended` on everything but a short allowlist. If you add an endpoint that
+  must answer while suspended — anything the office needs to get its own data out — add it to
+  `ALWAYS_ALLOWED` and to `server/test_license_gate.js`. The check fails **open** by design.
 - `package.json` is named `cnss-scanner-desktop` and mentions Electron, but the live product is
   the **web app**; ignore the desktop framing.
 - `client/dist/scan-bridge-setup.zip` is committed on purpose (Vercel can't build it); regenerate

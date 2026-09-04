@@ -89,8 +89,13 @@ All under `/api`. Almost every write goes through `logActivity()` (audit log) an
 | `/api/attachments` | `routes/attachments.js` | File uploads (Vercel Blob or DB fallback) + `scan_targets` (which record a user has open). |
 | `/api/backup` | `routes/backup.js` | JSON DB dump; called by the daily Vercel cron. |
 | `/api/settings` | `routes/settings.js` | Global settings (`app_settings`, e.g. `tva_rate`). On PUT, flushes the registre TVA cache. |
+| `/api/license` | `routes/license.js` | Is this office suspended? Answers the SPA's block screen (§12). |
+| `/api/export` | `routes/export.js` | Admin download of the whole database as JSON. Stays open while suspended, on purpose. |
 
 `/api/health` reports whether Postgres or SQLite is active.
+
+Every route above sits behind `middleware/license.js`, which 403s the whole API when the control
+plane says the office is suspended — see §12 for the allowlist that survives it.
 
 ---
 
@@ -184,7 +189,8 @@ billing (`الأجور` vs `مصاريف` split, see §5).
 ## 9. Environment / running
 
 Env vars (server): `POSTGRES_URL` (else SQLite fallback), `OPENROUTER_API_KEY` (or `OPENAI_API_KEY`),
-`JWT_SECRET`, `PORT` (default 3001). The AI client is built lazily via `services/openai.js`, so
+`JWT_SECRET`, `PORT` (default 3001). Managed offices also carry `CONTROL_PLANE_URL`, `OFFICE_ID`
+and `OFFICE_SECRET` (§12); leave all three unset locally and the licence check is a no-op. The AI client is built lazily via `services/openai.js`, so
 the server boots without a key and AI features fail only when used. (`data-cleaning.js` used to
 build its own client eagerly, which meant a missing key crashed the whole server at startup —
 keep new AI call sites on `getOpenAI()`.)
@@ -395,3 +401,68 @@ The index list lives in `services/schemaSetup.js`, shared with `provision_office
 - Vercel's default `ssoProtection` is `all_except_custom_domains`, so the deployment-specific
   URL (`<project>-<hash>.vercel.app`) demands a Vercel login. Give the office the production
   alias `https://<project>.vercel.app`, which is public.
+
+---
+
+## 12. Client management & suspension (the control plane)
+
+Offices are sold, so they can also be switched off. Because each office is its **own** Vercel
+project and its **own** database, there is nothing central to turn off — so the deployment asks a
+control plane whether it is still allowed to run, and blocks itself when told no.
+
+### Where the panel lives
+
+`../cnss-license-server` — the same server and the same `/admin` page that already manages
+desktop licences, now with two tabs: **تراخيص سطح المكتب** (unchanged) and **مكاتب الويب** (new).
+One password, one deployment, one list of paying customers.
+
+| Piece | File |
+|---|---|
+| Registry schema + queries (`offices`, `office_payments`) | `cnss-license-server/lib/offices.js` |
+| Check-in + admin endpoints | `cnss-license-server/api/index.js` |
+| Offices tab markup/JS | `cnss-license-server/lib/admin-offices.js` |
+
+### How enforcement works
+
+1. The panel registers an office and issues a **check-in secret**, shown once.
+2. `create_office.js --office-secret … --control-plane …` bakes `OFFICE_ID`, `OFFICE_SECRET` and
+   `CONTROL_PLANE_URL` into the new Vercel project (production target only, so preview builds of
+   the shared repo don't impersonate an office).
+3. The office server calls `POST /api/office/checkin` at most every 15 min (3 min while blocked),
+   reporting its commit and a few row counts. The verdict is cached in memory **and** in
+   `app_settings.license_state`, so a cold lambda doesn't call home on every request.
+4. `server/middleware/license.js` returns **403 `office_suspended`** for everything except the
+   allowlist; the SPA swaps the whole app for `components/SuspendedNotice.jsx`.
+
+| Status | Effect on the office |
+|---|---|
+| `active` | Normal. |
+| `suspended` | Blocked with the provider's Arabic message. Data untouched, reversible. |
+| `terminated` | Same block, different wording — contract over rather than unpaid. |
+
+### It fails OPEN, deliberately
+
+Missing env vars, an unreachable control plane, or a 401 (unknown office / rotated secret) all
+leave the office **working**. This is a bailiff's office; an outage on our side must not stop them
+filing an act. The lever we hold is the positive answer `"suspended"`, which an outage cannot
+forge — and a cached suspension is never lifted by a *failed* refresh, only by a successful one.
+
+### Still reachable while suspended
+
+`/api/health`, `/api/license/status`, `/api/onboarding/*`, `/api/auth/*`, `/api/backup` (cron) and
+**`/api/export/data`**. That last one is the point: `server/routes/export.js` lets the office's
+admin download the complete database as JSON even after termination. The registers are the
+office's legal work product — withholding them would be indefensible, and for a huissier, a real
+problem.
+
+### Billing
+
+`office_payments` is a ledger; recording a payment with «يغطّي إلى» moves the office's `next_due`,
+which is what clears the overdue flag in the panel. Suspension is **manual** — nothing
+auto-suspends on an overdue date; the panel just shows «متأخر N يوماً» so you can decide.
+
+### Testing
+
+`node server/test_license_gate.js` — stubs the database and stands up a fake control plane, then
+asserts the whole matrix: active passes, suspended blocks, the allowlist survives, an outage
+doesn't un-suspend, and an unknown/unconfigured office fails open. No database, no real network.

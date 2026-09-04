@@ -28,7 +28,18 @@ app.use('/api', (req, res, next) => {
     next();
 });
 
+/*
+ * Service status. Blocks the API with 403 office_suspended when the control
+ * plane says this office is suspended or its contract is over; a no-op when
+ * OFFICE_ID/OFFICE_SECRET/CONTROL_PLANE_URL are unset, which is every local
+ * checkout. Mounted before the routes so nothing has to opt in, and it keeps its
+ * own allowlist (login, export, backup cron) — see middleware/license.js.
+ */
+app.use(require('./middleware/license'));
+
 // Routes
+app.use('/api/license', require('./routes/license'));
+app.use('/api/export', require('./routes/export'));
 // First-run setup. Public, and self-closing the moment an account exists —
 // see routes/onboarding.js for why that check is the whole security model.
 app.use('/api/onboarding', require('./routes/onboarding'));
