@@ -29,6 +29,9 @@ app.use('/api', (req, res, next) => {
 });
 
 // Routes
+// First-run setup. Public, and self-closing the moment an account exists —
+// see routes/onboarding.js for why that check is the whole security model.
+app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/api/auth', authRoutes);
 app.use('/api/registre', registreRoutes);
 app.use('/api/execution', require('./routes/execution'));

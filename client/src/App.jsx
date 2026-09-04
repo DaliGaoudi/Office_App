@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate } from 're
 import { Shield, BookOpen, Users as UsersIcon, CalendarDays, LogOut, FileText, Receipt, Settings as SettingsIcon, Sun, Moon, Menu, Search, Database, Eye, PieChart } from 'lucide-react';
 import './index.css';
 
-import logo from './assets/logo.png';
+import { OFFICE_LOGO, loadBranding, cachedOfficeLabel, composeOfficeLabel } from './branding';
 
 // Context for Auth
 const AuthContext = createContext();
@@ -14,10 +14,16 @@ const useAuth = () => useContext(AuthContext);
 const ThemeContext = createContext();
 const useTheme = () => useContext(ThemeContext);
 
+// Context for per-deployment branding (the office name shown in the sidebar/tab).
+// It comes from the database, so it isn't known until the first fetch resolves.
+const BrandingContext = createContext({ officeLabel: '' });
+const useBranding = () => useContext(BrandingContext);
+
 // --- Layout & Components --- //
 
 const Sidebar = ({ isOpen, closeMenu }) => {
   const { user, logout } = useAuth();
+  const { officeLabel } = useBranding();
   const navigate = useNavigate();
   const [globalSearch, setGlobalSearch] = useState('');
   
@@ -39,8 +45,8 @@ const Sidebar = ({ isOpen, closeMenu }) => {
       {isOpen && <div className="mobile-overlay animate-fade" onClick={closeMenu}></div>}
       <div className={`sidebar glass-panel ${isOpen ? 'open' : ''}`}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', padding: '0 1rem' }}>
-          <img src={logo} alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-          <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>مكتب الأستاذ مراد القعودي</h2>
+          <img src={OFFICE_LOGO} alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+          <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>{officeLabel}</h2>
         </div>
         
         <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
@@ -262,16 +268,42 @@ import PortalDashboard from './pages/PortalDashboard';
 import DataCleaning from './pages/DataCleaning';
 import AuditLogs from './pages/AuditLogs';
 import Accounting from './pages/Accounting';
+import Onboarding from './pages/Onboarding';
 
 function App() {
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user')) || null);
   const [token, setToken] = useState(() => localStorage.getItem('token') || null);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
 
+  // Branding + first-run state, both answered by /api/onboarding/status.
+  // `null` means "not asked yet" — nothing is rendered until it resolves, so a
+  // configured office never flashes the onboarding screen on a slow connection.
+  const [needsOnboarding, setNeedsOnboarding] = useState(null);
+  const [officeLabel, setOfficeLabel] = useState(cachedOfficeLabel);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadBranding().then((b) => {
+      if (cancelled) return;
+      setNeedsOnboarding(b.needsOnboarding);
+      setOfficeLabel(b.label);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // The tab title is per-deployment branding, so it follows the office name.
+  useEffect(() => { document.title = officeLabel; }, [officeLabel]);
+
+  // Setup just finished: adopt the new name and fall through to the login screen.
+  const finishOnboarding = (officeName) => {
+    setOfficeLabel(composeOfficeLabel(officeName));
+    setNeedsOnboarding(false);
+  };
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
@@ -292,8 +324,15 @@ function App() {
   return (
     <AuthContext.Provider value={{ user, token, login, logout }}>
       <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      <BrandingContext.Provider value={{ officeLabel }}>
         <BrowserRouter>
-          {!user ? (
+          {needsOnboarding === null ? (
+            null /* still asking the server — render nothing rather than the wrong screen */
+          ) : needsOnboarding ? (
+            <Routes>
+              <Route path="*" element={<Onboarding onComplete={finishOnboarding} />} />
+            </Routes>
+          ) : !user ? (
             <Routes>
               <Route path="*" element={<Login />} />
             </Routes>
@@ -333,6 +372,7 @@ function App() {
             </Layout>
           )}
         </BrowserRouter>
+      </BrandingContext.Provider>
       </ThemeContext.Provider>
     </AuthContext.Provider>
   );

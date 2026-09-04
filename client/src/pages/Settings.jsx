@@ -5,7 +5,8 @@ import API_BASE from '../config';
 
 const API = `${API_BASE}/settings`;
 
-// Office-profile fields → {office_*} merge tags on the CNSS facturation bill.
+// Office-profile fields → {office_*} merge tags on the CNSS facturation bill
+// AND in the body of every محضر إعلام بطاقة جبر (see server/services/officeProfile.js).
 const OFFICE_FIELDS = [
   { key: 'office_name',    label: 'اسم العدل المنفذ (عربي)' },
   { key: 'office_name_fr', label: 'الاسم (بالفرنسية)', dir: 'ltr' },
@@ -15,6 +16,12 @@ const OFFICE_FIELDS = [
   { key: 'office_tax_id',  label: 'المعرّف الجبائي (MF)', dir: 'ltr' },
   { key: 'office_rib',     label: 'الحساب البنكي (RIB)', dir: 'ltr' },
   { key: 'office_cnss',    label: 'معرّف الصندوق (CNSS)', dir: 'ltr' },
+
+  // Printed inside the act itself — leaving these blank empties those sentences.
+  { key: 'office_address',      label: 'عنوان المكتب (كما يُكتب في المحضر)', hint: 'مثال: عمارة قلولو ، مكتب أ 23 ، شارع محمد معروف بسوسة' },
+  { key: 'office_jurisdiction', label: 'الدائرة القضائية', hint: 'مثال: لمحكمة الإستئناف بسوسة' },
+  { key: 'cnss_bureau',         label: 'المكتب الجهوي للصندوق', hint: 'مثال: بسوسة الكائن بشارع الجمهورية بسوسة' },
+  { key: 'cnss_region',         label: 'جهة المدير الجهوي للشؤون الإجتماعية', hint: 'مثال: بسوسة' },
 ];
 const EMPTY_OFFICE = Object.fromEntries(OFFICE_FIELDS.map(f => [f.key, '']));
 
@@ -191,7 +198,8 @@ export default function Settings() {
               بيانات المكتب (ترويسة فاتورة الضمان الاجتماعي)
             </h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-              تظهر هذه البيانات في أعلى القائمة الشهرية (الفاتورة) المُرسَلة إلى الصندوق الوطني للضمان الاجتماعي.
+              تظهر هذه البيانات في أعلى القائمة الشهرية (الفاتورة) المُرسَلة إلى الصندوق الوطني للضمان الاجتماعي،
+              كما تُدرَج الحقول الأخيرة داخل نصّ كل محضر إعلام بطاقة جبر. يُرجى ضبطها قبل توليد أي محضر.
             </p>
             <form onSubmit={saveOffice}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -201,6 +209,11 @@ export default function Settings() {
                     <input type="text" value={office[f.key] || ''} dir={f.dir || 'rtl'}
                       onChange={e => setOffice(prev => ({ ...prev, [f.key]: e.target.value }))}
                       style={{ width: '100%', padding: '0.6rem', borderRadius: '8px' }} />
+                    {f.hint && (
+                      <span style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        {f.hint}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
