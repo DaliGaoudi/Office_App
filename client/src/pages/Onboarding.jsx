@@ -118,7 +118,13 @@ export default function Onboarding({ onComplete }) {
   ) : null;
 
   return (
-    <div className="animate-fade" dir="rtl" style={{ maxWidth: 860, margin: '2rem auto', padding: '0 1rem' }}>
+    /*
+     * #root is `height: 100vh; overflow: hidden` — inside the app the scrolling is
+     * done by .main-content. This screen renders outside that layout, so it needs
+     * its own scroll container or the form is simply clipped at the fold.
+     */
+    <div style={{ flex: 1, height: '100vh', overflowY: 'auto', overflowX: 'hidden' }}>
+    <div className="animate-fade" dir="rtl" style={{ maxWidth: 860, margin: '2rem auto', padding: '0 1rem 3rem' }}>
       {step === 'details' && (
         <div className="glass-panel" style={{ padding: '2rem' }}>
           <h2 style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: 0 }}>
@@ -210,6 +216,7 @@ export default function Onboarding({ onComplete }) {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }
