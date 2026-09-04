@@ -20,7 +20,7 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 // Health check
-app.get('/api/health', (req, res) => res.json({ status: 'ok', database: process.env.POSTGRES_URL ? 'postgres' : 'sqlite' }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', database: (process.env.POSTGRES_URL || process.env.DATABASE_URL) ? 'postgres' : 'sqlite' }));
 
 // Prevent caching for API routes
 app.use('/api', (req, res, next) => {
