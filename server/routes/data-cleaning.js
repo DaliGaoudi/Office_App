@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../db');
 const authenticate = require('../middleware/auth');
 const stringSimilarity = require('string-similarity');
-const { OpenAI } = require('openai');
+const { getOpenAI } = require('../services/openai');
 
 // Ensure admin only
 const isAdmin = (req, res, next) => {
@@ -14,14 +14,6 @@ const isAdmin = (req, res, next) => {
     }
 };
 
-const openai = new OpenAI({
-    baseURL: "https://openrouter.ai/api/v1",
-    apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
-    defaultHeaders: {
-        "HTTP-Referer": "https://study-hd.vercel.app",
-        "X-Title": "Study HD Office App",
-    }
-});
 
 router.get('/suggestions', authenticate, isAdmin, async (req, res) => {
     try {
@@ -87,7 +79,7 @@ Clusters:
 ${JSON.stringify(clusters.map(c => c.items.map(i => i.name)), null, 2)}`;
 
             try {
-                const response = await openai.chat.completions.create({
+                const response = await getOpenAI().chat.completions.create({
                     model: "openai/gpt-4o-mini",
                     messages: [{ role: "user", content: prompt }],
                     response_format: { type: "json_object" } // Using json object to enforce valid JSON

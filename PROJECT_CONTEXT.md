@@ -184,8 +184,10 @@ billing (`الأجور` vs `مصاريف` split, see §5).
 ## 9. Environment / running
 
 Env vars (server): `POSTGRES_URL` (else SQLite fallback), `OPENROUTER_API_KEY` (or `OPENAI_API_KEY`),
-`JWT_SECRET`, `PORT` (default 3001). AI client boots lazily — server runs without a key, AI just
-fails when used.
+`JWT_SECRET`, `PORT` (default 3001). The AI client is built lazily via `services/openai.js`, so
+the server boots without a key and AI features fail only when used. (`data-cleaning.js` used to
+build its own client eagerly, which meant a missing key crashed the whole server at startup —
+keep new AI call sites on `getOpenAI()`.)
 
 Dev: root `package.json` has workspace scripts (concurrently/nodemon); client Vite dev server
 proxies `/api` to the server on `:3001`. Prod: `vercel.json` rewrites `/api/*` → `server/index.js`
