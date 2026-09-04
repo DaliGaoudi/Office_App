@@ -384,3 +384,14 @@ The index list lives in `services/schemaSetup.js`, shared with `provision_office
 > Note this provisions Neon **directly**, so those databases are billed through your Neon account
 > rather than appearing under Vercel Storage. Offices created by hand through the Vercel
 > Marketplace integration sit in a different place; pick one and stay consistent.
+
+**Provisioning notes learned the hard way:**
+
+- A Neon organization created through Vercel is *managed by Vercel*, and Neon's own API refuses
+  project creation on it (`404 action restricted`). The database therefore goes through
+  `vercel integration add neon`, not the Neon API.
+- The integration injects the connection string itself; `server/db.js` accepts `POSTGRES_URL`
+  or `DATABASE_URL` so it works whichever name arrives.
+- Vercel's default `ssoProtection` is `all_except_custom_domains`, so the deployment-specific
+  URL (`<project>-<hash>.vercel.app`) demands a Vercel login. Give the office the production
+  alias `https://<project>.vercel.app`, which is public.

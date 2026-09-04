@@ -278,7 +278,13 @@ async function main() {
             method: 'POST',
             body: { name, project: project.id, target: 'production', gitSource: { type: 'github', ref: GIT_BRANCH, repoId } },
         });
-        console.log(`  ✓ deployment ${deployment.id} queued → https://${deployment.url}`);
+        // Report the production alias, not deployment.url. Vercel's default
+        // ssoProtection ("all_except_custom_domains") makes the deployment-specific
+        // URL demand a Vercel login, which the office does not have; the
+        // <project>.vercel.app alias is the one that serves the app publicly.
+        console.log(`  ✓ deployment ${deployment.id} queued`);
+        console.log(`    office URL : https://${name}.vercel.app`);
+        console.log(`    build log  : https://${deployment.url} (Vercel login required)`);
     }
 
     console.log('\n  ────────────────────────────────────────────────');
