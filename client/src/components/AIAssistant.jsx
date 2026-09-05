@@ -6,7 +6,7 @@ export default function AIAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Hello! I am your smart assistant. How can I help you today?' }
+    { role: 'assistant', content: 'Hello! I’m your AI assistant. I can search files, summarise attached documents, create an act or a contact, and manage appointments. How can I help?' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -86,7 +86,7 @@ export default function AIAssistant() {
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)',
         backdropFilter: 'blur(20px) saturate(180%)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        border: '1px solid var(--border)',
       }}
     >
       <div className="modal-header" style={{ marginBottom: 0, padding: '1rem 1.5rem', background: 'var(--nav-active-bg)' }}>
@@ -158,7 +158,7 @@ export default function AIAssistant() {
                 type="text" 
                 value={input} 
                 onChange={e => setInput(e.target.value)}
-                placeholder="Ask a question..."
+                placeholder="Ask a question, or request a summary of a file's documents..."
                 style={{ paddingRight: '3rem' }}
                 disabled={loading}
               />

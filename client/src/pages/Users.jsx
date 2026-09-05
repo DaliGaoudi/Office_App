@@ -204,7 +204,7 @@ export default function Users() {
                   value={formData.username}
                   onChange={e => setFormData({...formData, username: e.target.value})}
                   required
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text)' }}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
                 />
               </div>
 
@@ -217,7 +217,7 @@ export default function Users() {
                   value={formData.password}
                   onChange={e => setFormData({...formData, password: e.target.value})}
                   required={!currentUser}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text)' }}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
                 />
               </div>
 
@@ -226,7 +226,7 @@ export default function Users() {
                 <select
                   value={formData.role}
                   onChange={e => setFormData({...formData, role: e.target.value})}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text)' }}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
                 >
                   <option value="user">User (Secretary)</option>
                   <option value="admin">Admin</option>
@@ -243,8 +243,8 @@ export default function Users() {
                       type="text"
                       value={formData.societe}
                       onChange={e => setFormData({...formData, societe: e.target.value})}
-                      placeholder="Matches the petitioner name in records"
-                      style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text)' }}
+                      placeholder="Must match the petitioner name in the registers"
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
                     />
                   </div>
                   <div>
@@ -253,8 +253,8 @@ export default function Users() {
                       type="text"
                       value={formData.client_aliases}
                       onChange={e => setFormData({...formData, client_aliases: e.target.value})}
-                      placeholder="Example: DIAM TUNISIE, Diam Tunisie Company"
-                      style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text)' }}
+                      placeholder="e.g. DIAM TUNISIE, Diam Tunisie Ltd"
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
                     />
                     <small style={{ opacity: 0.6, fontSize: '0.75rem', display: 'block', marginTop: '4px' }}>Used to search for records where the company name might be written differently.</small>
                   </div>

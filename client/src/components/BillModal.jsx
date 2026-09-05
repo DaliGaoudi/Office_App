@@ -29,7 +29,7 @@ function fmtDate(raw) {
 }
 
 /**
- * Current Arabic date string: سوسة في DD MMMM YYYY
+ * Current date line: Sousse, DD MMMM YYYY
  */
 const ARABIC_MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',

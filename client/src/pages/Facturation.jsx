@@ -438,7 +438,7 @@ export default function Facturation({ type = 'general' }) {
                                                     <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)' }}>Completed records in this file:</h4>
                                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                         <button className="btn" style={{ padding: '2px 8px', fontSize: '10px' }} onClick={() => selectAllActions(fileId, item.actions)}>Select All</button>
-                                                        <button className="btn" style={{ padding: '2px 8px', fontSize: '10px', background: 'rgba(255,255,255,0.05)' }} onClick={() => deselectAllActions(fileId)}>Deselect All</button>
+                                                        <button className="btn" style={{ padding: '2px 8px', fontSize: '10px', background: 'var(--surface-2)' }} onClick={() => deselectAllActions(fileId)}>Deselect All</button>
                                                     </div>
                                                 </div>
                                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.75rem' }}>
@@ -451,8 +451,8 @@ export default function Facturation({ type = 'general' }) {
                                                                 style={{ 
                                                                     display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', 
                                                                     borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s ease',
-                                                                    background: isSelected ? 'rgba(var(--primary-rgb), 0.12)' : 'rgba(255,255,255,0.02)',
-                                                                    border: isSelected ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.05)',
+                                                                    background: isSelected ? 'rgba(var(--primary-rgb), 0.12)' : 'var(--surface-subtle)',
+                                                                    border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border)',
                                                                     boxShadow: isSelected ? '0 4px 12px rgba(var(--primary-rgb), 0.15)' : 'none',
                                                                     fontSize: '0.8rem'
                                                                 }}>

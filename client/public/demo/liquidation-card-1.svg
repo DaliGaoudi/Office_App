@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1754" viewBox="0 0 1240 1754">
+  <defs>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.045"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="1240" height="1754" fill="#f4f2ec"/>
+  <rect x="26" y="26" width="1188" height="1702" fill="#fffefb" stroke="#cfcabd" stroke-width="2"/>
+  <g font-family="'Times New Roman', serif" fill="#1b1b1b">
+
+    <!-- ── Header: French (left) / Arabic (right) ── -->
+    <g font-size="25" text-anchor="middle">
+      <text x="330" y="105">R&#233;publique Tunisienne</text>
+      <text x="330" y="142">Minist&#232;re des Affaires Sociales</text>
+      <text x="330" y="179">Caisse Nationale de S&#233;curit&#233; Sociale</text>
+      <text x="330" y="216" font-size="22">49, Avenue Ta&#239;eb M&#8217;hiri - Tunis</text>
+      <text x="330" y="250" font-size="22">T&#233;l : 71 796 744</text>
+    </g>
+    <g font-size="25" text-anchor="middle">
+      <text x="915" y="105">&#1575;&#1604;&#1580;&#1605;&#1607;&#1608;&#1585;&#1610;&#1577; &#1575;&#1604;&#1578;&#1608;&#1606;&#1587;&#1610;&#1577;</text>
+      <text x="915" y="142">&#1608;&#1586;&#1575;&#1585;&#1577; &#1575;&#1604;&#1588;&#1572;&#1608;&#1606; &#1575;&#1604;&#1575;&#1580;&#1578;&#1605;&#1575;&#1593;&#1610;&#1577;</text>
+      <text x="915" y="179">&#1575;&#1604;&#1589;&#1606;&#1583;&#1608;&#1602; &#1575;&#1604;&#1608;&#1591;&#1606;&#1610; &#1604;&#1604;&#1590;&#1605;&#1575;&#1606; &#1575;&#1604;&#1575;&#1580;&#1578;&#1605;&#1575;&#1593;&#1610;</text>
+      <text x="915" y="216" font-size="22">49 &#1548; &#1588;&#1575;&#1585;&#1593; &#1575;&#1604;&#1591;&#1610;&#1576; &#1575;&#1604;&#1605;&#1607;&#1610;&#1585;&#1610; - &#1578;&#1608;&#1606;&#1587;</text>
+      <text x="915" y="250" font-size="22">&#1575;&#1604;&#1607;&#1575;&#1578;&#1601; : 71 796 744</text>
+    </g>
+    <circle cx="620" cy="150" r="46" fill="none" stroke="#333" stroke-width="2"/>
+    <text x="620" y="163" font-size="34" text-anchor="middle" font-weight="bold">CNSS</text>
+
+    <!-- ── Title row ── -->
+    <text x="120" y="360" font-size="27" font-weight="bold" letter-spacing="1">ETAT DE LIQUIDATION N&#176;</text>
+    <text x="1120" y="360" font-size="31" font-weight="bold" text-anchor="end">&#1576;&#1591;&#1575;&#1602;&#1577; &#1580;&#1576;&#1585; &#1593;&#1583;&#1583;</text>
+    <rect x="520" y="330" width="230" height="40" fill="#fdf6d8" stroke="#c9bf8f"/>
+    <text x="635" y="359" font-size="26" text-anchor="middle" font-family="monospace">1621400317</text>
+
+    <text x="120" y="410" font-size="21">D&#233;cern&#233; par la Caisse Nationale de S&#233;curit&#233; Sociale en application</text>
+    <text x="120" y="441" font-size="21">des dispositions de l&#8217;article 105 de la loi n&#176;60-30 du 14 d&#233;cembre 1960</text>
+    <text x="120" y="472" font-size="21">telle que modifi&#233;e et compl&#233;t&#233;e par les textes subs&#233;quents.</text>
+    <text x="120" y="524" font-size="21">Pour infraction aux articles 45 et 46 de la loi n&#176; 60-30 sus vis&#233;e et &#224;</text>
+    <text x="120" y="555" font-size="21">l&#8217;article 18 de la loi n&#176; 94-28 du 21 f&#233;vrier 1994, l&#8217;employeur</text>
+
+    <!-- ── Employer block ── -->
+    <g font-family="monospace" font-size="27">
+      <text x="330" y="640">SARL MEDITEX</text>
+      <text x="360" y="682">AVENUE HABIB BOURGUIBA</text>
+      <text x="330" y="724">4000 SOUSSE</text>
+    </g>
+
+    <!-- ── Affiliation ── -->
+    <text x="270" y="820" font-size="22">affili&#233; sous le num&#233;ro</text>
+    <rect x="540" y="792" width="220" height="38" fill="#fdf6d8" stroke="#c9bf8f"/>
+    <text x="650" y="820" font-size="25" text-anchor="middle" font-family="monospace">512884  00</text>
+    <text x="1120" y="820" font-size="24" text-anchor="end">&#1575;&#1604;&#1605;&#1606;&#1582;&#1585;&#1591; &#1578;&#1581;&#1578; &#1593;&#1583;&#1583;</text>
+
+    <text x="120" y="878" font-size="21">est contraint par toutes les voies de droit &#224; payer le montant de :</text>
+    <rect x="540" y="898" width="230" height="40" fill="#fdf6d8" stroke="#c9bf8f"/>
+    <text x="655" y="927" font-size="26" text-anchor="middle" font-family="monospace">3 214,750</text>
+    <text x="150" y="985" font-size="21" font-family="monospace">TROIS MILLE DEUX CENT QUATORZE DINARS SEPT CENT CINQUANTE MILLIMES *****</text>
+
+    <!-- ── Quarter / year ── -->
+    <text x="120" y="1065" font-size="21">&#224; la Caisse Nationale de S&#233;curit&#233; Sociale au titre des cotisations</text>
+    <text x="120" y="1096" font-size="21">relatives au trimestre <tspan font-family="monospace" font-size="25">3</tspan>  de l&#8217;ann&#233;e <tspan font-family="monospace" font-size="25">2022</tspan></text>
+    <text x="120" y="1127" font-size="21">major&#233; des p&#233;nalit&#233;s de retard pr&#233;vues par l&#8217;article 105 sus vis&#233;.</text>
+    <text x="1120" y="1065" font-size="23" text-anchor="end">&#1575;&#1588;&#1578;&#1585;&#1575;&#1603;&#1575;&#1578; &#1593;&#1606; &#1575;&#1604;&#1579;&#1604;&#1575;&#1579;&#1610;&#1577; &#1605;&#1606; &#1587;&#1606;&#1577;</text>
+    <text x="1120" y="1101" font-size="23" text-anchor="end">&#1605;&#1593; &#1573;&#1590;&#1575;&#1601;&#1577; &#1582;&#1591;&#1575;&#1610;&#1575; &#1575;&#1604;&#1578;&#1571;&#1582;&#1610;&#1585;</text>
+
+    <!-- ── Date + signatures ── -->
+    <text x="470" y="1235" font-size="22">D&#233;cern&#233; par la C.N.S.S. le</text>
+    <rect x="760" y="1207" width="190" height="38" fill="#fdf6d8" stroke="#c9bf8f"/>
+    <text x="855" y="1235" font-size="25" text-anchor="middle" font-family="monospace">12-03-2026</text>
+    <text x="620" y="1300" font-size="23" text-anchor="middle" font-weight="bold">P/Le Pr&#233;sident Directeur G&#233;n&#233;ral</text>
+    <text x="915" y="1300" font-size="24" text-anchor="middle">&#1593;&#1606; &#1575;&#1604;&#1585;&#1574;&#1610;&#1587; &#1575;&#1604;&#1605;&#1583;&#1610;&#1585; &#1575;&#1604;&#1593;&#1575;&#1605;</text>
+    <g fill="none" stroke="#4a4a7a" stroke-width="2.5" opacity="0.75">
+      <ellipse cx="560" cy="1395" rx="88" ry="60"/>
+      <ellipse cx="560" cy="1395" rx="76" ry="49"/>
+      <path d="M700 1420 q40 -50 78 -8 q30 34 74 -14"/>
+    </g>
+    <text x="120" y="1545" font-size="20">Arr&#234;t&#233; et rendu ex&#233;cutoire par le Gouverneur par d&#233;l&#233;gation</text>
+    <text x="120" y="1575" font-size="20">du Ministre des Affaires Sociales</text>
+    <text x="1120" y="1545" font-size="22" text-anchor="end">&#1602;&#1585;&#1585;&#1607;&#1575; &#1608;&#1589;&#1610;&#1585;&#1607;&#1575; &#1606;&#1575;&#1601;&#1584;&#1577; &#1575;&#1604;&#1605;&#1601;&#1593;&#1608;&#1604;</text>
+    <g fill="none" stroke="#3a5a3a" stroke-width="2.5" opacity="0.7">
+      <circle cx="880" cy="1640" r="66"/>
+      <circle cx="880" cy="1640" r="55"/>
+      <path d="M470 1665 q46 -44 92 -6 q34 28 78 -18"/>
+    </g>
+  </g>
+  <rect width="1240" height="1754" filter="url(#grain)" opacity="0.5"/>
+</svg>

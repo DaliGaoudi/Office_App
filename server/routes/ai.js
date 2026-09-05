@@ -4,6 +4,7 @@ const { OpenAI } = require('openai');
 const db = require('../db');
 const authenticate = require('../middleware/auth');
 const multer = require('multer');
+const { createRecord, RECORD_COLUMNS } = require('../services/records');
 
 // Polyfill browser APIs required by pdf-parse in serverless environments (Vercel)
 if (typeof global.DOMMatrix === 'undefined') { global.DOMMatrix = class DOMMatrix {}; }
@@ -14,15 +15,9 @@ const pdfParse = require('pdf-parse');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB limit
 
-// Initialize OpenAI client for OpenRouter
-const openai = new OpenAI({
-    baseURL: "https://openrouter.ai/api/v1",
-    apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
-    defaultHeaders: {
-        "HTTP-Referer": "https://study-hd.vercel.app", // Optional
-        "X-Title": "Study HD Office App", // Optional
-    }
-});
+// Shared lazy OpenAI/OpenRouter client and the CNSS extraction helper.
+const { getOpenAI } = require('../services/openai');
+const { extractCnssFromFile } = require('../services/cnssExtract');
 
 /**
  * AI Tool: Search Acts
@@ -118,14 +113,160 @@ async function modifyRegistryRecord(id_so, id_r, updates) {
     const row = await db.get(`SELECT id_r FROM clients_record WHERE id_r = ? AND id_so::text = ?`, [id_r, id_so]);
     if (!row) throw new Error("Acte non trouvé ou accès refusé.");
 
-    const keys = Object.keys(updates);
-    if (keys.length === 0) return { success: true, message: "Aucune mise à jour fournie." };
+    // Only allow real columns through — keys come from the LLM and are
+    // interpolated into SQL. id_r / id_so are never user-modifiable.
+    const protectedCols = ['id_r', 'id_so', 'id_user'];
+    const keys = Object.keys(updates).filter(k => RECORD_COLUMNS.includes(k) && !protectedCols.includes(k));
+    const rejected = Object.keys(updates).filter(k => !keys.includes(k));
+    if (keys.length === 0) {
+        return { success: false, message: `Aucun champ valide fourni.${rejected.length ? ' Champs ignorés: ' + rejected.join(', ') : ''}` };
+    }
 
-    const setStr = keys.map(k => `${k} = ?`).join(', ');
-    const params = [...Object.values(updates), id_r];
+    const setStr = keys.map(k => `"${k}" = ?`).join(', ');
+    const params = [...keys.map(k => updates[k]), id_r];
 
     await db.run(`UPDATE clients_record SET ${setStr} WHERE id_r = ?`, params);
-    return { success: true, message: `L'acte ${id_r} a été mis à jour.` };
+    return {
+        success: true,
+        message: `L'acte ${id_r} a été mis à jour (${keys.join(', ')}).`,
+        ...(rejected.length ? { ignored_fields: rejected } : {}),
+    };
+}
+
+/**
+ * AI Tool: Create a new record (delegates to the shared records service so
+ * auto-ref / date_echeance / column whitelist / audit log stay in one place).
+ */
+async function createNewRecord(user, updates = {}) {
+    const record = await createRecord(user, updates || {});
+    return { success: true, id_r: record.id_r, ref: record.ref, message: `Nouvel acte créé (réf ${record.ref}, id ${record.id_r}).` };
+}
+
+/**
+ * AI Tool: Create or update a contact in the annuaire (telephone table).
+ */
+async function createOrUpdateContact(id_so, data = {}) {
+    const fields = ['nom', 'prenom', 'num_tel1', 'num_tel2', 'email_tel', 'adresse_tel', 'observation_tel'];
+
+    if (data.id_tel) {
+        const row = await db.get(`SELECT id_tel FROM telephone WHERE id_tel = ? AND id_so::text = ?`, [data.id_tel, id_so]);
+        if (!row) throw new Error("Contact non trouvé ou accès refusé.");
+        const keys = fields.filter(k => data[k] !== undefined);
+        if (keys.length === 0) return { success: true, message: "Aucune mise à jour fournie." };
+        const setStr = keys.map(k => `"${k}" = ?`).join(', ');
+        await db.run(`UPDATE telephone SET ${setStr} WHERE id_tel = ?`, [...keys.map(k => data[k]), data.id_tel]);
+        return { success: true, id_tel: data.id_tel, message: `Contact ${data.id_tel} mis à jour.` };
+    }
+
+    if (!data.nom && !data.num_tel1) throw new Error("Au moins un nom ou un numéro de téléphone est requis.");
+    const res = await db.run(
+        `INSERT INTO telephone (nom, prenom, num_tel1, num_tel2, email_tel, adresse_tel, observation_tel, id_so)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [data.nom || '', data.prenom || '', data.num_tel1 || '', data.num_tel2 || '', data.email_tel || '', data.adresse_tel || '', data.observation_tel || '', id_so]
+    );
+    return { success: true, id_tel: res.lastID, message: `Contact "${data.nom || data.num_tel1}" ajouté à l'annuaire.` };
+}
+
+/*
+ * Get an attachment's raw bytes.
+ *
+ * Only Blob-backed attachments have an absolute URL worth fetching. When Vercel Blob
+ * isn't configured the bytes live in Postgres and blob_url is the relative path
+ * "/api/attachments/file/:id" — passing that to fetch() throws, so this tool had been
+ * silently returning nothing for every DB-stored document. Read those straight from
+ * the table instead: no self-HTTP request, and no need to mint a signed URL.
+ */
+async function loadAttachmentBytes(att, id_so) {
+    if (/^https?:\/\//i.test(att.blob_url || '')) {
+        const resp = await fetch(att.blob_url);
+        if (!resp.ok) return null;
+        return Buffer.from(await resp.arrayBuffer());
+    }
+
+    const row = await db.get(
+        `SELECT data FROM attachments WHERE id = ? AND id_so::text = ?`, [att.id, String(id_so)]
+    );
+    if (!row || !row.data) return null;
+
+    // node-postgres returns BYTEA as a Buffer; tolerate a hex string too.
+    if (Buffer.isBuffer(row.data)) return row.data;
+    return typeof row.data === 'string'
+        ? Buffer.from(row.data.replace(/^\\x/, ''), 'hex')
+        : Buffer.from(row.data);
+}
+
+/**
+ * Fetch one attachment's text content. PDFs are parsed directly; images are
+ * OCR'd through the vision model. Returns '' on any failure (best-effort).
+ */
+async function extractAttachmentText(att, id_so) {
+    try {
+        const buffer = await loadAttachmentBytes(att, id_so);
+        if (!buffer) return '';
+
+        if (att.mimetype === 'application/pdf') {
+            const data = await pdfParse(buffer);
+            return (data.text || '').trim();
+        }
+        if (att.mimetype && att.mimetype.startsWith('image/')) {
+            const dataUrl = `data:${att.mimetype};base64,${buffer.toString('base64')}`;
+            const vision = await getOpenAI().chat.completions.create({
+                model: "openai/gpt-4o-mini",
+                messages: [
+                    { role: "system", content: "استخرج كامل النص المطبوع المقروء من هذه الوثيقة (محضر عدلي تونسي). تجاهل الكتابة باليد. أعد النص فقط دون شرح." },
+                    { role: "user", content: [
+                        { type: "text", text: "النص الكامل لهذه الوثيقة:" },
+                        { type: "image_url", image_url: { url: dataUrl } }
+                    ] }
+                ],
+            });
+            return (vision.choices[0]?.message?.content || '').trim();
+        }
+        return '';
+    } catch (e) {
+        console.error('extractAttachmentText failed for', att.filename, e.message);
+        return '';
+    }
+}
+
+/**
+ * AI Tool: Read the documents attached to a case. Verifies the case belongs to
+ * the user's office, then parses each file's text. Capped to keep within the
+ * serverless time budget.
+ */
+async function readCaseDocuments(id_so, id_r) {
+    const owner = await db.get(`SELECT id_r FROM clients_record WHERE id_r = ? AND id_so::text = ?`, [id_r, id_so]);
+    if (!owner) return { error: "Dossier non trouvé ou accès refusé." };
+
+    // Scoped by id_so as well as the ownership check above, and by record_type:
+    // record_id alone collides across registers, so a CNSS file sharing the numeric
+    // id would have had its documents read out as if they belonged to this case.
+    const rows = await db.all(
+        `SELECT id, filename, mimetype, blob_url FROM attachments
+          WHERE record_id = ? AND id_so::text = ? AND record_type IN ('registre', 'execution', 'general')
+          ORDER BY created_at DESC`,
+        [String(id_r), String(id_so)]
+    );
+    if (rows.length === 0) return { documents: [], note: "Aucun document attaché à ce dossier." };
+
+    const MAX_DOCS = 3, MAX_IMAGES = 2, PER_DOC_CHARS = 3000;
+    const documents = [];
+    let imagesUsed = 0;
+    let truncated = rows.length > MAX_DOCS;
+
+    for (const att of rows.slice(0, MAX_DOCS)) {
+        const isImage = att.mimetype && att.mimetype.startsWith('image/');
+        if (isImage && imagesUsed >= MAX_IMAGES) {
+            documents.push({ filename: att.filename, content: '[image non lue: limite atteinte]' });
+            continue;
+        }
+        if (isImage) imagesUsed++;
+        let text = await extractAttachmentText(att, id_so);
+        if (text.length > PER_DOC_CHARS) { text = text.slice(0, PER_DOC_CHARS) + '… [tronqué]'; truncated = true; }
+        documents.push({ filename: att.filename, content: text || '[contenu illisible]' });
+    }
+
+    return { documents, total_attachments: rows.length, ...(truncated ? { note: `Affichage des ${documents.length} document(s) les plus récents.` } : {}) };
 }
 
 /**
@@ -254,20 +395,90 @@ router.post('/chat', authenticate, async (req, res) => {
                         required: ["query"]
                     }
                 }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "read_case_documents",
+                    description: "Lire et résumer les documents scannés (PDF/images) attachés à un dossier. Utilise l'OCR pour les images.",
+                    parameters: {
+                        type: "object",
+                        properties: { id_r: { type: "number", description: "Identifiant du dossier (id_r)" } },
+                        required: ["id_r"]
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "create_record",
+                    description: "Créer un nouveau dossier/acte dans le registre général. Confirme les détails avec l'utilisateur avant de créer.",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            updates: {
+                                type: "object",
+                                description: "Champs du dossier (ex: {nom_cl1, nom_cl2, de_part, cl1_adresse, remarque, tribunal, date_reg}). La référence est auto-générée."
+                            }
+                        },
+                        required: ["updates"]
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "create_or_update_contact",
+                    description: "Ajouter un contact à l'annuaire, ou le modifier si id_tel est fourni.",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            id_tel: { type: "number", description: "Fourni uniquement pour modifier un contact existant" },
+                            nom: { type: "string" },
+                            prenom: { type: "string" },
+                            num_tel1: { type: "string" },
+                            num_tel2: { type: "string" },
+                            email_tel: { type: "string" },
+                            adresse_tel: { type: "string" },
+                            observation_tel: { type: "string" }
+                        }
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "search_contacts",
+                    description: "Rechercher un contact dans l'annuaire (téléphone, email).",
+                    parameters: {
+                        type: "object",
+                        properties: { query: { type: "string", description: "Nom, prénom ou numéro" } }
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "get_upcoming_events",
+                    description: "Obtenir les prochains événements/audiences du calendrier.",
+                    parameters: { type: "object", properties: {} }
+                }
             }
         ];
 
-        const response = await openai.chat.completions.create({
+        const response = await getOpenAI().chat.completions.create({
             model: "openai/gpt-4o-mini",
             messages: [
-                { 
-                    role: "system", 
+                {
+                    role: "system",
                     content: `Tu es l'Intelligence de l'Étude HD. Tu gères le cabinet d'huissier.
-                        - Tu as plein accès au calendrier et au registre général.
-                        - Tu peux LIRE, CRÉER et MODIFIER des événements et des dossiers.
+                        - Tu as plein accès au calendrier, au registre général et à l'annuaire.
+                        - Tu peux LIRE, CRÉER et MODIFIER des événements, des dossiers et des contacts.
+                        - Tu peux LIRE et RÉSUMER les documents scannés (PDF/images) attachés à un dossier via read_case_documents.
                         - Tu peux analyser l'historique d'un cas (get_case_intelligence) pour en faire des résumés.
                         - Tu peux auto-compléter des infos si tu les trouves dans l'annuaire lors de la création d'actes.
-                        Reste professionnel, précis et confirme toujours les modifications.` 
+                        RÈGLE IMPORTANTE: avant toute écriture (create_record, modify_registry_record, create_or_update_contact, manage_calendar de type create/update/delete), récapitule à l'utilisateur ce que tu vas faire et demande confirmation. N'exécute l'outil d'écriture qu'après un accord clair.
+                        Réponds dans la langue de l'utilisateur (arabe ou français). Reste professionnel et précis.`
                 },
                 ...messages
             ],
@@ -302,6 +513,12 @@ router.post('/chat', authenticate, async (req, res) => {
                        result = await searchContacts(id_so, functionArgs.query);
                    } else if (functionName === "get_upcoming_events") {
                        result = await getCalendar(id_so);
+                   } else if (functionName === "read_case_documents") {
+                       result = await readCaseDocuments(id_so, functionArgs.id_r);
+                   } else if (functionName === "create_record") {
+                       result = await createNewRecord(req.user, functionArgs.updates);
+                   } else if (functionName === "create_or_update_contact") {
+                       result = await createOrUpdateContact(id_so, functionArgs);
                    }
                 } catch (e) {
                    result = { error: e.message };
@@ -315,7 +532,7 @@ router.post('/chat', authenticate, async (req, res) => {
                 });
             }
 
-            const secondResponse = await openai.chat.completions.create({
+            const secondResponse = await getOpenAI().chat.completions.create({
                 model: "openai/gpt-4o-mini",
                 messages: [
                     { role: "system", content: "Réponds à l'utilisateur avec une synthèse claire des données ou confirme les changements." },
@@ -407,8 +624,8 @@ router.post('/extract', authenticate, upload.single('file'), async (req, res) =>
             return res.status(400).json({ error: "Type de fichier non supporté. Envoyez un PDF ou une image." });
         }
 
-        const response = await openai.chat.completions.create({
-            model: "openai/gpt-4o-mini", // Very capable for OCR and JSON parsing
+        const response = await getOpenAI().chat.completions.create({
+            model: "google/gemini-2.5-pro", // Strong vision OCR for Arabic + financial tables
             messages: messages,
             response_format: { type: "json_object" }
         });
@@ -425,6 +642,20 @@ router.post('/extract', authenticate, upload.single('file'), async (req, res) =>
 
     } catch (err) {
         console.error("AI File Extraction Error:", err);
+        res.status(500).json({ error: err.message || "Erreur d'extraction IA." });
+    }
+});
+
+// Extract the fields of a CNSS "État de Liquidation" (the bilingual coercion-card
+// paper) so they can prefill a CNSS company + its first liquidation card. Mirrors
+// /extract but with a CNSS-specific prompt and field schema.
+router.post('/extract-cnss', authenticate, upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu." });
+        const data = await extractCnssFromFile(req.file.buffer, req.file.mimetype);
+        res.json({ success: true, data });
+    } catch (err) {
+        console.error("CNSS Extraction Error:", err);
         res.status(500).json({ error: err.message || "Erreur d'extraction IA." });
     }
 });

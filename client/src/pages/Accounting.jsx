@@ -11,6 +11,27 @@ const formatAmount = (val) => {
   return Number(val).toFixed(3);
 };
 
+/*
+ * /accounting/stats sums the fee columns straight out of the table, and those are
+ * millimes — the unit every other screen divides by 1000 before showing (see
+ * utils/formatters.js). This page's own formatAmount above does not, so the cards,
+ * the charts and the CSV all read a thousand times too high. Convert once, here,
+ * so every consumer below is in dinars.
+ */
+const toDinars = (json) => ({
+  ...json,
+  totals: Object.fromEntries(
+    Object.entries(json.totals || {}).map(([k, v]) => [k, (Number(v) || 0) / 1000])
+  ),
+  monthly: (json.monthly || []).map((m) => ({
+    ...m,
+    base: (Number(m.base) || 0) / 1000,
+    tva: (Number(m.tva) || 0) / 1000,
+    expenses: (Number(m.expenses) || 0) / 1000,
+    total: (Number(m.total) || 0) / 1000,
+  })),
+});
+
 export default function Accounting() {
   const [data, setData] = useState({ monthly: [], totals: { base: 0, tva: 0, expenses: 0, total: 0 } });
   const [loading, setLoading] = useState(true);
@@ -32,7 +53,7 @@ export default function Accounting() {
       });
       if (!res.ok) throw new Error('Failed to load financial data');
       const json = await res.json();
-      setData(json);
+      setData(toDinars(json));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -171,7 +192,7 @@ export default function Accounting() {
               <div style={{ width: '100%', height: 350 }} dir="ltr">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={data.monthly} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,148,148,0.2)" vertical={false} />
                     <XAxis dataKey="monthName" stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} />
                     <YAxis stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} />
                     <Tooltip content={<CustomTooltip />} />
@@ -191,7 +212,7 @@ export default function Accounting() {
               <div style={{ width: '100%', height: 250 }} dir="ltr">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data.monthly} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,148,148,0.2)" vertical={false} />
                     <XAxis dataKey="monthName" stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} />
                     <YAxis stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} />
                     <Tooltip content={<CustomTooltip />} />

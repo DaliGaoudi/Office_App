@@ -4,6 +4,7 @@ const db = require('../db');
 
 const authenticate = require('../middleware/auth');
 const { logActivity } = require('../utils/logger');
+const { createRecord } = require('../services/records');
 
 // ── TVA cache (refreshed from settings table) ──────────────────────────────
 let cachedTVA = 19; // default — overridden on first DB read
@@ -40,47 +41,57 @@ module.exports.refreshTVA = refreshTVA;
 // Get all records (clients_record) with advanced search
 router.get('/', authenticate, async (req, res) => {
     try {
-        const { page = 1, limit = 50, ref, nom_cl1, de_part, date_reg, date_inscri } = req.query;
+        const { page = 1, limit = 50, ref, nom_cl1, de_part, date_reg, date_inscri, search } = req.query;
         const offset = (page - 1) * limit;
 
-        let query = `SELECT * FROM clients_record WHERE id_so::text = ?`;
-        let params = [req.user.id_so];
+        // Build the filter clause once so the list query and count query stay in
+        // sync. We accept BOTH the per-field filters (ref/nom_cl1/de_part/...) and
+        // a single free-text `search` param, so the backend works regardless of
+        // which client build is live (an older bundle that sent only `search`
+        // would otherwise be ignored here and appear to "show all").
+        let filterSql = '';
+        const filterParams = [];
 
+        if (search) {
+            filterSql += ` AND (ref::text LIKE ? OR nom_cl1 LIKE ? OR nom_cl2 LIKE ? OR de_part LIKE ?)`;
+            filterParams.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+        }
         if (ref) {
-            query += ` AND ref::text LIKE ?`;
-            params.push(`%${ref}%`);
+            filterSql += ` AND ref::text LIKE ?`;
+            filterParams.push(`%${ref}%`);
         }
         if (nom_cl1) {
-            query += ` AND (nom_cl1 LIKE ? OR nom_cl2 LIKE ?)`;
-            params.push(`%${nom_cl1}%`, `%${nom_cl1}%`);
+            filterSql += ` AND (nom_cl1 LIKE ? OR nom_cl2 LIKE ?)`;
+            filterParams.push(`%${nom_cl1}%`, `%${nom_cl1}%`);
         }
         if (de_part) {
-            query += ` AND de_part LIKE ?`;
-            params.push(`%${de_part}%`);
+            filterSql += ` AND de_part LIKE ?`;
+            filterParams.push(`%${de_part}%`);
         }
         if (date_reg) {
-            query += ` AND date_reg LIKE ?`;
-            params.push(`%${date_reg}%`);
+            filterSql += ` AND date_reg LIKE ?`;
+            filterParams.push(`%${date_reg}%`);
         }
         if (date_inscri) {
-            query += ` AND date_inscri LIKE ?`;
-            params.push(`%${date_inscri}%`);
+            filterSql += ` AND date_inscri LIKE ?`;
+            filterParams.push(`%${date_inscri}%`);
         }
+
+        // The general and execution registers share clients_record; exclude
+        // execution rows (is_execution = TRUE) so they don't leak into general
+        // results. General rows have is_execution FALSE or NULL, hence IS NOT TRUE.
+        const baseWhere = `WHERE id_so::text = ? AND (is_execution IS NOT TRUE)${filterSql}`;
+
+        let query = `SELECT * FROM clients_record ${baseWhere}`;
+        let params = [req.user.id_so, ...filterParams];
 
         query += ` ORDER BY ref DESC LIMIT ? OFFSET ?`;
         params.push(parseInt(limit), parseInt(offset));
 
         const rows = await db.all(query, params);
-        
-        let countQuery = `SELECT COUNT(*) as count FROM clients_record WHERE id_so::text = ?`;
-        let countParams = [req.user.id_so];
-        
-        // Re-apply same filters for count
-        if (ref) { countQuery += ` AND ref::text LIKE ?`; countParams.push(`%${ref}%`); }
-        if (nom_cl1) { countQuery += ` AND (nom_cl1 LIKE ? OR nom_cl2 LIKE ?)`; countParams.push(`%${nom_cl1}%`, `%${nom_cl1}%`); }
-        if (de_part) { countQuery += ` AND de_part LIKE ?`; countParams.push(`%${de_part}%`); }
-        if (date_reg) { countQuery += ` AND date_reg LIKE ?`; countParams.push(`%${date_reg}%`); }
-        if (date_inscri) { countQuery += ` AND date_inscri LIKE ?`; countParams.push(`%${date_inscri}%`); }
+
+        const countQuery = `SELECT COUNT(*) as count FROM clients_record ${baseWhere}`;
+        const countParams = [req.user.id_so, ...filterParams];
 
         const countRow = await db.get(countQuery, countParams);
         const count = parseInt(countRow.count);
@@ -114,77 +125,8 @@ router.get('/:id', authenticate, async (req, res) => {
 // Create Record
 router.post('/', authenticate, async (req, res) => {
     try {
-        const allColumns = [
-            'id_r', 'montant_partiel1', 'montant_partiel2', 'inscri', 'delimitation', 'poste', 'autre',
-            'nom_cl1', 'nom_cl2', 'de_part', 'ref', 'cl1_profession', 'cl1_adresse', 'cl1_avocat',
-            'cl1_tel', 'cl1_adressepersonnel', 'cl2_profession', 'cl2_adresse', 'cl2_avocat', 'cl2_tel',
-            'cl2_adressepersonnel', 'fin_date', 'remarque', 'date_reg', 'date_inscri', 'origine',
-            'exemple', 'imprimer', 'orientation', 'mobilite', 'version_bureau', 'TVA', 'salaire',
-            'acompte', 'resume', 'date_ajout', 'id_user', 'id_so', 'status', 'date_s', 'nombre',
-            'tribunal', 'resultat', 'tel2_cl1', 'tel2_cl2',
-            'service_petitioner_name', 'service_petitioner_contact', 'date_echeance'
-        ];
-
-        const finalRecord = {};
-        
-        // 1. Auto-increment ref if not provided
-        if (!req.body.ref) {
-            const maxRefRow = await db.get(`SELECT MAX(ref) as max_ref FROM clients_record WHERE id_so = ?`, [req.user.id_so]);
-            finalRecord.ref = (parseInt(maxRefRow?.max_ref) || 0) + 1;
-        } else {
-            finalRecord.ref = req.body.ref;
-        }
-
-        // 2. Calculate date_echeance (date_reg + 5 days)
-        const date_reg = req.body.date_reg || new Date().toISOString().split('T')[0];
-        if (!req.body.date_echeance && date_reg) {
-            try {
-                const d = new Date(date_reg);
-                if (!isNaN(d.getTime())) {
-                    d.setDate(d.getDate() + 5);
-                    finalRecord.date_echeance = d.toISOString().split('T')[0];
-                }
-            } catch (e) {
-                console.error("Error calculating date_echeance:", e);
-            }
-        }
-
-        allColumns.forEach(col => {
-            if (finalRecord[col] !== undefined) return; // already set (ref or date_echeance)
-            
-            const val = req.body[col];
-            if (val !== undefined && val !== null && val !== '') {
-                finalRecord[col] = val;
-            } else {
-                if (col === 'id_user') finalRecord[col] = req.user.id;
-                else if (col === 'id_so') finalRecord[col] = req.user.id_so;
-                else if (col === 'date_ajout') finalRecord[col] = new Date().toLocaleString('fr-FR');
-                else if (col === 'status') finalRecord[col] = 'has_deposit';
-                else if (['id_r'].includes(col)) {
-                    // handled by Postgres
-                } else if (['nom_cl1', 'nom_cl2', 'de_part', 'date_reg', 'remarque', 'date_s', 'nombre', 'tribunal', 'resultat', 'service_petitioner_name', 'service_petitioner_contact', 'date_echeance', 'date_inscri'].includes(col)) {
-                    finalRecord[col] = finalRecord[col] || '';
-                } else {
-                    finalRecord[col] = '0';
-                }
-            }
-        });
-
-        const keys = Object.keys(finalRecord).filter(k => finalRecord[k] !== undefined);
-        const values = keys.map(k => finalRecord[k]);
-        const placeholders = keys.map(() => '?').join(',');
-
-        const quotedKeys = keys.map(k => `"${k}"`);
-        let query = `INSERT INTO clients_record (${quotedKeys.join(',')}) VALUES (${placeholders})`;
-        if (process.env.POSTGRES_URL) {
-            query += ` RETURNING id_r`;
-        }
-        
-        const result = await db.run(query, values);
-        
-        await logActivity(req.user, 'CREATE', 'RECORD', `إضافة ملف عام جديد عدد ${finalRecord.ref}`);
-
-        res.json({ id_r: result.lastID, ...finalRecord });
+        const record = await createRecord(req.user, req.body);
+        res.json(record);
     } catch (err) {
         console.error('INSERT ERROR:', err.message);
         res.status(500).json({ error: err.message });

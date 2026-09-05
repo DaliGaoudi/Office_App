@@ -26,36 +26,57 @@ function computeActionSalaire(row) {
 // Main Execution List
 router.get('/', authenticate, async (req, res) => {
     try {
-        const { search = '', page = 1, limit = 25 } = req.query;
+        const { search = '', ref, nom_cl1, de_part, date_inscri, page = 1, limit = 25 } = req.query;
         const offset = (parseInt(page) - 1) * parseInt(limit);
         const l = parseInt(limit);
-        
-        // Query to sum the 'salaire' (total price) of all actions per record using a subquery and EXISTS to avoid duplication
-        let query = `SELECT c.*, c.id_r as id_o, 
-                       (SELECT COALESCE(SUM(CAST(NULLIF(o2.salaire, '') AS NUMERIC)), 0) 
-                        FROM "œuvre_type" o2 
-                        WHERE o2.id_o::text = c.id_r::text) as total_salaire
-                        FROM clients_record c 
-                       WHERE c.id_so::text = ? 
-                       AND c.is_execution = TRUE`;
-        let params = [req.user.id_so];
+
+        // The execution page sends the same per-field filters as the general register
+        // (ref / nom_cl1 / de_part / date_inscri); the old handler only read a single
+        // `search` param, so typing into those fields never filtered anything.
+        // Build the filter clause once so the list query and count query stay in sync.
+        let filterSql = '';
+        const filterParams = [];
 
         if (search) {
-            query += ` AND (c.ref::text LIKE ? OR c.nom_cl1 LIKE ? OR c.de_part LIKE ?)`;
-            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+            filterSql += ` AND (c.ref::text LIKE ? OR c.nom_cl1 LIKE ? OR c.de_part LIKE ?)`;
+            filterParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
+        }
+        if (ref) {
+            filterSql += ` AND c.ref::text LIKE ?`;
+            filterParams.push(`%${ref}%`);
+        }
+        if (nom_cl1) {
+            filterSql += ` AND (c.nom_cl1 LIKE ? OR c.nom_cl2 LIKE ?)`;
+            filterParams.push(`%${nom_cl1}%`, `%${nom_cl1}%`);
+        }
+        if (de_part) {
+            filterSql += ` AND c.de_part LIKE ?`;
+            filterParams.push(`%${de_part}%`);
+        }
+        if (date_inscri) {
+            filterSql += ` AND c.date_inscri::text LIKE ?`;
+            filterParams.push(`%${date_inscri}%`);
         }
 
-        const countQuery = `SELECT COUNT(c.id_r) as count FROM clients_record c 
-                            WHERE c.id_so::text = ? 
-                            AND c.is_execution = TRUE
-                            ${search ? 'AND (c.ref::text LIKE ? OR c.nom_cl1 LIKE ? OR c.de_part LIKE ?)' : ''}`;
-        
+        const baseWhere = `WHERE c.id_so::text = ? AND c.is_execution = TRUE${filterSql}`;
+        const params = [req.user.id_so, ...filterParams];
+
+        // Query to sum the 'salaire' (total price) of all actions per record using a subquery and EXISTS to avoid duplication
+        let query = `SELECT c.*, c.id_r as id_o,
+                       (SELECT COALESCE(SUM(CAST(NULLIF(o2.salaire, '') AS NUMERIC)), 0)
+                        FROM "œuvre_type" o2
+                        WHERE o2.id_o::text = c.id_r::text) as total_salaire
+                        FROM clients_record c
+                       ${baseWhere}`;
+
+        const countQuery = `SELECT COUNT(c.id_r) as count FROM clients_record c ${baseWhere}`;
         const cRow = await db.get(countQuery, params);
-        
+        const total = parseInt(cRow?.count || 0);
+
         query += ` ORDER BY c.ref DESC LIMIT ? OFFSET ?`;
         const rows = await db.all(query, [...params, l, offset]);
 
-        res.json({ data: (rows || []), total: parseInt(cRow?.count || 0), page: parseInt(page) });
+        res.json({ data: (rows || []), total, page: parseInt(page), totalPages: Math.ceil(total / l) || 1 });
     } catch (err) {
         console.error("Execution Main List Error:", err);
         res.status(500).json({ error: err.message, v: "2.1" });

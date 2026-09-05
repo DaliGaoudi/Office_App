@@ -100,7 +100,7 @@ export default function RegistreExecution() {
       </div>
 
       {/* ── Filters ── */}
-        <form onSubmit={handleSearch} className="search-wrapper glass" style={{ padding: '1rem', flexWrap: 'wrap', direction: 'rtl', marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
+        <form onSubmit={handleSearch} className="search-wrapper glass" style={{ padding: '1rem', flexWrap: 'wrap', direction: 'ltr', marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
           <input type="text" placeholder="Reference Number"   value={filters.ref}        onChange={e => setFilters({ ...filters, ref: e.target.value })} />
           <div style={{ flex: 1, minWidth: '150px' }}>
             <AutocompleteInput placeholder="Service Requester" value={filters.de_part} onChange={e => setFilters({ ...filters, de_part: e.target.value })} />
@@ -111,14 +111,14 @@ export default function RegistreExecution() {
           <input type="text" placeholder="Record Notification Date (YYYY-MM-DD)" value={filters.date_inscri || ''} onChange={e => setFilters({ ...filters, date_inscri: e.target.value })} />
 
           <button type="submit" className="btn"><Search size={18} /> Search</button>
-          <button type="button" className="btn" style={{ background: 'rgba(255,255,255,0.08)' }}
+          <button type="button" className="btn" style={{ background: 'var(--surface-2)' }}
             onClick={() => { setFilters({ ref: '', nom_cl1: '', de_part: '', date_inscri: '' }); setActiveFilters({}); setPage(1); }}>
             Clear
           </button>
         </form>
 
       {/* ── Table ── */}
-      <div className="glass table-container print-area" style={{ direction: 'rtl' }}>
+      <div className="glass table-container print-area" style={{ direction: 'ltr' }}>
         {loading ? (
           <p style={{ padding: '2rem', textAlign: 'center', opacity: 0.6 }}>Loading…</p>
         ) : (

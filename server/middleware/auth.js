@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'huissier_mourad_secret_legacy';
+const { getJwtSecret } = require('../config/secrets');
 
 /**
  * Authentication Middleware
@@ -16,7 +15,7 @@ function authenticate(req, res, next) {
     }
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = jwt.verify(token, getJwtSecret());
         req.user = decoded;
         
         // Ensure id_so is a string (consistent with legacy behavior)

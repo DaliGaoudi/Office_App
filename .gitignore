@@ -5,3 +5,14 @@ server/.env
 **/.env
 database_v3.sqlite
 server/database_v3.sqlite
+
+# Local tooling / generated artifacts (not part of the webapp)
+.claude/
+graphify-out/
+
+# Database backups (contain real data — never commit)
+server/backups/
+
+# Template backup written by scripts/parameterize_cnss_template.js —
+# the pristine original is recoverable from git history.
+server/assets/*.docx.bak

@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../db');
 const authenticate = require('../middleware/auth');
 const stringSimilarity = require('string-similarity');
-const { OpenAI } = require('openai');
+const { getOpenAI } = require('../services/openai');
 
 // Ensure admin only
 const isAdmin = (req, res, next) => {
@@ -14,26 +14,18 @@ const isAdmin = (req, res, next) => {
     }
 };
 
-const openai = new OpenAI({
-    baseURL: "https://openrouter.ai/api/v1",
-    apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
-    defaultHeaders: {
-        "HTTP-Referer": "https://study-hd.vercel.app",
-        "X-Title": "Study HD Office App",
-    }
-});
 
 router.get('/suggestions', authenticate, isAdmin, async (req, res) => {
     try {
         // Fetch all unique client names and their counts
         const query = `
-            SELECT nom_cl1, COUNT(*) as count 
-            FROM clients_record 
-            WHERE nom_cl1 IS NOT NULL AND nom_cl1 != '' 
-            GROUP BY nom_cl1 
+            SELECT nom_cl1, COUNT(*) as count
+            FROM clients_record
+            WHERE id_so::text = ? AND nom_cl1 IS NOT NULL AND nom_cl1 != ''
+            GROUP BY nom_cl1
             ORDER BY count DESC
         `;
-        const rows = await db.all(query);
+        const rows = await db.all(query, [req.user.id_so]);
         const names = rows.map(r => r.nom_cl1.trim());
 
         if (names.length === 0) {
@@ -87,7 +79,7 @@ Clusters:
 ${JSON.stringify(clusters.map(c => c.items.map(i => i.name)), null, 2)}`;
 
             try {
-                const response = await openai.chat.completions.create({
+                const response = await getOpenAI().chat.completions.create({
                     model: "openai/gpt-4o-mini",
                     messages: [{ role: "user", content: prompt }],
                     response_format: { type: "json_object" } // Using json object to enforce valid JSON
@@ -148,17 +140,24 @@ router.post('/merge', authenticate, isAdmin, async (req, res) => {
         let totalUpdated = 0;
 
         for (const merge of merges) {
-            const { oldNames, canonicalName } = merge;
-            if (!canonicalName || !oldNames || oldNames.length === 0) continue;
+            const canonicalName = (merge.canonicalName || '').trim();
+            const oldNames = Array.isArray(merge.oldNames)
+                ? merge.oldNames.map(n => (n || '').trim()).filter(Boolean)
+                : [];
+            if (!canonicalName || oldNames.length === 0) continue;
 
-            // Remove the canonical name from oldNames if it's there
-            const namesToReplace = oldNames.filter(n => n !== canonicalName);
-            if (namesToReplace.length === 0) continue;
+            // /suggestions clusters names with TRIM(nom_cl1), but the stored column
+            // often carries leading/trailing whitespace. Match on TRIM so the rows
+            // actually hit, and normalize whitespace-padded copies of the canonical
+            // name too (otherwise it re-splits into a clean + a padded variant).
+            // AND nom_cl1 <> ? skips rows already exactly equal to the clean canonical,
+            // so totalUpdated reflects rows actually changed.
+            // id_so keeps the merge inside the caller's office — without it this
+            // rewrites nom_cl1 for every office sharing the database.
+            const placeholders = oldNames.map(() => '?').join(',');
+            const query = `UPDATE clients_record SET nom_cl1 = ? WHERE id_so::text = ? AND TRIM(nom_cl1) IN (${placeholders}) AND nom_cl1 <> ?`;
 
-            const placeholders = namesToReplace.map(() => '?').join(',');
-            const query = `UPDATE clients_record SET nom_cl1 = ? WHERE nom_cl1 IN (${placeholders})`;
-            
-            const result = await db.run(query, [canonicalName, ...namesToReplace]);
+            const result = await db.run(query, [canonicalName, req.user.id_so, ...oldNames, canonicalName]);
             totalUpdated += result.changes || 0;
         }
 

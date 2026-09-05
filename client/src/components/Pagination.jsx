@@ -50,7 +50,7 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
       gap: '0.75rem',
       padding: '0.75rem 1rem',
       borderTop: '1px solid var(--card-border)',
-      direction: 'rtl',
+      direction: 'ltr',
     }}>
       {/* Right: total count + page size chooser (flipped in RTL) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>

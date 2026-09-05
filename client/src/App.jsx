@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate } from 're
 import { Shield, BookOpen, Users as UsersIcon, CalendarDays, LogOut, FileText, Receipt, Settings as SettingsIcon, Sun, Moon, Menu, Search, Database, Eye, PieChart } from 'lucide-react';
 import './index.css';
 
-import logo from './assets/logo.png';
+import { OFFICE_LOGO, loadBranding, cachedOfficeLabel, composeOfficeLabel } from './branding';
 
 // Context for Auth
 const AuthContext = createContext();
@@ -14,10 +14,16 @@ const useAuth = () => useContext(AuthContext);
 const ThemeContext = createContext();
 const useTheme = () => useContext(ThemeContext);
 
+// Context for per-deployment branding (the office name shown in the sidebar/tab).
+// It comes from the database, so it isn't known until the first fetch resolves.
+const BrandingContext = createContext({ officeLabel: '' });
+const useBranding = () => useContext(BrandingContext);
+
 // --- Layout & Components --- //
 
 const Sidebar = ({ isOpen, closeMenu }) => {
   const { user, logout } = useAuth();
+  const { officeLabel } = useBranding();
   const navigate = useNavigate();
   const [globalSearch, setGlobalSearch] = useState('');
   
@@ -39,13 +45,13 @@ const Sidebar = ({ isOpen, closeMenu }) => {
       {isOpen && <div className="mobile-overlay animate-fade" onClick={closeMenu}></div>}
       <div className={`sidebar glass-panel ${isOpen ? 'open' : ''}`}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', padding: '0 1rem' }}>
-          <img src={logo} alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-          <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>Bailiff Office Suite</h2>
+          <img src={OFFICE_LOGO} alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+          <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>{officeLabel}</h2>
         </div>
         
         <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
           {user?.role !== 'client' && (
-            <form onSubmit={handleGlobalSearch} style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>
+            <form onSubmit={handleGlobalSearch} style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-2)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>
               <input 
                 type="text" 
                 placeholder="Search by reference number..." 
@@ -250,21 +256,41 @@ import Dashboard from './pages/Dashboard';
 import RegistreGeneral from './pages/RegistreGeneral';
 import RegistreExecution from './pages/RegistreExecution';
 import RegistreCNSS from './pages/RegistreCNSS';
+import RegistreCNSSDetail from './pages/RegistreCNSSDetail';
 import Telephone from './pages/Telephone';
 import Calendar from './pages/Calendar';
 import RecordDetail from './pages/RecordDetail';
 import Facturation from './pages/Facturation';
+import FacturationCNSS from './pages/FacturationCNSS';
 import Settings from './pages/Settings';
 import Users from './pages/Users';
 import PortalDashboard from './pages/PortalDashboard';
 import DataCleaning from './pages/DataCleaning';
 import AuditLogs from './pages/AuditLogs';
 import Accounting from './pages/Accounting';
+import Onboarding from './pages/Onboarding';
+import SuspendedNotice from './components/SuspendedNotice';
+
+// How often a logged-in session re-asks the server for the office's service
+// status. The server answers from its own cache, so this is a cheap local call;
+// it exists so a suspension (or a reinstatement) lands without a page reload.
+// Half the server's own check-in cadence, so the screen is never the slow half.
+const LICENSE_POLL_MS = 30 * 1000;
 
 function App() {
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user')) || null);
   const [token, setToken] = useState(() => localStorage.getItem('token') || null);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+
+  // Branding + first-run state, both answered by /api/onboarding/status.
+  // `null` means "not asked yet" — nothing is rendered until it resolves, so a
+  // configured office never flashes the onboarding screen on a slow connection.
+  const [needsOnboarding, setNeedsOnboarding] = useState(null);
+  const [officeLabel, setOfficeLabel] = useState(cachedOfficeLabel);
+
+  // Service status from the provider's control plane; null = unknown, which is
+  // treated exactly like "active" so the app never blocks itself by accident.
+  const [license, setLicense] = useState(null);
 
   useEffect(() => {
     if (import.meta.env.VITE_DEMO_MODE === 'true' && !user) {
@@ -281,6 +307,56 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadBranding().then((b) => {
+      if (cancelled) return;
+      setNeedsOnboarding(b.needsOnboarding);
+      setOfficeLabel(b.label);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // The tab title is per-deployment branding, so it follows the office name.
+  useEffect(() => { document.title = officeLabel; }, [officeLabel]);
+
+  /*
+   * Service status (see server/services/license.js). Only meaningful once
+   * someone is logged in — the endpoint is authenticated, and the notice is
+   * addressed to the office, not to a stranger who found the URL.
+   *
+   * `license` stays null until the first answer, and any failure leaves it null:
+   * a network hiccup must never lock a working office out of its own app.
+   */
+  const fetchLicense = async (force) => {
+    const t = localStorage.getItem('token');
+    if (!t) return null;
+    try {
+      const res = await fetch(`${API_BASE}/license/status${force ? '?force=1' : ''}`, {
+        headers: { Authorization: `Bearer ${t}` },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      setLicense(data);
+      return data;
+    } catch {
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    if (!user) { setLicense(null); return; }
+    fetchLicense();
+    const id = setInterval(() => fetchLicense(), LICENSE_POLL_MS);
+    return () => clearInterval(id);
+  }, [user]);
+
+  // Setup just finished: adopt the new name and fall through to the login screen.
+  const finishOnboarding = (officeName) => {
+    setOfficeLabel(composeOfficeLabel(officeName));
+    setNeedsOnboarding(false);
+  };
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
@@ -301,11 +377,29 @@ function App() {
   return (
     <AuthContext.Provider value={{ user, token, login, logout }}>
       <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      <BrandingContext.Provider value={{ officeLabel }}>
         <BrowserRouter>
-          {!user ? (
+          {needsOnboarding === null ? (
+            null /* still asking the server — render nothing rather than the wrong screen */
+          ) : needsOnboarding ? (
+            <Routes>
+              <Route path="*" element={<Onboarding onComplete={finishOnboarding} />} />
+            </Routes>
+          ) : !user ? (
             <Routes>
               <Route path="*" element={<Login />} />
             </Routes>
+          ) : license && license.status !== 'active' ? (
+            /* Suspended or terminated: the notice replaces every route. Export
+               still works — see server/routes/export.js for why. */
+            <SuspendedNotice
+              status={license.status}
+              message={license.message}
+              providerContact={license.providerContact}
+              canExport={license.canExport}
+              onRetry={() => fetchLicense(true)}
+              onLogout={logout}
+            />
           ) : (
             <Layout>
               {user?.role === 'client' ? (
@@ -319,12 +413,14 @@ function App() {
                   <Route path="/general" element={<RegistreGeneral />} />
                   <Route path="/execution" element={<RegistreExecution />} />
                   <Route path="/cnss" element={<RegistreCNSS />} />
+                  <Route path="/cnss/new" element={<RegistreCNSSDetail />} />
+                  <Route path="/cnss/:id" element={<RegistreCNSSDetail />} />
                   <Route path="/telephone" element={<Telephone />} />
                   <Route path="/calendar" element={<Calendar />} />
                   <Route path="/record/:type/:id" element={<RecordDetail />} />
                   <Route path="/facturation/general"   element={<Facturation type="general" />} />
                   <Route path="/facturation/execution" element={<Facturation type="execution" />} />
-                  <Route path="/facturation/cnss"      element={<Facturation type="cnss" />} />
+                  <Route path="/facturation/cnss"      element={<FacturationCNSS />} />
                   <Route path="/settings"              element={<Settings />} />
                   {(user?.role === 'admin' || user?.role === 'superadmin') && (
                     <>
@@ -340,6 +436,7 @@ function App() {
             </Layout>
           )}
         </BrowserRouter>
+      </BrandingContext.Provider>
       </ThemeContext.Provider>
     </AuthContext.Provider>
   );

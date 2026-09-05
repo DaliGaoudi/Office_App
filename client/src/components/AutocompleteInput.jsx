@@ -111,7 +111,7 @@ export default function AutocompleteInput({
                                 display: 'flex',
                                 alignItems: 'center'
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-2)'}
                             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                         >
                             {s}

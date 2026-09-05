@@ -34,24 +34,26 @@ router.get('/records', authenticate, isClient, async (req, res) => {
             return res.json([]); // No aliases, no files
         }
 
-        // Build LIKE clauses for each alias
+        // Build LIKE clauses for each alias. The id_so filter is essential: aliases are
+        // matched with a loose LIKE, so without it a client of one office would be
+        // shown any record in ANY office whose nom_cl1 happens to contain their name.
         const likeClauses = aliases.map(() => `nom_cl1 LIKE ?`).join(' OR ');
-        const queryParams = aliases.map(a => `%${a}%`);
+        const queryParams = [req.user.id_so, ...aliases.map(a => `%${a}%`)];
 
         const query = `
-            SELECT 
-                id_r as id, 
-                ref, 
-                is_execution, 
-                nom_cl1, 
-                nom_cl2, 
-                tribunal, 
-                date_s, 
-                status, 
-                resultat, 
-                date_ajout 
-            FROM clients_record 
-            WHERE (${likeClauses})
+            SELECT
+                id_r as id,
+                ref,
+                is_execution,
+                nom_cl1,
+                nom_cl2,
+                tribunal,
+                date_s,
+                status,
+                resultat,
+                date_ajout
+            FROM clients_record
+            WHERE id_so::text = ? AND (${likeClauses})
             ORDER BY date_ajout DESC
         `;
 
@@ -75,10 +77,10 @@ router.get('/records/:id/actions', authenticate, isClient, async (req, res) => {
 
         // First, verify the record belongs to the client
         const likeClauses = aliases.map(() => `nom_cl1 LIKE ?`).join(' OR ');
-        const recordParams = [recordId, ...aliases.map(a => `%${a}%`)];
-        
+        const recordParams = [recordId, req.user.id_so, ...aliases.map(a => `%${a}%`)];
+
         const record = await db.get(
-            `SELECT id_r FROM clients_record WHERE id_r = ? AND (${likeClauses})`,
+            `SELECT id_r FROM clients_record WHERE id_r = ? AND id_so::text = ? AND (${likeClauses})`,
             recordParams
         );
 
@@ -94,10 +96,10 @@ router.get('/records/:id/actions', authenticate, isClient, async (req, res) => {
                 date_r as date, 
                 remarques, 
                 date_ajout 
-            FROM œuvre_type 
-            WHERE id_o = ? 
+            FROM œuvre_type
+            WHERE id_o = ? AND id_so::text = ?
             ORDER BY date_ajout DESC`,
-            [recordId]
+            [recordId, req.user.id_so]
         );
 
         res.json(actions);
