@@ -91,6 +91,39 @@ const TABLIGH_FILTERS = [
   { k: 'without', l: 'غير مُبلَّغة',  match: (c) => !hasTabligh(c) },
 ];
 
+/*
+ * A text cell edited in place, used for عدد التضمين in the بطاقات الجبر table.
+ *
+ * Unlike the تاريخ التبليغ cell beside it, this cannot just save onChange: a date
+ * picker fires once when a date is chosen, whereas typing would fire — and PUT —
+ * once per keystroke. So it commits on blur or Enter, and only when the text
+ * actually changed; Escape abandons the edit.
+ */
+function InlineCardText({ value, onCommit, title, placeholder }) {
+  const committed = value === null || value === undefined ? '' : String(value);
+
+  /*
+   * Uncontrolled on purpose: the typed text only matters at commit time, so the
+   * browser owns it and no React state mirrors the prop. `key` makes the input
+   * remount when the stored value changes from elsewhere (the card modal, a
+   * reload), which re-seeds defaultValue — the one thing an uncontrolled input
+   * would otherwise miss. By then the field has been blurred, so no focus is lost.
+   */
+  return (
+    <input type="text" key={committed} defaultValue={committed} title={title} placeholder={placeholder}
+      onBlur={(e) => {
+        const next = e.currentTarget.value.trim();
+        if (next !== committed.trim()) onCommit(next);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
+        // Restore first, so the blur below compares equal and commits nothing.
+        else if (e.key === 'Escape') { e.currentTarget.value = committed; e.currentTarget.blur(); }
+      }}
+      style={{ width: '100%', minWidth: '5.5rem', padding: '0.3rem 0.4rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600 }} />
+  );
+}
+
 export default function RegistreCNSSDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -550,7 +583,12 @@ export default function RegistreCNSSDetail() {
                   </td></tr>
                 ) : visibleCards.map(card => (
                   <tr key={card.id_cn_oe}>
-                    <td style={{ fontWeight: 600 }}>{card.nbrreg || '—'}</td>
+                    <td>
+                      <InlineCardText value={card.nbrreg}
+                        onCommit={(v) => saveCardField(card.id_cn_oe, { nbrreg: v })}
+                        title="عدد التضمين بدفتر التنفيذ — يُحفظ عند الخروج من الخانة أو بالضغط على Enter"
+                        placeholder="—" />
+                    </td>
                     <td>{card.numcarte || '—'}</td>
                     <td>{card.semestre || '—'}</td>
                     <td style={{ color: 'var(--primary)', fontWeight: 700 }}>{fmtDinar(card.dette)}</td>
