@@ -703,6 +703,9 @@ tr:hover {
 .badge-gray { background: rgba(128, 128, 128, 0.1); color: var(--text-muted); }
 .badge-red { background: var(--status-error-bg); color: var(--status-error); }
 .badge-violet { background: rgba(139, 92, 246, 0.14); color: #8b5cf6; }
+/* STATUS_MAP.has_deposit (في إنتظار التبليغ) asks for 'pink'; with no such class the
+   badge rendered unstyled. Literal colour like badge-violet — there is no pink token. */
+.badge-pink { background: rgba(236, 72, 153, 0.14); color: #ec4899; }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {

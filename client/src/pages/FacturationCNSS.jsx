@@ -51,7 +51,7 @@ export default function FacturationCNSS() {
 
   const COLS = [
     { key: 'rang', label: '#' },
-    { key: 'nbrreg', label: 'عدد الملف' },
+    { key: 'nbrreg', label: 'عدد التضمين' },
     { key: 'numcarte', label: 'عدد البطاقة' },
     { key: 'nom', label: 'اسم المطلوب' },
     { key: 'numcnss', label: 'عدد الإنخراط' },

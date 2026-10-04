@@ -3,7 +3,7 @@ import { Search, Plus, Edit, Printer, Trash2, UploadCloud, ScanLine, FileText } 
 import { useNavigate } from 'react-router-dom';
 import Pagination from '../components/Pagination';
 import AutocompleteInput from '../components/AutocompleteInput';
-import { STATUS_MAP } from '../utils/formatters';
+import { CNSS_STATUS_MAP, CNSS_AWAITING_PRINT } from '../utils/formatters';
 
 import API_BASE from '../config';
 import { compressImage, scanCardFromBridge, createRecordFromCard } from '../utils/cnssScan';
@@ -235,15 +235,15 @@ export default function RegistreCNSS() {
                     <td className="hide-on-mobile" style={{ fontWeight: 700, color: 'var(--primary)' }}>{fmtDinar(item.total_dette)}</td>
                     <td className="hide-on-mobile" onClick={(e) => e.stopPropagation()}>
                       {(() => {
-                        const s = STATUS_MAP[item.status] || STATUS_MAP.cancelled;
+                        const s = CNSS_STATUS_MAP[item.status] || CNSS_STATUS_MAP.cancelled;
                         return (
                           <div className={`badge badge-${s.color}`} style={{ padding: 0, overflow: 'hidden' }}>
                             <select
-                                value={item.status || 'has_deposit'}
+                                value={item.status || CNSS_AWAITING_PRINT}
                                 onChange={(e) => handleStatusChange(item.id_cn, e.target.value)}
                                 style={{ background: 'transparent', border: 'none', color: 'inherit', fontSize: 'inherit', cursor: 'pointer', outline: 'none', padding: '0.4rem 0.8rem', width: '100%', fontFamily: 'inherit', appearance: 'none', textAlign: 'center' }}
                             >
-                                {Object.entries(STATUS_MAP).map(([key, info]) => (
+                                {Object.entries(CNSS_STATUS_MAP).map(([key, info]) => (
                                     <option key={key} value={key} style={{ color: '#000' }}>{info.label}</option>
                                 ))}
                             </select>

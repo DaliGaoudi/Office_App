@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Check, Plus, Trash2, Edit, UploadCloud, FileText, Printer, ScanLine, ChevronDown, ChevronLeft } from 'lucide-react';
-import { STATUS_MAP } from '../utils/formatters';
+import { CNSS_STATUS_MAP, CNSS_AWAITING_PRINT, TABLIGH_METHODS } from '../utils/formatters';
 import API_BASE from '../config';
 import AutocompleteInput from '../components/AutocompleteInput';
 import { compressImage, scanCardFromBridge, createRecordFromCard, duplicateMessage } from '../utils/cnssScan';
@@ -29,7 +29,7 @@ export function deriveDatesins(semestre) {
   return `16/${monthAfter}/${y}`;
 }
 
-const EMPTY_COMPANY = { ref: '', nom_cl2: '', cl2_adresse: '', cl2_adresse2: '', numcnss: '', codeng: '', cl2_profession: '', tribunal: '', status: 'has_deposit' };
+const EMPTY_COMPANY = { ref: '', nom_cl2: '', cl2_adresse: '', cl2_adresse2: '', numcnss: '', codeng: '', cl2_profession: '', tribunal: '', tabligh_method: '', resultat: '', notes: '', status: CNSS_AWAITING_PRINT };
 
 // Per-act fee statement, split into two billing sections. Amounts are whole
 // millimes (1 د.ت = 1000 مليم). VAT (أ ق م) is applied to the الأجور section only.
@@ -388,6 +388,10 @@ export default function RegistreCNSSDetail() {
     { key: 'cl2_adresse2', label: 'تكملة العنوان' },
     { key: 'cl2_profession', label: 'المهنة / النشاط' },
     { key: 'tribunal', label: 'المحكمة' },
+    { key: 'tabligh_method', label: 'طريقة التبليغ', options: TABLIGH_METHODS, placeholder: '— غير محدّد —' },
+    { key: 'resultat', label: 'المآل النهائي' },
+    // Full width and last, so the الحالة select below it starts a fresh row.
+    { key: 'notes', label: 'ملاحظات', textarea: true, span: true },
   ];
 
   return (
@@ -432,11 +436,21 @@ export default function RegistreCNSSDetail() {
         <form onSubmit={saveCompany}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             {fields.map(f => (
-              <div key={f.key}>
+              <div key={f.key} style={f.span ? { gridColumn: 'span 2' } : null}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>{f.label}</label>
                 {f.auto ? (
                   <AutocompleteInput value={company[f.key] || ''} onChange={(e) => setField(f.key, e.target.value)}
                     className="glass" style={{ padding: '0.6rem', background: 'transparent', border: 'none', color: 'var(--text-main)' }} />
+                ) : f.options ? (
+                  <select value={company[f.key] || ''} onChange={(e) => setField(f.key, e.target.value)}
+                    style={{ width: '100%', padding: '0.6rem' }}>
+                    <option value="">{f.placeholder || '—'}</option>
+                    {f.options.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                ) : f.textarea ? (
+                  <textarea value={company[f.key] || ''} placeholder={f.placeholder}
+                    onChange={(e) => setField(f.key, e.target.value)} rows={3}
+                    style={{ width: '100%', padding: '0.6rem', resize: 'vertical', fontFamily: 'inherit' }} />
                 ) : (
                   <input type="text" value={company[f.key] || ''} readOnly={f.readonly} placeholder={f.placeholder}
                     onChange={(e) => setField(f.key, e.target.value)}
@@ -446,8 +460,8 @@ export default function RegistreCNSSDetail() {
             ))}
             <div>
               <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>الحالة</label>
-              <select value={company.status || 'has_deposit'} onChange={(e) => setField('status', e.target.value)} style={{ width: '100%', padding: '0.6rem' }}>
-                {Object.entries(STATUS_MAP).map(([key, info]) => <option key={key} value={key}>{info.label}</option>)}
+              <select value={company.status || CNSS_AWAITING_PRINT} onChange={(e) => setField('status', e.target.value)} style={{ width: '100%', padding: '0.6rem' }}>
+                {Object.entries(CNSS_STATUS_MAP).map(([key, info]) => <option key={key} value={key}>{info.label}</option>)}
               </select>
             </div>
           </div>
@@ -517,13 +531,13 @@ export default function RegistreCNSSDetail() {
             <table>
               <thead>
                 <tr>
+                  <th>عدد التضمين</th>
                   <th>عدد البطاقة</th>
                   <th>الثلاثية</th>
                   <th>أصل الدين (د.ت)</th>
                   <th>تاريخ البطاقة</th>
                   <th>تاريخ احتساب الخطايا</th>
                   <th>تاريخ التبليغ</th>
-                  <th>عدد الملف</th>
                   <th className="no-print">عمل</th>
                 </tr>
               </thead>
@@ -536,7 +550,8 @@ export default function RegistreCNSSDetail() {
                   </td></tr>
                 ) : visibleCards.map(card => (
                   <tr key={card.id_cn_oe}>
-                    <td style={{ fontWeight: 600 }}>{card.numcarte || '—'}</td>
+                    <td style={{ fontWeight: 600 }}>{card.nbrreg || '—'}</td>
+                    <td>{card.numcarte || '—'}</td>
                     <td>{card.semestre || '—'}</td>
                     <td style={{ color: 'var(--primary)', fontWeight: 700 }}>{fmtDinar(card.dette)}</td>
                     <td>{card.datecarte || '—'}</td>
@@ -547,7 +562,6 @@ export default function RegistreCNSSDetail() {
                         title="تاريخ تبليغ المحضر — يُستعمل في القائمة الشهرية"
                         style={{ padding: '0.3rem 0.4rem', borderRadius: '6px', fontSize: '0.85rem' }} />
                     </td>
-                    <td>{card.nbrreg || '—'}</td>
                     <td className="no-print">
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button className="btn-icon" title="توليد المحضر (Word)" style={{ color: 'var(--primary)' }} onClick={() => generateAct(card)}>
@@ -584,7 +598,7 @@ export default function RegistreCNSSDetail() {
                 { k: 'dette', l: 'أصل الدين (د.ت)', ph: '2959.306' },
                 { k: 'pourcentage', l: 'نسبة الخطية في الشهر (%)' },
                 { k: 'datesins', l: 'تاريخ احتساب الخطايا (تلقائي)' },
-                { k: 'nbrreg', l: 'عدد الملف (التضمين بدفتر التنفيذ)' },
+                { k: 'nbrreg', l: 'عدد التضمين (بدفتر التنفيذ)' },
               ].map(f => (
                 <div key={f.k}>
                   <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.8rem', opacity: 0.8 }}>{f.l}</label>

@@ -42,7 +42,7 @@ const deriveDatesins = (semestre) => {
  *   العنوان                → cnss.cl2_adresse (+ cl2_adresse2)
  *   عدد_الإنخراط_بالصندوق  → cnss.numcnss
  *   رمز_الإنخراط           → cnss.codeng
- *   عدد_الملف              → cnss_oeuvre.nbrreg
+ *   عدد_التضمين            → cnss_oeuvre.nbrreg
  *   عدد_بطاقة_الجبر        → cnss_oeuvre.numcarte
  *   تاريخ_بطاقة_الجبر      → cnss_oeuvre.datecarte
  *   الثلاثية               → cnss_oeuvre.semestre
@@ -56,8 +56,19 @@ const deriveDatesins = (semestre) => {
 const CNSS_COLS = [
     'ref', 'numcnss', 'nom_cl2', 'cl2_profession', 'cin', 'matricule_fiscal',
     'codeng', 'cl2_adresse', 'cl2_adresse2', 'cl2_avocat', 'cl2_tel',
-    'cl2_adressepersonnel', 'title', 'tribunal', 'nombre', 'date_s', 'montant', 'status'
+    'cl2_adressepersonnel', 'title', 'tribunal', 'nombre', 'date_s', 'montant', 'status',
+    // طريقة التبليغ — فصل 8 / فصل 10 / مباشر, stored as the literal label.
+    'tabligh_method',
+    // المآل النهائي — free text, same column name the execution register uses.
+    'resultat',
+    // ملاحظات — free text the office keeps on the employer. Internal only: it is
+    // never rendered into an act or the monthly list.
+    'notes'
 ];
+
+// A new ملف starts before its محضر is printed; see CNSS_STATUS_MAP on the client.
+// Existing records keep whatever status they already carry.
+const DEFAULT_CNSS_STATUS = 'awaiting_print';
 
 // Writable columns for a liquidation-card line (+ the per-act fee breakdown).
 // fee_aqm (VAT) is derived and persisted by the client so the stored row matches
@@ -368,7 +379,7 @@ router.post('/scan', authenticate, upload.single('file'), async (req, res) => {
                 id_cn: nid.n,
                 ref: (parseInt(m && m.m) || 0) + 1,
                 nom_cl2: d.nom_cl2 || '', numcnss: d.numcnss || '', codeng: d.codeng || '',
-                cl2_adresse: d.cl2_adresse || '', status: 'has_deposit',
+                cl2_adresse: d.cl2_adresse || '', status: DEFAULT_CNSS_STATUS,
                 id_user: req.user.id, id_so: req.user.id_so, date_ajout: new Date().toLocaleString('fr-FR'),
             };
             const ck = Object.keys(compData);
@@ -482,7 +493,7 @@ router.post('/', authenticate, async (req, res) => {
         data.id_user = req.user.id;
         data.id_so = req.user.id_so;
         data.date_ajout = new Date().toLocaleString('fr-FR');
-        if (!data.status) data.status = 'has_deposit';
+        if (!data.status) data.status = DEFAULT_CNSS_STATUS;
 
         // Auto-number ref when the client didn't supply one.
         if (data.ref === undefined || data.ref === '') {

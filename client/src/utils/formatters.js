@@ -23,3 +23,25 @@ export const STATUS_MAP = {
   waiting_payment: { label: 'في انتظار الخلاص', color: 'amber' },
   finished: { label: 'منتهي', color: 'green' }
 };
+
+/*
+ * CNSS statuses — the general registers' STATUS_MAP plus one stage that only the
+ * CNSS flow has: a محضر is printed before it can be served, so a new بطاقة جبر
+ * starts at في انتظار الطباعة. Kept separate so the option does NOT appear in the
+ * execution/general registers, which share STATUS_MAP above.
+ *
+ * Listed in lifecycle order, which is also the order of the dropdowns.
+ */
+export const CNSS_AWAITING_PRINT = 'awaiting_print';
+
+export const CNSS_STATUS_MAP = {
+  [CNSS_AWAITING_PRINT]: { label: 'في انتظار الطباعة', color: 'blue' },
+  has_deposit: STATUS_MAP.has_deposit,
+  waiting_payment: STATUS_MAP.waiting_payment,
+  finished: STATUS_MAP.finished,
+  cancelled: STATUS_MAP.cancelled
+};
+
+// How a محضر إعلام was served (طريقة التبليغ). Stored as the literal label, like
+// the other loosely-typed CNSS text columns; empty means not recorded yet.
+export const TABLIGH_METHODS = ['فصل 8', 'فصل 10', 'مباشر'];
