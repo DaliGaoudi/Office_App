@@ -35,7 +35,7 @@ export const STATUS_MAP = {
 export const CNSS_AWAITING_PRINT = 'awaiting_print';
 
 export const CNSS_STATUS_MAP = {
-  [CNSS_AWAITING_PRINT]: { label: 'في انتظار الطباعة', color: 'blue' },
+  [CNSS_AWAITING_PRINT]: { label: 'في انتظار الطباعة', color: 'white' },
   has_deposit: STATUS_MAP.has_deposit,
   waiting_payment: STATUS_MAP.waiting_payment,
   finished: STATUS_MAP.finished,

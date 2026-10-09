@@ -706,6 +706,10 @@ tr:hover {
 /* STATUS_MAP.has_deposit (في إنتظار التبليغ) asks for 'pink'; with no such class the
    badge rendered unstyled. Literal colour like badge-violet — there is no pink token. */
 .badge-pink { background: rgba(236, 72, 153, 0.14); color: #ec4899; }
+/* CNSS في انتظار الطباعة. "White" means the main ink: white on the dark theme,
+   near-black on the light one, so the badge never disappears on a white card. */
+.badge-white { background: rgba(255, 255, 255, 0.08); color: var(--text-main); box-shadow: inset 0 0 0 1px var(--border); }
+[data-theme='light'] .badge-white { background: var(--surface-2); }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
