@@ -27,7 +27,7 @@ const ROUTES_DIR = path.join(__dirname, '..', 'routes');
 const TENANT_TABLES = [
     'clients_record', 'cnss', 'cnss_oeuvre', 'evenement', 'telephone',
     'œuvre_type', 'oeuvre_type', 'admin_admin', 'case_documents',
-    'attachments', 'scan_targets',
+    'attachments', 'scan_targets', 'cnss_acte',
 ];
 
 /*

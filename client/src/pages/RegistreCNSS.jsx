@@ -139,13 +139,14 @@ export default function RegistreCNSS() {
   };
 
   // Generate the «محضر إعلام بطاقة جبر» for a company straight from the table —
-  // all of its cards in one Word file (one act per page).
+  // every محضر in one Word file (one per page); a card not yet in a محضر becomes
+  // its own one-card محضر.
   const generateActs = async (item) => {
     if (!Number(item.card_count)) { alert('لا توجد بطاقات جبر لهذا المطلوب لتوليد محضرها.'); return; }
     setProcessing('جاري توليد المحضر…');
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`${API}/${item.id_cn}/acts.docx`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API}/${item.id_cn}/acts.docx`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) { const e = await res.json().catch(() => ({})); alert('فشل توليد المحضر: ' + (e.error || res.status)); return; }
       const url = URL.createObjectURL(await res.blob());
       const a = document.createElement('a');

@@ -174,7 +174,19 @@ CREATE TABLE IF NOT EXISTS cnss_oeuvre (
     fee_counterparts TEXT,
     fee_original TEXT,
     vat_rate TEXT,
-    date_tabligh TEXT
+    date_tabligh TEXT,
+    id_acte INTEGER
+);
+
+-- One row per محضر إعلام بطاقة جبر; its cards point at it via cnss_oeuvre.id_acte.
+-- numero is the محضر's sequence within its مطلوب. See services/cnssActes.js.
+CREATE TABLE IF NOT EXISTS cnss_acte (
+    id_acte SERIAL PRIMARY KEY,
+    id_cn INTEGER,
+    id_so INTEGER,
+    id_user INTEGER,
+    numero INTEGER,
+    date_ajout TEXT
 );
 
 CREATE TABLE IF NOT EXISTS evenement (

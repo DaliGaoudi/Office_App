@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Check, Plus, Trash2, Edit, UploadCloud, FileText, Printer, ScanLine, ChevronDown, ChevronLeft } from 'lucide-react';
+import { ArrowLeft, Save, Check, Plus, Trash2, Edit, UploadCloud, FileText, Printer, ScanLine, ChevronDown, ChevronLeft, Unlink } from 'lucide-react';
 import { CNSS_STATUS_MAP, CNSS_AWAITING_PRINT, TABLIGH_METHODS } from '../utils/formatters';
 import API_BASE from '../config';
 import AutocompleteInput from '../components/AutocompleteInput';
 import { compressImage, scanCardFromBridge, createRecordFromCard, duplicateMessage } from '../utils/cnssScan';
+import { SHARED_KEYS, selectionMismatches, mismatchText, conflictMessage } from '../utils/cnssActes';
 
 const API = `${API_BASE}/cnss`;
 
@@ -131,6 +132,8 @@ export default function RegistreCNSSDetail() {
 
   const [company, setCompany] = useState(EMPTY_COMPANY);
   const [cards, setCards]     = useState([]);
+  const [actes, setActes]     = useState([]);   // محاضر of this مطلوب (cnss_acte rows)
+  const [selectedIds, setSelectedIds] = useState([]);   // cards ticked for one محضر
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving]   = useState(false);
   const [saved, setSaved]     = useState(false);
@@ -156,9 +159,10 @@ export default function RegistreCNSSDetail() {
   const [creatingFromCard, setCreatingFromCard] = useState(null);
   const newCardInputRef = useRef(null);
 
-  const fetchData = useCallback(async () => {
+  // `silent` refreshes in place (after generating a محضر) instead of blanking the page.
+  const fetchData = useCallback(async (silent = false) => {
     if (isNew) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     const token = localStorage.getItem('token');
     try {
       const res = await fetch(`${API}/${id}`, { headers: { Authorization: `Bearer ${token}` } });
@@ -166,6 +170,10 @@ export default function RegistreCNSSDetail() {
       const { cards: c, ...comp } = json;
       setCompany({ ...EMPTY_COMPANY, ...comp });
       setCards(c || []);
+      setActes(json.actes || []);
+      // Drop ticks on cards that no longer exist.
+      const ids = new Set((c || []).map((x) => x.id_cn_oe));
+      setSelectedIds((prev) => prev.filter((x) => ids.has(x)));
     } catch (e) { console.error(e); }
     setLoading(false);
   }, [id, isNew]);
@@ -261,9 +269,13 @@ export default function RegistreCNSSDetail() {
   };
 
   // Inline edit of a single card field straight from the cards table (used for
-  // تاريخ التبليغ). Optimistic local update + persist.
+  // تاريخ التبليغ). Optimistic local update + persist. عدد التضمين and تاريخ التبليغ
+  // belong to the محضر, so the server copies them to its other cards — mirror that.
   const saveCardField = async (cardId, patch) => {
-    setCards(prev => prev.map(c => c.id_cn_oe === cardId ? { ...c, ...patch } : c));
+    const acteId = cards.find(c => c.id_cn_oe === cardId)?.id_acte;
+    const shared = Object.keys(patch).some(k => SHARED_KEYS.includes(k));
+    setCards(prev => prev.map(c => (c.id_cn_oe === cardId || (shared && acteId != null && c.id_acte === acteId))
+      ? { ...c, ...patch } : c));
     const token = localStorage.getItem('token');
     try {
       await fetch(`${API}/cards/${cardId}`, {
@@ -390,27 +402,89 @@ export default function RegistreCNSSDetail() {
     URL.revokeObjectURL(url);
   };
 
-  const generateAct = async (card) => {
-    const token = localStorage.getItem('token');
+  const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+  const errorOf = async (res) => (await res.json().catch(() => ({}))).error || res.status;
+
+  // ── محاضر: one محضر can cover several cards (rules in utils/cnssActes.js) ──
+  // POST cards as one محضر. A 409 is a warning (cards leaving another محضر,
+  // differing تاريخ بطاقة الجبر): ask, then resend with force. A 422 is a refusal.
+  const generateActe = async (cardIds, filename) => {
+    const send = (force) => fetch(`${API}/${id}/actes`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ card_ids: cardIds, force }),
+    });
     try {
-      const res = await fetch(`${API}/cards/${card.id_cn_oe}/act.docx`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) { const err = await res.json().catch(() => ({})); alert('فشل توليد المحضر: ' + (err.error || res.status)); return; }
-      downloadBlob(await res.blob(), `محضر_${card.numcarte || card.id_cn_oe}.docx`);
+      let res = await send(false);
+      if (res.status === 409) {
+        if (!window.confirm(conflictMessage(await res.json()))) return false;
+        res = await send(true);
+      }
+      if (!res.ok) { alert('فشل توليد المحضر:\n' + await errorOf(res)); return false; }
+      downloadBlob(await res.blob(), filename);
+      fetchData(true);
+      return true;
+    } catch (e) { console.error(e); alert('خطأ في الاتصال بالخادم'); return false; }
+  };
+
+  const generateSelected = async () => {
+    const chosen = cards.filter(c => selectedIds.includes(c.id_cn_oe));
+    const name = chosen.map(c => c.numcarte || c.id_cn_oe).join('_');
+    if (await generateActe(selectedIds, `محضر_${name}.docx`)) setSelectedIds([]);
+  };
+
+  const reprintActe = async (acte) => {
+    try {
+      const res = await fetch(`${API}/actes/${acte.id_acte}/act.docx`, { headers: authHeaders() });
+      if (!res.ok) { alert('فشل توليد المحضر: ' + await errorOf(res)); return; }
+      downloadBlob(await res.blob(), `محضر_${acte.numero}_${company.nom_cl2 || id}.docx`);
     } catch (e) { console.error(e); alert('خطأ في الاتصال بالخادم'); }
   };
 
-  const generateAllActs = async () => {
-    const token = localStorage.getItem('token');
+  // A card already in a محضر reprints that محضر; a free card gets its own.
+  const generateAct = (card) => {
+    const acte = actes.find(a => a.id_acte === card.id_acte);
+    return acte ? reprintActe(acte) : generateActe([card.id_cn_oe], `محضر_${card.numcarte || card.id_cn_oe}.docx`);
+  };
+
+  const dissolveActe = async (acte) => {
+    if (!window.confirm(`إلغاء تجميع المحضر ${acte.numero}؟\nتعود بطاقاته حرّة ويمكن جمعها في محضر آخر. لا تُحذف أي بطاقة.`)) return;
     try {
-      const res = await fetch(`${API}/${id}/acts.docx`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) { const err = await res.json().catch(() => ({})); alert('فشل توليد المحاضر: ' + (err.error || res.status)); return; }
-      downloadBlob(await res.blob(), `محاضر_${company.nom_cl2 || id}.docx`);
+      const res = await fetch(`${API}/actes/${acte.id_acte}`, { method: 'DELETE', headers: authHeaders() });
+      if (!res.ok) { alert('تعذّر إلغاء التجميع: ' + await errorOf(res)); return; }
+      fetchData(true);
     } catch (e) { console.error(e); alert('خطأ في الاتصال بالخادم'); }
   };
+
+  // Every محضر in one file; cards not yet in a محضر each become a one-card محضر.
+  const generateAllActs = async () => {
+    try {
+      const res = await fetch(`${API}/${id}/acts.docx`, { method: 'POST', headers: authHeaders() });
+      if (!res.ok) { alert('فشل توليد المحاضر: ' + await errorOf(res)); return; }
+      downloadBlob(await res.blob(), `محاضر_${company.nom_cl2 || id}.docx`);
+      fetchData(true);
+    } catch (e) { console.error(e); alert('خطأ في الاتصال بالخادم'); }
+  };
+
+  const toggleSelected = (cardId) => setSelectedIds(prev =>
+    prev.includes(cardId) ? prev.filter(x => x !== cardId) : [...prev, cardId]);
 
   if (loading) return <div style={{ padding: '4rem', textAlign: 'center', opacity: 0.5 }}>جاري التحميل...</div>;
 
   const visibleCards = cards.filter(TABLIGH_FILTERS.find(f => f.k === tablighFilter).match);
+
+  const acteById = Object.fromEntries(actes.map(a => [a.id_acte, a]));
+  const acteSize = (acteId) => cards.filter(c => c.id_acte === acteId).length;
+  const selectedCards = cards.filter(c => selectedIds.includes(c.id_cn_oe));
+  const selectionBlocked = selectionMismatches(selectedCards);
+  const allVisibleSelected = visibleCards.length > 0 && visibleCards.every(c => selectedIds.includes(c.id_cn_oe));
+  const toggleAllVisible = () => {
+    const visibleIds = visibleCards.map(c => c.id_cn_oe);
+    setSelectedIds(prev => allVisibleSelected
+      ? prev.filter(x => !visibleIds.includes(x))
+      : [...new Set([...prev, ...visibleIds])]);
+  };
+  const editingActe = editingCardId && cardForm.id_acte != null ? acteById[cardForm.id_acte] : null;
 
   const fields = [
     { key: 'ref', label: 'العدد الترتيبي', placeholder: 'تلقائي', readonly: true },
@@ -457,7 +531,8 @@ export default function RegistreCNSSDetail() {
             {isAILoading ? 'جاري القراءة...' : <><UploadCloud size={18} /> مسح ذكي لحالة التصفية</>}
           </button>
           {!isNew && cards.length > 0 && (
-            <button className="btn" onClick={generateAllActs} title="توليد كل المحاضر في ملف Word واحد">
+            <button className="btn" onClick={generateAllActs}
+              title="كل المحاضر في ملف Word واحد — كل بطاقة غير تابعة لمحضر تصبح محضراً مستقلاً">
               <FileText size={18} /> توليد كل المحاضر
             </button>
           )}
@@ -560,10 +635,34 @@ export default function RegistreCNSSDetail() {
             </div>
           </div>
 
+          {/* ── Selection → one محضر ── */}
+          {selectedIds.length > 0 && (
+            <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap',
+              padding: '0.6rem 0.9rem', marginBottom: '1rem', borderRadius: '10px',
+              border: `1px solid ${selectionBlocked.length ? '#ef4444' : 'var(--primary)'}`, background: 'var(--surface-2)' }}>
+              <strong>{selectedIds.length} بطاقة محددة</strong>
+              {selectionBlocked.length > 0 ? (
+                <span style={{ color: '#ef4444', fontSize: '0.85rem', flex: 1 }}>
+                  لا يمكن جمعها في محضر واحد: {mismatchText(selectionBlocked)}
+                </span>
+              ) : <span style={{ flex: 1 }} />}
+              <button className="btn" onClick={generateSelected} disabled={selectionBlocked.length > 0}
+                title={selectionBlocked.length ? 'بطاقات المحضر الواحد يجب أن يكون لها نفس عدد التضمين ونفس تاريخ التبليغ' : 'محضر واحد يذكر كل البطاقات المحددة'}>
+                <FileText size={18} /> توليد محضر للبطاقات المحددة
+              </button>
+              <button className="btn" style={{ background: 'transparent', border: '1px solid var(--card-border)', color: 'var(--text-main)' }}
+                onClick={() => setSelectedIds([])}>إلغاء التحديد</button>
+            </div>
+          )}
+
           <div className="table-container">
-            <table>
+            <table className="cnss-cards">
               <thead>
                 <tr>
+                  <th className="no-print" style={{ width: '2rem' }}>
+                    <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible}
+                      disabled={visibleCards.length === 0} title="تحديد كل البطاقات الظاهرة" />
+                  </th>
                   <th>عدد التضمين</th>
                   <th>عدد البطاقة</th>
                   <th>الثلاثية</th>
@@ -571,18 +670,25 @@ export default function RegistreCNSSDetail() {
                   <th>تاريخ البطاقة</th>
                   <th>تاريخ احتساب الخطايا</th>
                   <th>تاريخ التبليغ</th>
+                  <th>المحضر</th>
                   <th className="no-print">عمل</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleCards.length === 0 ? (
-                  <tr><td colSpan={8} style={{ textAlign: 'center', opacity: 0.5, padding: '2rem' }}>
+                  <tr><td colSpan={10} style={{ textAlign: 'center', opacity: 0.5, padding: '2rem' }}>
                     {cards.length === 0
                       ? 'لا توجد بطاقات جبر — أضف بطاقة أو استعمل «المسح الذكي»'
                       : 'لا توجد بطاقات مطابقة لهذه التصفية'}
                   </td></tr>
-                ) : visibleCards.map(card => (
+                ) : visibleCards.map(card => {
+                  const acte = acteById[card.id_acte];
+                  return (
                   <tr key={card.id_cn_oe}>
+                    <td className="no-print">
+                      <input type="checkbox" checked={selectedIds.includes(card.id_cn_oe)}
+                        onChange={() => toggleSelected(card.id_cn_oe)} title="تحديد البطاقة لجمعها في محضر" />
+                    </td>
                     <td>
                       <InlineCardText value={card.nbrreg}
                         onCommit={(v) => saveCardField(card.id_cn_oe, { nbrreg: v })}
@@ -600,9 +706,25 @@ export default function RegistreCNSSDetail() {
                         title="تاريخ تبليغ المحضر — يُستعمل في القائمة الشهرية"
                         style={{ padding: '0.3rem 0.4rem', borderRadius: '6px', fontSize: '0.85rem' }} />
                     </td>
+                    <td>
+                      {acte ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', whiteSpace: 'nowrap' }}>
+                          <span title={`عدد بطاقاته: ${acteSize(acte.id_acte)} — أُنشئ ${acte.date_ajout || ''}`}
+                            style={{ padding: '0.15rem 0.55rem', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 600,
+                              background: 'var(--surface-2)', border: '1px solid var(--primary)', color: 'var(--primary)' }}>
+                            محضر {acte.numero}
+                          </span>
+                          <button className="btn-icon no-print" title="إلغاء تجميع هذا المحضر (تعود بطاقاته حرّة)"
+                            style={{ color: 'var(--text-muted)' }} onClick={() => dissolveActe(acte)}>
+                            <Unlink size={14} />
+                          </button>
+                        </div>
+                      ) : <span style={{ opacity: 0.5 }}>—</span>}
+                    </td>
                     <td className="no-print">
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button className="btn-icon" title="توليد المحضر (Word)" style={{ color: 'var(--primary)' }} onClick={() => generateAct(card)}>
+                        <button className="btn-icon" style={{ color: 'var(--primary)' }} onClick={() => generateAct(card)}
+                          title={acte ? `إعادة طباعة المحضر ${acte.numero} (Word)` : 'توليد محضر لهذه البطاقة وحدها (Word)'}>
                           <FileText size={16} />
                         </button>
                         <button className="btn-icon" title="تعديل" style={{ color: 'var(--text-main)' }} onClick={() => openEditCard(card)}>
@@ -614,7 +736,8 @@ export default function RegistreCNSSDetail() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -628,6 +751,13 @@ export default function RegistreCNSSDetail() {
             <h3 style={{ color: 'var(--primary)', marginBottom: '1.5rem', textAlign: 'center' }}>
               {editingCardId ? 'تعديل بطاقة جبر' : 'إضافة بطاقة جبر'}
             </h3>
+            {editingActe && acteSize(editingActe.id_acte) > 1 && (
+              <div style={{ marginBottom: '1rem', padding: '0.6rem 0.8rem', borderRadius: '8px', fontSize: '0.85rem',
+                border: '1px solid var(--primary)', background: 'var(--surface-2)' }}>
+                هذه البطاقة ضمن المحضر {editingActe.numero} (عدد بطاقاته: {acteSize(editingActe.id_acte)}) —
+                تغيير عدد التضمين أو تاريخ التبليغ يُطبَّق على كل بطاقات المحضر.
+              </div>
+            )}
             <form onSubmit={saveCard} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
               {[
                 { k: 'numcarte', l: 'عدد بطاقة الجبر' },
@@ -735,6 +865,8 @@ export default function RegistreCNSSDetail() {
       <style dangerouslySetInnerHTML={{ __html: `
         .btn-icon { background: transparent; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0.7; padding: 0.3rem; }
         .btn-icon:hover { opacity: 1; }
+        /* Ten columns since the selection + المحضر columns: tighter cells keep عمل on screen. */
+        .cnss-cards th, .cnss-cards td { padding: 0.75rem 0.55rem; }
       `}} />
     </div>
   );

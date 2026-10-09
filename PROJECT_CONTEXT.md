@@ -109,6 +109,11 @@ plane says the office is suspended — see §12 for the allowlist that survives 
   `nom_cl2` (employer/debtor), `numcnss`, `codeng`, `numcarte` (بطاقة جبر number), `datecarte`,
   `semestre`, `dette` (amount owed).
 - **`cnss_oeuvre`** — actions/sub-records attached to a CNSS file (PK `id_cn_oe`).
+- **`cnss_acte`** — one row per محضر إعلام بطاقة جبر (PK `id_acte`, per-مطلوب `numero`). A محضر
+  lists one or more cards (`cnss_oeuvre.id_acte`; a card is in at most one محضر). Its cards must
+  share عدد التضمين (`nbrreg`) and تاريخ التبليغ (`date_tabligh`) — editing either on one card
+  updates the whole محضر; its fee table is the sum of its cards' fees. Rules in
+  `services/cnssActes.js`; the table is created lazily on first use. Test: `server/test_cnss_actes.js`.
 - **`oeuvre_type`** — catalog of action types for execution records.
 - **`evenement`** — calendar events (hearings): `title`, `start`, `time_even`, `tribunal_even`.
 - **`telephone`** — contacts directory.

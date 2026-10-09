@@ -10,7 +10,10 @@ const db = require('../db');
 const authenticate = require('../middleware/auth');
 const { logActivity } = require('../utils/logger');
 const { extractCnssFromFile } = require('../services/cnssExtract');
-const { AJR_KEYS, EXP_KEYS, toMillimes, formatMillimes, computeFees } = require('../services/cnssFees');
+const {
+    ensureActeSchema, checkGrouping, buildActRecord, SHARED_FIELDS,
+    loadActes, createActe, assignCards, pruneEmptyActes,
+} = require('../services/cnssActes');
 const { renderMonthlyList, buildMonthlyGroups } = require('../services/listRender');
 const { getOfficeProfile } = require('../services/officeProfile');
 const { yearInArabicWords } = require('../services/numberToArabicWords');
@@ -123,34 +126,6 @@ const SUM_DETTE = sub =>
 // ───────── "محضر إعلام بطاقة جبر" generation (publipostage replacement) ─────────
 // Built once from Assets/template.docx by scripts/build_cnss_template.js.
 const TEMPLATE_PATH = path.join(__dirname, '..', 'assets', 'template_cnss.docx');
-
-// Map a company + one of its cards onto the template's tags (incl. the fee table).
-// Fee math (computeFees/formatMillimes/AJR_KEYS/EXP_KEYS) lives in services/cnssFees.js.
-const buildActRecord = (company, card) => {
-    const fees = {};
-    [...AJR_KEYS, ...EXP_KEYS].forEach((k) => { fees[k] = formatMillimes(toMillimes(card[k])); });
-    // أ ق م = VAT, derived from the الأجور subtotal (never a manual input).
-    const { ajr, exp, vat, rate, total } = computeFees(card);
-    fees.fee_aqm = formatMillimes(vat);
-    fees.vat_rate = String(rate);
-    fees.fee_ajr_total = formatMillimes(ajr);     // الأجور subtotal (pre-VAT)
-    fees.fee_exp_total = formatMillimes(exp);     // مصاريف subtotal
-    fees.fee_total = formatMillimes(total);       // grand total
-
-    return {
-        num_dossier: card.nbrreg || '',
-        code_inscription: company.codeng || '',
-        num_affiliation: company.numcnss || '',
-        nom_matloub: company.nom_cl2 || '',
-        adresse: [company.cl2_adresse, company.cl2_adresse2].filter(Boolean).join(' '),
-        date_carte: card.datecarte || '',
-        num_carte: card.numcarte || '',
-        trimestre: card.semestre || '',
-        montant: card.dette || '',
-        date_penalite: card.datesins || '',
-        ...fees,
-    };
-};
 
 // The acts loop ends with this paragraph so each محضر starts on a fresh page. The
 // render converts each one into a section break (see perActFooters).
@@ -474,13 +449,15 @@ router.get('/:id', authenticate, async (req, res) => {
         const company = await db.get(`SELECT * FROM cnss WHERE id_cn = ? AND id_so = ?`, [id, req.user.id_so]);
         if (!company) return res.status(404).json({ error: 'Dossier non trouvé.' });
 
+        await ensureActeSchema();
         const cards = await db.all(
             `SELECT * FROM cnss_oeuvre WHERE id_cn = ? AND id_so = ? ORDER BY id_cn_oe ASC`,
             [id, req.user.id_so]
         );
+        const actes = Object.values(await loadActes(id, req.user.id_so));
 
         await logActivity(req.user, 'VIEW', 'RECORD', `عرض ملف CNSS عدد ${company.ref || id}`);
-        res.json({ ...company, cards });
+        res.json({ ...company, cards, actes });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -556,7 +533,9 @@ router.patch('/:id/status', authenticate, async (req, res) => {
 router.delete('/:id', authenticate, async (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
+        await ensureActeSchema();
         await db.run(`DELETE FROM cnss_oeuvre WHERE id_cn = ? AND id_so = ?`, [id, req.user.id_so]);
+        await db.run(`DELETE FROM cnss_acte WHERE id_cn = ? AND id_so = ?`, [id, req.user.id_so]);
         await db.run(`DELETE FROM cnss WHERE id_cn = ? AND id_so = ?`, [id, req.user.id_so]);
 
         await logActivity(req.user, 'DELETE', 'RECORD', `حذف ملف CNSS (ID: ${id})`);
@@ -568,35 +547,147 @@ router.delete('/:id', authenticate, async (req, res) => {
 
 // ───────────────────── Generate the act(s) as Word (.docx) ─────────────────────
 
-// One card → one "محضر إعلام بطاقة جبر".
-router.get('/cards/:cardId/act.docx', authenticate, async (req, res) => {
-    try {
-        const cardId = parseInt(req.params.cardId, 10);
-        const card = await db.get(`SELECT * FROM cnss_oeuvre WHERE id_cn_oe = ? AND id_so = ?`, [cardId, req.user.id_so]);
-        if (!card) return res.status(404).json({ error: 'بطاقة الجبر غير موجودة.' });
-        const company = await db.get(`SELECT * FROM cnss WHERE id_cn = ? AND id_so = ?`, [card.id_cn, req.user.id_so]);
-        if (!company) return res.status(404).json({ error: 'الملف غير موجود.' });
+// A محضر covers one or more cards of one مطلوب; services/cnssActes.js holds the
+// grouping rules. Every route here that creates or moves a grouping is a POST.
 
-        const buf = renderActs([buildActRecord(company, card)], await getOfficeProfile());
-        await logActivity(req.user, 'PRINT', 'RECORD', `توليد محضر إعلام بطاقة جبر (بطاقة ${card.numcarte || cardId})`);
-        sendDocx(res, buf, `act_${cardId}.docx`);
+const loadCompany = (id, id_so) => db.get(`SELECT * FROM cnss WHERE id_cn = ? AND id_so = ?`, [id, id_so]);
+const loadCards = (id, id_so) => db.all(
+    `SELECT * FROM cnss_oeuvre WHERE id_cn = ? AND id_so = ? ORDER BY id_cn_oe ASC`, [id, id_so]);
+
+// The given محاضر, in order, as one document (one محضر per page).
+const renderActes = async (company, acteIds, cards) => renderActs(
+    acteIds.map((a) => buildActRecord(company, cards.filter((c) => c.id_acte === a))),
+    await getOfficeProfile());
+
+const blankLabel = (v) => v || 'فارغ';
+const mismatchMessage = (mismatches) => 'لا يمكن جمع هذه البطاقات في محضر واحد:\n'
+    + mismatches.map((m) => `• ${m.label} مختلف بينها (${m.values.map(blankLabel).join('، ')})`).join('\n')
+    + '\nبطاقات المحضر الواحد يجب أن يكون لها نفس عدد التضمين ونفس تاريخ التبليغ.';
+
+// Selected cards → one محضر. Answers:
+//   422 { mismatches }                  عدد التضمين / تاريخ التبليغ differ — refused
+//   409 { needsConfirm, conflicts, … }  cards would leave another محضر, or their
+//                                        تاريخ بطاقة الجبر differ — resend with force
+//   200 docx                            the محضر (new, or the exact one reprinted)
+router.post('/:id/actes', authenticate, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        const raw = Array.isArray(req.body.card_ids) ? req.body.card_ids : [];
+        const ids = [...new Set(raw.map(Number).filter(Number.isInteger))];
+        if (!ids.length) return res.status(400).json({ error: 'اختر بطاقة جبر واحدة على الأقل.' });
+
+        await ensureActeSchema();
+        const company = await loadCompany(id, req.user.id_so);
+        if (!company) return res.status(404).json({ error: 'الملف غير موجود.' });
+        const all = await loadCards(id, req.user.id_so);
+        const selected = all.filter((c) => ids.includes(c.id_cn_oe));
+        if (selected.length !== ids.length) {
+            return res.status(400).json({ error: 'بعض البطاقات المحددة لا تنتمي إلى هذا الملف.' });
+        }
+
+        const actesById = await loadActes(id, req.user.id_so);
+        const check = checkGrouping(selected, all.filter((c) => c.id_acte != null), actesById);
+
+        if (check.mismatches.length) {
+            return res.status(422).json({ error: mismatchMessage(check.mismatches), mismatches: check.mismatches });
+        }
+
+        if (check.reprintActeId) {
+            const acte = actesById[check.reprintActeId];
+            const buf = await renderActes(company, [acte.id_acte], selected);
+            await logActivity(req.user, 'PRINT', 'RECORD',
+                `إعادة طباعة المحضر عدد ${acte.numero} للملف ${company.nom_cl2 || id}`);
+            return sendDocx(res, buf, `acte_${id}_${acte.numero}.docx`);
+        }
+
+        if (!req.body.force && (check.conflicts.length || check.dateCarteValues.length > 1)) {
+            return res.status(409).json({
+                needsConfirm: true, conflicts: check.conflicts, dateCarteValues: check.dateCarteValues,
+            });
+        }
+
+        const acte = await createActe(id, req.user);
+        await assignCards(acte.id_acte, ids, req.user.id_so);
+        await pruneEmptyActes(id, req.user.id_so);
+
+        const cards = selected.map((c) => ({ ...c, id_acte: acte.id_acte }));
+        const buf = await renderActes(company, [acte.id_acte], cards);
+        const moved = check.conflicts.map((c) => `${c.moving.length} من المحضر ${c.numero}`).join('، ');
+        await logActivity(req.user, 'PRINT', 'RECORD',
+            `توليد المحضر عدد ${acte.numero} (${cards.length} بطاقة) للملف ${company.nom_cl2 || id}`
+            + (moved ? ` — نُقلت ${moved}` : ''));
+        sendDocx(res, buf, `acte_${id}_${acte.numero}.docx`);
     } catch (err) {
-        console.error('act.docx error:', err);
+        console.error('actes error:', err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// All of a company's cards → one document, one act per page (publipostage).
-router.get('/:id/acts.docx', authenticate, async (req, res) => {
+// Reprint an existing محضر as it stands.
+router.get('/actes/:acteId/act.docx', authenticate, async (req, res) => {
+    try {
+        const acteId = parseInt(req.params.acteId, 10);
+        await ensureActeSchema();
+        const acte = await db.get(`SELECT * FROM cnss_acte WHERE id_acte = ? AND id_so = ?`, [acteId, req.user.id_so]);
+        if (!acte) return res.status(404).json({ error: 'المحضر غير موجود.' });
+        const company = await loadCompany(acte.id_cn, req.user.id_so);
+        if (!company) return res.status(404).json({ error: 'الملف غير موجود.' });
+        const cards = await loadCards(acte.id_cn, req.user.id_so);
+        if (!cards.some((c) => c.id_acte === acteId)) return res.status(404).json({ error: 'المحضر لا يحتوي على بطاقات.' });
+
+        const buf = await renderActes(company, [acteId], cards);
+        await logActivity(req.user, 'PRINT', 'RECORD',
+            `إعادة طباعة المحضر عدد ${acte.numero} للملف ${company.nom_cl2 || acte.id_cn}`);
+        sendDocx(res, buf, `acte_${acte.id_cn}_${acte.numero}.docx`);
+    } catch (err) {
+        console.error('acte reprint error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Dissolve a محضر: its cards become free to be grouped again.
+router.delete('/actes/:acteId', authenticate, async (req, res) => {
+    try {
+        const acteId = parseInt(req.params.acteId, 10);
+        await ensureActeSchema();
+        const acte = await db.get(`SELECT * FROM cnss_acte WHERE id_acte = ? AND id_so = ?`, [acteId, req.user.id_so]);
+        if (!acte) return res.status(404).json({ error: 'المحضر غير موجود.' });
+        await db.run(`UPDATE cnss_oeuvre SET id_acte = NULL WHERE id_acte = ? AND id_so = ?`, [acteId, req.user.id_so]);
+        await db.run(`DELETE FROM cnss_acte WHERE id_acte = ? AND id_so = ?`, [acteId, req.user.id_so]);
+        await logActivity(req.user, 'DELETE', 'RECORD', `إلغاء تجميع المحضر عدد ${acte.numero} (ملف ${acte.id_cn})`);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Every محضر of the company in one document. Existing محاضر print as grouped; each
+// card not yet in a محضر becomes its own one-card محضر (and stays so), so a card
+// printed here can't later slip into a second محضر unnoticed.
+router.post('/:id/acts.docx', authenticate, async (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
-        const company = await db.get(`SELECT * FROM cnss WHERE id_cn = ? AND id_so = ?`, [id, req.user.id_so]);
+        await ensureActeSchema();
+        const company = await loadCompany(id, req.user.id_so);
         if (!company) return res.status(404).json({ error: 'الملف غير موجود.' });
-        const cards = await db.all(`SELECT * FROM cnss_oeuvre WHERE id_cn = ? AND id_so = ? ORDER BY id_cn_oe ASC`, [id, req.user.id_so]);
+        let cards = await loadCards(id, req.user.id_so);
         if (!cards.length) return res.status(400).json({ error: 'لا توجد بطاقات لتوليد محاضرها.' });
 
-        const buf = renderActs(cards.map(c => buildActRecord(company, c)), await getOfficeProfile());
-        await logActivity(req.user, 'PRINT', 'RECORD', `توليد ${cards.length} محضر للملف ${company.nom_cl2 || id}`);
+        const actesById = await loadActes(id, req.user.id_so);
+        const free = cards.filter((c) => c.id_acte == null || !actesById[c.id_acte]);
+        for (const card of free) {
+            const acte = await createActe(id, req.user);
+            await assignCards(acte.id_acte, [card.id_cn_oe], req.user.id_so);
+            actesById[acte.id_acte] = acte;
+        }
+        if (free.length) cards = await loadCards(id, req.user.id_so);
+
+        const acteIds = Object.values(actesById)
+            .filter((a) => cards.some((c) => c.id_acte === a.id_acte))
+            .sort((a, b) => a.numero - b.numero)
+            .map((a) => a.id_acte);
+        const buf = await renderActes(company, acteIds, cards);
+        await logActivity(req.user, 'PRINT', 'RECORD', `توليد ${acteIds.length} محضر للملف ${company.nom_cl2 || id}`);
         sendDocx(res, buf, `acts_${id}.docx`);
     } catch (err) {
         console.error('acts.docx error:', err);
@@ -656,8 +747,25 @@ router.put('/cards/:cardId', authenticate, async (req, res) => {
         const vals = [...Object.values(data), cardId, req.user.id_so];
         await db.run(`UPDATE cnss_oeuvre SET ${setStr} WHERE id_cn_oe = ? AND id_so = ?`, vals);
 
-        await logActivity(req.user, 'UPDATE', 'RECORD', `تعديل بطاقة جبر (ID: ${cardId})`);
-        res.json({ success: true, updatedID: cardId });
+        // عدد التضمين and تاريخ التبليغ belong to the محضر, not the card: changing them
+        // on one card of a محضر changes them for all its cards (services/cnssActes.js).
+        const shared = pick(data, SHARED_FIELDS.map(f => f.key));
+        let propagated = 0;
+        if (Object.keys(shared).length) {
+            await ensureActeSchema();
+            const card = await db.get(`SELECT id_acte FROM cnss_oeuvre WHERE id_cn_oe = ? AND id_so = ?`, [cardId, req.user.id_so]);
+            if (card && card.id_acte != null) {
+                const set = Object.keys(shared).map(k => `"${k}" = ?`).join(', ');
+                const r = await db.run(
+                    `UPDATE cnss_oeuvre SET ${set} WHERE id_acte = ? AND id_so = ? AND id_cn_oe <> ?`,
+                    [...Object.values(shared), card.id_acte, req.user.id_so, cardId]);
+                propagated = r.changes;
+            }
+        }
+
+        await logActivity(req.user, 'UPDATE', 'RECORD', `تعديل بطاقة جبر (ID: ${cardId})`
+            + (propagated ? ` وتحديث ${propagated} بطاقة أخرى من نفس المحضر` : ''));
+        res.json({ success: true, updatedID: cardId, propagated });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -667,7 +775,12 @@ router.put('/cards/:cardId', authenticate, async (req, res) => {
 router.delete('/cards/:cardId', authenticate, async (req, res) => {
     try {
         const cardId = parseInt(req.params.cardId, 10);
+        const card = await db.get(`SELECT id_cn FROM cnss_oeuvre WHERE id_cn_oe = ? AND id_so = ?`, [cardId, req.user.id_so]);
         await db.run(`DELETE FROM cnss_oeuvre WHERE id_cn_oe = ? AND id_so = ?`, [cardId, req.user.id_so]);
+        if (card) {
+            await ensureActeSchema();
+            await pruneEmptyActes(card.id_cn, req.user.id_so);   // a one-card محضر goes with its card
+        }
 
         await logActivity(req.user, 'DELETE', 'RECORD', `حذف بطاقة جبر (ID: ${cardId})`);
         res.json({ success: true, deletedID: cardId });
