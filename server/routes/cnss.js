@@ -1,10 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const fs = require('fs');
-const path = require('path');
 const multer = require('multer');
-const PizZip = require('pizzip');
-const Docxtemplater = require('docxtemplater');
 const db = require('../db');
 
 const authenticate = require('../middleware/auth');
@@ -14,9 +10,12 @@ const {
     ensureActeSchema, checkGrouping, buildActRecord, SHARED_FIELDS,
     loadActes, createActe, assignCards, pruneEmptyActes,
 } = require('../services/cnssActes');
+const {
+    validateCard, errorText, unprintableMessage, canonicalCard,
+} = require('../services/cnssValidate');
 const { renderMonthlyList, buildMonthlyGroups } = require('../services/listRender');
 const { getOfficeProfile } = require('../services/officeProfile');
-const { yearInArabicWords } = require('../services/numberToArabicWords');
+const { renderActs } = require('../services/cnssActRender');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -123,143 +122,7 @@ const SUM_DETTE = sub =>
     `COALESCE((SELECT SUM(CASE WHEN o.dette ~ '^[0-9.]+$' THEN o.dette::numeric ELSE 0 END)
                FROM cnss_oeuvre o WHERE o.id_cn = ${sub}), 0)`;
 
-// ───────── "محضر إعلام بطاقة جبر" generation (publipostage replacement) ─────────
-// Built once from Assets/template.docx by scripts/build_cnss_template.js.
-const TEMPLATE_PATH = path.join(__dirname, '..', 'assets', 'template_cnss.docx');
-
-// The acts loop ends with this paragraph so each محضر starts on a fresh page. The
-// render converts each one into a section break (see perActFooters).
-const PAGE_BREAK_P = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
-
-// A valid but empty footer, used to park the footer part while docxtemplater runs
-// so it never sees (and blanks out) the {fee_*} tags we fill per act ourselves.
-const EMPTY_FOOTER = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n'
-    + '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
-    + '<w:p><w:pPr><w:pStyle w:val="Pieddepage"/></w:pPr></w:p></w:ftr>';
-
-const FOOTER_CT = 'application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml';
-const FOOTER_REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer';
-
-const xmlEscape = (s) => String(s == null ? '' : s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-// Fill one act's amounts into a copy of the tagged fee-table footer. Any tag the
-// act doesn't carry resolves to '' — same contract as docxtemplater's nullGetter.
-const fillFooter = (footerXml, act) =>
-    footerXml.replace(/\{([a-z_]+)\}/g, (_, key) => xmlEscape(act[key]));
-
-/*
- * Give every محضر its own section, so every محضر gets its own footer.
- *
- * A footer is the only thing Word pins to the bottom of the page, but footers
- * belong to a SECTION — one shared footer would print the first act's fees under
- * every act. So: turn each inter-act page break into a section break, and hand
- * each section a generated footer part holding that act's amounts.
- *
- * Returns false (leaving the document untouched) if the template doesn't have the
- * shape we expect.
- */
-function perActFooters(zip, acts, footerTpl) {
-    const docPart = zip.file('word/document.xml');
-    const relsPart = zip.file('word/_rels/document.xml.rels');
-    const ctPart = zip.file('[Content_Types].xml');
-    if (!docPart || !relsPart || !ctPart || !footerTpl) return false;
-
-    let xml = docPart.asText();
-    let rels = relsPart.asText();
-    let ct = ctPart.asText();
-
-    // The body-level sectPr is the LAST one; it defines the final section.
-    const sectStart = xml.lastIndexOf('<w:sectPr');
-    const sectEnd = xml.indexOf('</w:sectPr>', sectStart);
-    if (sectStart === -1 || sectEnd === -1) return false;
-    const bodySect = xml.slice(sectStart, sectEnd + '</w:sectPr>'.length);
-
-    let nextRel = Math.max(0, ...[...rels.matchAll(/Id="rId(\d+)"/g)].map((m) => +m[1]));
-    let nextFooter = Math.max(0, ...Object.keys(zip.files)
-        .map((f) => /^word\/footer(\d+)\.xml$/.exec(f)).filter(Boolean).map((m) => +m[1]));
-
-    const footerRelIds = acts.map((act) => {
-        const relId = `rId${++nextRel}`;
-        const name = `footer${++nextFooter}.xml`;
-        zip.file(`word/${name}`, fillFooter(footerTpl, act));
-        rels = rels.replace('</Relationships>',
-            `<Relationship Id="${relId}" Type="${FOOTER_REL}" Target="${name}"/></Relationships>`);
-        ct = ct.replace('</Types>',
-            `<Override PartName="/word/${name}" ContentType="${FOOTER_CT}"/></Types>`);
-        return relId;
-    });
-
-    // A section's own sectPr, cloned from the body one with its footer swapped.
-    // CT_SectPr order: header/footerReference first, then type, then pgSz/pgMar…
-    const sectionFor = (relId) => bodySect
-        .replace(/<w:footerReference\b[^>]*\/>/g, '')
-        .replace(/(<w:headerReference\b[^>]*\/>)/, `$1<w:footerReference w:type="default" r:id="${relId}"/>`)
-        .replace(/(<w:footerReference\b[^>]*\/>)/, '$1<w:type w:val="nextPage"/>');
-
-    // Each inter-act page break becomes a section break carrying that act's footer.
-    // The final act needs no break — the body-level sectPr closes it.
-    let i = -1;
-    xml = xml.split(PAGE_BREAK_P).reduce((acc, chunk, idx, parts) => {
-        if (idx === parts.length - 1) return acc + chunk;
-        i += 1;
-        const brk = i < footerRelIds.length - 1
-            ? `<w:p><w:pPr>${sectionFor(footerRelIds[i])}</w:pPr></w:p>`
-            : ''; // trailing break after the last act — drop it entirely
-        return acc + chunk + brk;
-    }, '');
-
-    // The last section is the body-level sectPr; point it at the last act's footer.
-    xml = xml.slice(0, xml.lastIndexOf('<w:sectPr'))
-        + sectionFor(footerRelIds[footerRelIds.length - 1]).replace('<w:type w:val="nextPage"/>', '')
-        + xml.slice(xml.indexOf('</w:sectPr>', xml.lastIndexOf('<w:sectPr')) + '</w:sectPr>'.length);
-
-    zip.file('word/document.xml', xml);
-    zip.file('word/_rels/document.xml.rels', rels);
-    zip.file('[Content_Types].xml', ct);
-    return true;
-}
-
-/*
- * Render one Word document containing `acts` (1 → single act, N → one per page).
- *
- * `office` carries the letterhead identity printed in the body of every محضر —
- * the bailiff's name, address, judicial circuit and the CNSS regional bureau. These
- * were once hardcoded in the template; they are merge tags now, so each deployment
- * prints its own office (see services/officeProfile.js). Those tags appear both
- * inside the {#acts} loop and in the letterhead header, so the office is supplied
- * at both scopes below.
- *
- * nullGetter keeps any unfilled tag (e.g. a blank fee cell) from throwing.
- */
-const renderActs = (records, office = {}) => {
-    const yearWords = yearInArabicWords(new Date().getFullYear());
-    // Act fields win over office fields, so a future per-act override stays possible.
-    const acts = records.map((act) => ({ ...office, year_words: yearWords, ...act }));
-
-    const zip = new PizZip(fs.readFileSync(TEMPLATE_PATH));
-
-    // Park the tagged fee-table footer so docxtemplater doesn't blank its {fee_*}
-    // tags; each act gets its own filled copy afterwards.
-    const footerName = Object.keys(zip.files).find((f) => /^word\/footer\d*\.xml$/.test(f));
-    const footerTpl = footerName ? zip.file(footerName).asText() : null;
-    if (footerName) zip.file(footerName, EMPTY_FOOTER);
-
-    const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true, nullGetter: () => '' });
-    // The office also goes in at root scope: the letterhead's {office_*} tags live in
-    // the header, which is outside the {#acts} loop and so can't see per-act values.
-    doc.render({ acts, ...office, year_words: yearWords });
-
-    const out = doc.getZip();
-    if (!perActFooters(out, acts, footerTpl)) {
-        // Unrecognised template: fall back to just dropping the trailing break.
-        const xml = out.file('word/document.xml').asText();
-        const last = xml.lastIndexOf(PAGE_BREAK_P);
-        if (last !== -1) out.file('word/document.xml', xml.slice(0, last) + xml.slice(last + PAGE_BREAK_P.length));
-        if (footerName) out.file(footerName, footerTpl.replace(/\{[a-z_]+\}/g, ''));
-    }
-    return out.generate({ type: 'nodebuffer' });
-};
+// The Word rendering itself lives in services/cnssActRender.js.
 
 const sendDocx = (res, buf, filename) => {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
@@ -365,9 +228,14 @@ router.post('/scan', authenticate, upload.single('file'), async (req, res) => {
             createdCompany = true;
         }
 
+        // Bring the AI's reading to canonical form (٠١٢ digits, 21-05-2026 → 21/05/2026,
+        // "2 959,306" → 2959.306). A value that still fails is kept as read so the user
+        // can see it: the cards table flags it and no act prints until it is fixed.
+        const read = validateCard({
+            numcarte: d.numcarte || '', datecarte: d.datecarte || '', semestre: d.semestre || '', dette: d.dette || '',
+        }).values;
         const extracted = {
-            numcarte: d.numcarte || '', datecarte: d.datecarte || '', semestre: d.semestre || '',
-            dette: d.dette || '', pourcentage: '1.5', datesins: deriveDatesins(d.semestre), nbrreg: '',
+            ...read, pourcentage: '1.5', datesins: deriveDatesins(read.semestre), nbrreg: '',
         };
 
         // Already filed under this مطلوب? File nothing and hand the extracted card
@@ -556,7 +424,7 @@ const loadCards = (id, id_so) => db.all(
 
 // The given محاضر, in order, as one document (one محضر per page).
 const renderActes = async (company, acteIds, cards) => renderActs(
-    acteIds.map((a) => buildActRecord(company, cards.filter((c) => c.id_acte === a))),
+    acteIds.map((a) => buildActRecord(company, cards.filter((c) => c.id_acte === a).map(canonicalCard))),
     await getOfficeProfile());
 
 const blankLabel = (v) => v || 'فارغ';
@@ -587,6 +455,9 @@ router.post('/:id/actes', authenticate, async (req, res) => {
 
         const actesById = await loadActes(id, req.user.id_so);
         const check = checkGrouping(selected, all.filter((c) => c.id_acte != null), actesById);
+
+        const unprintable = unprintableMessage(selected);
+        if (unprintable) return res.status(422).json({ error: unprintable });
 
         if (check.mismatches.length) {
             return res.status(422).json({ error: mismatchMessage(check.mismatches), mismatches: check.mismatches });
@@ -634,6 +505,8 @@ router.get('/actes/:acteId/act.docx', authenticate, async (req, res) => {
         if (!company) return res.status(404).json({ error: 'الملف غير موجود.' });
         const cards = await loadCards(acte.id_cn, req.user.id_so);
         if (!cards.some((c) => c.id_acte === acteId)) return res.status(404).json({ error: 'المحضر لا يحتوي على بطاقات.' });
+        const unprintable = unprintableMessage(cards.filter((c) => c.id_acte === acteId));
+        if (unprintable) return res.status(422).json({ error: unprintable });
 
         const buf = await renderActes(company, [acteId], cards);
         await logActivity(req.user, 'PRINT', 'RECORD',
@@ -672,6 +545,8 @@ router.post('/:id/acts.docx', authenticate, async (req, res) => {
         if (!company) return res.status(404).json({ error: 'الملف غير موجود.' });
         let cards = await loadCards(id, req.user.id_so);
         if (!cards.length) return res.status(400).json({ error: 'لا توجد بطاقات لتوليد محاضرها.' });
+        const unprintable = unprintableMessage(cards);
+        if (unprintable) return res.status(422).json({ error: unprintable });
 
         const actesById = await loadActes(id, req.user.id_so);
         const free = cards.filter((c) => c.id_acte == null || !actesById[c.id_acte]);
@@ -704,14 +579,22 @@ router.post('/:id/cards', authenticate, async (req, res) => {
         const owner = await db.get(`SELECT * FROM cnss WHERE id_cn = ? AND id_so = ?`, [id, req.user.id_so]);
         if (!owner) return res.status(404).json({ error: 'Dossier non trouvé.' });
 
+        // `force` re-files a card /scan already read (the duplicate "keep it anyway"), so
+        // an unreadable value stays for the user to fix, as in /scan. Typed values must
+        // be valid (services/cnssValidate.js).
+        const { values, errors } = validateCard(pick(req.body, OEUVRE_COLS));
+        if (Object.keys(errors).length && !req.body.force) {
+            return res.status(422).json({ error: errorText(errors), fields: errors });
+        }
+        const data = { ...pick(req.body, OEUVRE_COLS), ...values };
+
         // Same عدد البطاقة guard as /scan. `force` is the user's "keep it anyway"
         // (it isn't an OEUVRE_COLS column, so it never reaches SQL).
         if (!req.body.force) {
-            const dup = await findDuplicateCard(id, req.user.id_so, req.body.numcarte);
+            const dup = await findDuplicateCard(id, req.user.id_so, data.numcarte);
             if (dup) return res.status(409).json(duplicatePayload(owner, dup));
         }
 
-        const data = pick(req.body, OEUVRE_COLS);
         data.id_cn = id;
         data.id_user = req.user.id;
         data.id_so = req.user.id_so;
@@ -740,8 +623,28 @@ router.post('/:id/cards', authenticate, async (req, res) => {
 router.put('/cards/:cardId', authenticate, async (req, res) => {
     try {
         const cardId = parseInt(req.params.cardId, 10);
-        const data = pick(req.body, OEUVRE_COLS);
-        if (Object.keys(data).length === 0) return res.json({ success: true });
+        const input = pick(req.body, OEUVRE_COLS);
+        if (Object.keys(input).length === 0) return res.json({ success: true });
+
+        await ensureActeSchema();
+        const existing = await db.get(`SELECT * FROM cnss_oeuvre WHERE id_cn_oe = ? AND id_so = ?`, [cardId, req.user.id_so]);
+        if (!existing) return res.status(404).json({ error: 'بطاقة الجبر غير موجودة.' });
+        const { values, errors } = validateCard(input, existing);
+        if (Object.keys(errors).length) return res.status(422).json({ error: errorText(errors), fields: errors });
+        const data = { ...input, ...values };
+
+        // تاريخ التبليغ is copied to the whole محضر below, so it must not precede any
+        // of its cards' تاريخ البطاقة either.
+        if (data.date_tabligh && existing.id_acte != null) {
+            const siblings = await db.all(`SELECT * FROM cnss_oeuvre WHERE id_acte = ? AND id_so = ? AND id_cn_oe <> ?`,
+                [existing.id_acte, req.user.id_so, cardId]);
+            const clash = siblings.map((c) => ({ c, e: validateCard({ date_tabligh: data.date_tabligh }, c).errors.date_tabligh }))
+                .find((x) => x.e);
+            if (clash) {
+                const msg = `${clash.e} — البطاقة ${clash.c.numcarte || clash.c.id_cn_oe} من نفس المحضر`;
+                return res.status(422).json({ error: msg, fields: { date_tabligh: msg } });
+            }
+        }
 
         const setStr = Object.keys(data).map(k => `"${k}" = ?`).join(', ');
         const vals = [...Object.values(data), cardId, req.user.id_so];
@@ -751,21 +654,17 @@ router.put('/cards/:cardId', authenticate, async (req, res) => {
         // on one card of a محضر changes them for all its cards (services/cnssActes.js).
         const shared = pick(data, SHARED_FIELDS.map(f => f.key));
         let propagated = 0;
-        if (Object.keys(shared).length) {
-            await ensureActeSchema();
-            const card = await db.get(`SELECT id_acte FROM cnss_oeuvre WHERE id_cn_oe = ? AND id_so = ?`, [cardId, req.user.id_so]);
-            if (card && card.id_acte != null) {
-                const set = Object.keys(shared).map(k => `"${k}" = ?`).join(', ');
-                const r = await db.run(
-                    `UPDATE cnss_oeuvre SET ${set} WHERE id_acte = ? AND id_so = ? AND id_cn_oe <> ?`,
-                    [...Object.values(shared), card.id_acte, req.user.id_so, cardId]);
-                propagated = r.changes;
-            }
+        if (Object.keys(shared).length && existing.id_acte != null) {
+            const set = Object.keys(shared).map(k => `"${k}" = ?`).join(', ');
+            const r = await db.run(
+                `UPDATE cnss_oeuvre SET ${set} WHERE id_acte = ? AND id_so = ? AND id_cn_oe <> ?`,
+                [...Object.values(shared), existing.id_acte, req.user.id_so, cardId]);
+            propagated = r.changes;
         }
 
         await logActivity(req.user, 'UPDATE', 'RECORD', `تعديل بطاقة جبر (ID: ${cardId})`
             + (propagated ? ` وتحديث ${propagated} بطاقة أخرى من نفس المحضر` : ''));
-        res.json({ success: true, updatedID: cardId, propagated });
+        res.json({ success: true, updatedID: cardId, propagated, values: data });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

@@ -114,6 +114,12 @@ plane says the office is suspended — see §12 for the allowlist that survives 
   share عدد التضمين (`nbrreg`) and تاريخ التبليغ (`date_tabligh`) — editing either on one card
   updates the whole محضر; its fee table is the sum of its cards' fees. Rules in
   `services/cnssActes.js`; the table is created lazily on first use. Test: `server/test_cnss_actes.js`.
+- **Card field validation** — `services/cnssValidate.js` (mirrored in `client/src/utils/cnssValidate.js`;
+  `server/test_cnss_validate.js` fails if they drift). Arabic-Indic digits are converted; dates must be
+  numerals, a real day, a 4-digit year ≥ 1990, not in the future (except تاريخ احتساب الخطايا), and
+  تاريخ التبليغ ≥ تاريخ البطاقة. Canonical storage: `datecarte`/`datesins` DD/MM/YYYY, `date_tabligh`
+  YYYY-MM-DD, `semestre` QQ/YYYY, `dette` dinars with 3 decimals. Typed values that fail get a 422;
+  AI-scanned values that fail are kept as read, flagged ⚠ in the table, and block act printing.
 - **`oeuvre_type`** — catalog of action types for execution records.
 - **`evenement`** — calendar events (hearings): `title`, `start`, `time_even`, `tribunal_even`.
 - **`telephone`** — contacts directory.

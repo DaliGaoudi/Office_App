@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Check, Plus, Trash2, Edit, UploadCloud, FileText, Printer, ScanLine, ChevronDown, ChevronLeft, Unlink } from 'lucide-react';
+import { ArrowLeft, Save, Check, Plus, Trash2, Edit, UploadCloud, FileText, ScanLine, Unlink } from 'lucide-react';
 import { CNSS_STATUS_MAP, CNSS_AWAITING_PRINT, TABLIGH_METHODS } from '../utils/formatters';
 import API_BASE from '../config';
 import AutocompleteInput from '../components/AutocompleteInput';
 import { compressImage, scanCardFromBridge, createRecordFromCard, duplicateMessage } from '../utils/cnssScan';
 import { SHARED_KEYS, selectionMismatches, mismatchText, conflictMessage } from '../utils/cnssActes';
+import { validateCard, cardErrors, toLatinDigits, errorText } from '../utils/cnssValidate';
+import { InlineCardText, InlineCardDate, CheckedCell } from '../components/CnssInlineCells';
+import CnssCardModal from '../components/CnssCardModal';
+import { EMPTY_CARD, vatMillimes, vatRateOf } from '../utils/cnssCardForm';
 
 const API = `${API_BASE}/cnss`;
 
@@ -19,8 +23,8 @@ const fmtDinar = (v) => {
 // "تاريخ احتساب الخطايا" follows the quarter: the 16th of the month after the
 // quarter ends. Q1→16/04, Q2→16/07, Q3→16/10, Q4→16/01 of the next year.
 // semestre is "Q/YYYY" e.g. "04/2021".
-export function deriveDatesins(semestre) {
-  const m = /^\s*(\d{1,2})\s*\/\s*(\d{4})\s*$/.exec(semestre || '');
+function deriveDatesins(semestre) {
+  const m = /^\s*(\d{1,2})\s*\/\s*(\d{4})\s*$/.exec(toLatinDigits(semestre));
   if (!m) return '';
   const q = parseInt(m[1], 10);
   let y = parseInt(m[2], 10);
@@ -32,56 +36,6 @@ export function deriveDatesins(semestre) {
 
 const EMPTY_COMPANY = { ref: '', nom_cl2: '', cl2_adresse: '', cl2_adresse2: '', numcnss: '', codeng: '', cl2_profession: '', tribunal: '', tabligh_method: '', resultat: '', notes: '', status: CNSS_AWAITING_PRINT };
 
-// Per-act fee statement, split into two billing sections. Amounts are whole
-// millimes (1 د.ت = 1000 مليم). VAT (أ ق م) is applied to the الأجور section only.
-//   الأجور  → VAT-bearing base.
-//   مصاريف  → no VAT.
-const AJR_FIELDS = [
-  { k: 'fee_original', l: 'أصل المحضر' },
-  { k: 'fee_counterparts', l: 'النظائر' },
-  { k: 'fee_legal_copy', l: 'النسخة القانونية' },
-  { k: 'fee_office_copy', l: 'النسخة المكتبية' },
-  { k: 'fee_movement', l: 'التوجه' },
-  { k: 'fee_copies', l: 'نسخ الأوراق' },
-];
-const EXP_FIELDS = [
-  { k: 'fee_travel', l: 'التنقل' },
-  { k: 'fee_registration', l: 'التسجيل' },
-  { k: 'fee_stamp', l: 'الترسيم' },
-  { k: 'fee_post', l: 'البريد' },
-];
-// All manual-input fee columns (the VAT line fee_aqm is derived, not typed).
-const FEE_KEYS = [...AJR_FIELDS, ...EXP_FIELDS].map((f) => f.k);
-const DEFAULT_VAT_RATE = '19';
-const toMillimes = (v) => parseInt(String(v || '').replace(/[^\d]/g, ''), 10) || 0;
-const sumKeys = (form, fields) => fields.reduce((s, f) => s + toMillimes(form[f.k]), 0);
-// vat_rate is a percentage; blank/invalid → 19% default.
-const vatRateOf = (form) => {
-  const raw = String(form.vat_rate ?? '').replace(',', '.').trim();
-  if (raw === '') return parseFloat(DEFAULT_VAT_RATE);
-  const n = parseFloat(raw);
-  return isNaN(n) ? parseFloat(DEFAULT_VAT_RATE) : n;
-};
-const ajrTotalMillimes = (form) => sumKeys(form, AJR_FIELDS);
-const expTotalMillimes = (form) => sumKeys(form, EXP_FIELDS);
-const vatMillimes = (form) => Math.round(ajrTotalMillimes(form) * vatRateOf(form) / 100);
-const grandTotalMillimes = (form) => ajrTotalMillimes(form) + vatMillimes(form) + expTotalMillimes(form);
-// millimes → "D DDD,MMM" (Tunisian dinars; comma = millime decimal).
-const formatDinar = (millimes) =>
-  String(Math.floor(millimes / 1000)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ',' + String(millimes % 1000).padStart(3, '0');
-
-// Normalize a stored date (YYYY-MM-DD or DD/MM/YYYY) to YYYY-MM-DD for <input type="date">.
-const toISODate = (s) => {
-  s = String(s || '').trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
-  return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : '';
-};
-
-const EMPTY_CARD = { numcarte: '', datecarte: '', date_tabligh: '', semestre: '', dette: '', pourcentage: '1.5', datesins: '', nbrreg: '',
-  vat_rate: DEFAULT_VAT_RATE,
-  ...Object.fromEntries(FEE_KEYS.map((k) => [k, ''])) };
-
 // Within a folder, split its cards by whether the محضر has been delivered — only
 // cards carrying a تاريخ التبليغ reach the monthly CNSS list, so "غير مُبلَّغة" is
 // the office's worklist.
@@ -91,39 +45,6 @@ const TABLIGH_FILTERS = [
   { k: 'with',    l: 'مُبلَّغة',      match: hasTabligh },
   { k: 'without', l: 'غير مُبلَّغة',  match: (c) => !hasTabligh(c) },
 ];
-
-/*
- * A text cell edited in place, used for عدد التضمين in the بطاقات الجبر table.
- *
- * Unlike the تاريخ التبليغ cell beside it, this cannot just save onChange: a date
- * picker fires once when a date is chosen, whereas typing would fire — and PUT —
- * once per keystroke. So it commits on blur or Enter, and only when the text
- * actually changed; Escape abandons the edit.
- */
-function InlineCardText({ value, onCommit, title, placeholder }) {
-  const committed = value === null || value === undefined ? '' : String(value);
-
-  /*
-   * Uncontrolled on purpose: the typed text only matters at commit time, so the
-   * browser owns it and no React state mirrors the prop. `key` makes the input
-   * remount when the stored value changes from elsewhere (the card modal, a
-   * reload), which re-seeds defaultValue — the one thing an uncontrolled input
-   * would otherwise miss. By then the field has been blurred, so no focus is lost.
-   */
-  return (
-    <input type="text" key={committed} defaultValue={committed} title={title} placeholder={placeholder}
-      onBlur={(e) => {
-        const next = e.currentTarget.value.trim();
-        if (next !== committed.trim()) onCommit(next);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
-        // Restore first, so the blur below compares equal and commits nothing.
-        else if (e.key === 'Escape') { e.currentTarget.value = committed; e.currentTarget.blur(); }
-      }}
-      style={{ width: '100%', minWidth: '5.5rem', padding: '0.3rem 0.4rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600 }} />
-  );
-}
 
 export default function RegistreCNSSDetail() {
   const { id } = useParams();
@@ -142,7 +63,7 @@ export default function RegistreCNSSDetail() {
   const [showCardModal, setShowCardModal]   = useState(false);
   const [editingCardId, setEditingCardId]   = useState(null);
   const [cardForm, setCardForm]             = useState(EMPTY_CARD);
-  const [showFees, setShowFees]             = useState(false);
+  const [fieldErrors, setFieldErrors]       = useState({});   // field → message, shown under the input
 
   // Cards table filter: all / delivered (has تاريخ التبليغ) / not delivered.
   const [tablighFilter, setTablighFilter]   = useState('all');
@@ -225,9 +146,10 @@ export default function RegistreCNSSDetail() {
   };
 
   // ── Cards ──
-  const openNewCard = () => { setEditingCardId(null); setCardForm(EMPTY_CARD); setShowCardModal(true); };
+  const openNewCard = () => { setEditingCardId(null); setCardForm(EMPTY_CARD); setFieldErrors({}); setShowCardModal(true); };
   const openEditCard = (card) => {
     setEditingCardId(card.id_cn_oe);
+    setFieldErrors(cardErrors(card));   // a stored value that fails is pointed out straight away
     setCardForm({ ...EMPTY_CARD, ...card });
     setShowCardModal(true);
   };
@@ -239,14 +161,23 @@ export default function RegistreCNSSDetail() {
       if (k === 'semestre') next.datesins = deriveDatesins(v) || prev.datesins;
       return next;
     });
+    setFieldErrors(prev => {
+      const { [k]: _, ...rest } = prev;
+      return rest;
+    });
   };
 
   const saveCard = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
+    // Same rules as the server (utils/cnssValidate.js): stop with each message under
+    // its field, otherwise send the canonical values (Latin digits, DD/MM/YYYY, …).
+    const { values, errors } = validateCard(cardForm);
+    if (Object.keys(errors).length) { setFieldErrors(errors); return; }
+    const form = { ...cardForm, ...values };
     // fee_aqm (VAT) is derived from the الأجور subtotal × vat_rate — persist the
     // computed value so the stored row matches what the act renders.
-    const payload = { ...cardForm, fee_aqm: String(vatMillimes(cardForm)), vat_rate: String(vatRateOf(cardForm)) };
+    const payload = { ...form, fee_aqm: String(vatMillimes(form)), vat_rate: String(vatRateOf(form)) };
     const send = (body) => fetch(
       editingCardId ? `${API}/cards/${editingCardId}` : `${API}/${id}/cards`,
       {
@@ -263,27 +194,35 @@ export default function RegistreCNSSDetail() {
         if (!info.duplicate || !window.confirm(duplicateMessage(info))) return;
         res = await send({ ...payload, force: 1 });
       }
-      if (res.ok) { setShowCardModal(false); fetchData(); }
-      else { const err = await res.json(); alert('خطأ: ' + (err.error || 'فشل حفظ البطاقة')); }
+      if (res.ok) { setShowCardModal(false); fetchData(); return; }
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 422 && err.fields) setFieldErrors(err.fields);
+      else alert('خطأ: ' + (err.error || 'فشل حفظ البطاقة'));
     } catch (err) { console.error(err); }
   };
 
   // Inline edit of a single card field straight from the cards table (used for
   // تاريخ التبليغ). Optimistic local update + persist. عدد التضمين and تاريخ التبليغ
   // belong to the محضر, so the server copies them to its other cards — mirror that.
+  // A refused edit (422) restores the previous values and says why.
   const saveCardField = async (cardId, patch) => {
+    const before = cards;
     const acteId = cards.find(c => c.id_cn_oe === cardId)?.id_acte;
     const shared = Object.keys(patch).some(k => SHARED_KEYS.includes(k));
-    setCards(prev => prev.map(c => (c.id_cn_oe === cardId || (shared && acteId != null && c.id_acte === acteId))
-      ? { ...c, ...patch } : c));
+    const apply = (p) => setCards(prev => prev.map(c => (c.id_cn_oe === cardId || (shared && acteId != null && c.id_acte === acteId))
+      ? { ...c, ...p } : c));
+    apply(patch);
     const token = localStorage.getItem('token');
     try {
-      await fetch(`${API}/cards/${cardId}`, {
+      const res = await fetch(`${API}/cards/${cardId}`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(patch),
       });
-    } catch (e) { console.error(e); }
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) { setCards(before); alert(json.fields ? errorText(json.fields) : 'تعذّر الحفظ: ' + (json.error || res.status)); return; }
+      if (json.values) apply(json.values);   // the server's canonical form (e.g. Latin digits)
+    } catch (e) { console.error(e); setCards(before); alert('خطأ في الاتصال بالخادم'); }
   };
 
   const deleteCard = async (cardId) => {
@@ -477,6 +416,9 @@ export default function RegistreCNSSDetail() {
   const acteSize = (acteId) => cards.filter(c => c.id_acte === acteId).length;
   const selectedCards = cards.filter(c => selectedIds.includes(c.id_cn_oe));
   const selectionBlocked = selectionMismatches(selectedCards);
+  // Cards whose stored values fail validation: the server refuses to print them.
+  const selectionInvalid = selectedCards.filter(c => Object.keys(cardErrors(c)).length);
+  const todayISO = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Tunis' }).format(new Date());
   const allVisibleSelected = visibleCards.length > 0 && visibleCards.every(c => selectedIds.includes(c.id_cn_oe));
   const toggleAllVisible = () => {
     const visibleIds = visibleCards.map(c => c.id_cn_oe);
@@ -645,8 +587,12 @@ export default function RegistreCNSSDetail() {
                 <span style={{ color: '#ef4444', fontSize: '0.85rem', flex: 1 }}>
                   لا يمكن جمعها في محضر واحد: {mismatchText(selectionBlocked)}
                 </span>
+              ) : selectionInvalid.length > 0 ? (
+                <span style={{ color: '#ef4444', fontSize: '0.85rem', flex: 1 }}>
+                  بيانات غير صالحة في البطاقات {selectionInvalid.map(c => c.numcarte || c.id_cn_oe).join('، ')} — صحّحها أولاً (⚠ في الجدول)
+                </span>
               ) : <span style={{ flex: 1 }} />}
-              <button className="btn" onClick={generateSelected} disabled={selectionBlocked.length > 0}
+              <button className="btn" onClick={generateSelected} disabled={selectionBlocked.length > 0 || selectionInvalid.length > 0}
                 title={selectionBlocked.length ? 'بطاقات المحضر الواحد يجب أن يكون لها نفس عدد التضمين ونفس تاريخ التبليغ' : 'محضر واحد يذكر كل البطاقات المحددة'}>
                 <FileText size={18} /> توليد محضر للبطاقات المحددة
               </button>
@@ -683,6 +629,7 @@ export default function RegistreCNSSDetail() {
                   </td></tr>
                 ) : visibleCards.map(card => {
                   const acte = acteById[card.id_acte];
+                  const errs = cardErrors(card);
                   return (
                   <tr key={card.id_cn_oe}>
                     <td className="no-print">
@@ -696,15 +643,15 @@ export default function RegistreCNSSDetail() {
                         placeholder="—" />
                     </td>
                     <td>{card.numcarte || '—'}</td>
-                    <td>{card.semestre || '—'}</td>
-                    <td style={{ color: 'var(--primary)', fontWeight: 700 }}>{fmtDinar(card.dette)}</td>
-                    <td>{card.datecarte || '—'}</td>
-                    <td>{card.datesins || '—'}</td>
-                    <td>
-                      <input type="date" value={toISODate(card.date_tabligh)}
-                        onChange={(e) => saveCardField(card.id_cn_oe, { date_tabligh: e.target.value })}
-                        title="تاريخ تبليغ المحضر — يُستعمل في القائمة الشهرية"
-                        style={{ padding: '0.3rem 0.4rem', borderRadius: '6px', fontSize: '0.85rem' }} />
+                    <CheckedCell error={errs.semestre}>{card.semestre || '—'}</CheckedCell>
+                    <CheckedCell error={errs.dette} style={{ color: 'var(--primary)', fontWeight: 700 }}>
+                      {errs.dette ? card.dette : fmtDinar(card.dette)}
+                    </CheckedCell>
+                    <CheckedCell error={errs.datecarte}>{card.datecarte || '—'}</CheckedCell>
+                    <CheckedCell error={errs.datesins}>{card.datesins || '—'}</CheckedCell>
+                    <td title={errs.date_tabligh || undefined}>
+                      <InlineCardDate key={card.date_tabligh || ''} card={card} max={todayISO}
+                        onCommit={(v) => saveCardField(card.id_cn_oe, { date_tabligh: v })} />
                     </td>
                     <td>
                       {acte ? (
@@ -744,122 +691,10 @@ export default function RegistreCNSSDetail() {
         </div>
       )}
 
-      {/* ── Card modal ── */}
       {showCardModal && (
-        <div className="modal-overlay no-print" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div className="glass card animate-scale" style={{ width: 620, maxWidth: '100%', padding: '2rem', maxHeight: '95vh', overflowY: 'auto', borderRadius: '16px' }} dir="rtl">
-            <h3 style={{ color: 'var(--primary)', marginBottom: '1.5rem', textAlign: 'center' }}>
-              {editingCardId ? 'تعديل بطاقة جبر' : 'إضافة بطاقة جبر'}
-            </h3>
-            {editingActe && acteSize(editingActe.id_acte) > 1 && (
-              <div style={{ marginBottom: '1rem', padding: '0.6rem 0.8rem', borderRadius: '8px', fontSize: '0.85rem',
-                border: '1px solid var(--primary)', background: 'var(--surface-2)' }}>
-                هذه البطاقة ضمن المحضر {editingActe.numero} (عدد بطاقاته: {acteSize(editingActe.id_acte)}) —
-                تغيير عدد التضمين أو تاريخ التبليغ يُطبَّق على كل بطاقات المحضر.
-              </div>
-            )}
-            <form onSubmit={saveCard} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
-              {[
-                { k: 'numcarte', l: 'عدد بطاقة الجبر' },
-                { k: 'datecarte', l: 'تاريخ بطاقة الجبر', ph: 'YYYY-MM-DD' },
-                { k: 'semestre', l: 'الثلاثية', ph: '04/2021' },
-                { k: 'dette', l: 'أصل الدين (د.ت)', ph: '2959.306' },
-                { k: 'pourcentage', l: 'نسبة الخطية في الشهر (%)' },
-                { k: 'datesins', l: 'تاريخ احتساب الخطايا (تلقائي)' },
-                { k: 'nbrreg', l: 'عدد التضمين (بدفتر التنفيذ)' },
-              ].map(f => (
-                <div key={f.k}>
-                  <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.8rem', opacity: 0.8 }}>{f.l}</label>
-                  <input type="text" value={cardForm[f.k] || ''} placeholder={f.ph || ''}
-                    onChange={(e) => setCardField(f.k, e.target.value)}
-                    style={{ width: '100%', padding: '0.6rem', borderRadius: '8px' }} />
-                </div>
-              ))}
-
-              {/* ── الأجور — the act's fee statement (collapsed by default) ── */}
-              <div style={{ gridColumn: 'span 2', borderTop: '1px solid var(--card-border)', paddingTop: '0.9rem', marginTop: '0.25rem' }}>
-                <button type="button" onClick={() => setShowFees((v) => !v)}
-                  style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--primary)', fontWeight: 600 }}>
-                    {showFees ? <ChevronDown size={18} /> : <ChevronLeft size={18} />} الأجور
-                  </span>
-                  <span style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-                    المجموع <strong style={{ color: 'var(--primary)' }} dir="ltr">{formatDinar(grandTotalMillimes(cardForm))}</strong> د.ت
-                  </span>
-                </button>
-
-                {showFees && (() => {
-                  const ajr = ajrTotalMillimes(cardForm);
-                  const vat = vatMillimes(cardForm);
-                  const exp = expTotalMillimes(cardForm);
-                  const sectionHeader = (label) => (
-                    <div style={{ padding: '0.4rem 0.85rem', fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary)', background: 'var(--surface-2)', borderBottom: '1px solid var(--card-border)' }}>{label}</div>
-                  );
-                  const feeRow = (f) => {
-                    const mm = toMillimes(cardForm[f.k]);
-                    return (
-                      <div key={f.k} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.3rem 0.85rem', borderBottom: '1px solid var(--card-border)' }}>
-                        <label style={{ flex: 1, fontSize: '0.85rem' }}>{f.l}</label>
-                        <input type="text" inputMode="numeric" value={cardForm[f.k] || ''} placeholder="0"
-                          onChange={(e) => setCardField(f.k, e.target.value.replace(/[^\d]/g, ''))}
-                          style={{ width: 110, padding: '0.35rem 0.5rem', borderRadius: '6px', textAlign: 'center' }} />
-                        <span style={{ width: 92, textAlign: 'left', fontSize: '0.8rem', color: 'var(--text-muted)' }} dir="ltr">{mm ? formatDinar(mm) : '—'}</span>
-                      </div>
-                    );
-                  };
-                  const subtotalRow = (label, mm) => (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.85rem', borderBottom: '1px solid var(--card-border)', fontSize: '0.82rem', fontWeight: 600 }}>
-                      <span style={{ opacity: 0.85 }}>{label}</span>
-                      <span dir="ltr">{formatDinar(mm)} د.ت</span>
-                    </div>
-                  );
-                  return (
-                  <div style={{ marginTop: '0.85rem', border: '1px solid var(--card-border)', borderRadius: '10px', overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', padding: '0.35rem 0.85rem', fontSize: '0.72rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--card-border)' }}>
-                      <span style={{ flex: 1 }}>البيان</span><span style={{ width: 110, textAlign: 'center' }}>المبلغ (مليم)</span><span style={{ width: 92, textAlign: 'left' }}>د.ت</span>
-                    </div>
-
-                    {/* ── الأجور (VAT base) ── */}
-                    {sectionHeader('الأجور')}
-                    {AJR_FIELDS.map(feeRow)}
-                    {subtotalRow('مجموع الأجور', ajr)}
-
-                    {/* ── أ ق م (VAT) — rate editable, amount derived ── */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.3rem 0.85rem', borderBottom: '1px solid var(--card-border)' }}>
-                      <label style={{ flex: 1, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        أ ق م
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}>
-                          (<input type="text" inputMode="decimal" value={cardForm.vat_rate ?? ''} placeholder={DEFAULT_VAT_RATE}
-                            onChange={(e) => setCardField('vat_rate', e.target.value.replace(/[^\d.,]/g, ''))}
-                            style={{ width: 44, padding: '0.15rem 0.3rem', borderRadius: '6px', textAlign: 'center', fontSize: '0.8rem' }} />%)
-                        </span>
-                      </label>
-                      <span style={{ width: 110, textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{vat ? vat : '—'}</span>
-                      <span style={{ width: 92, textAlign: 'left', fontSize: '0.8rem', color: 'var(--text-muted)' }} dir="ltr">{vat ? formatDinar(vat) : '—'}</span>
-                    </div>
-
-                    {/* ── مصاريف (no VAT) ── */}
-                    {sectionHeader('مصاريف')}
-                    {EXP_FIELDS.map(feeRow)}
-                    {subtotalRow('مجموع المصاريف', exp)}
-
-                    {/* ── grand total ── */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.55rem 0.85rem', background: 'var(--surface-2)', fontWeight: 700 }}>
-                      <span>المجموع العام</span>
-                      <span style={{ color: 'var(--primary)' }} dir="ltr">{formatDinar(ajr + vat + exp)} د.ت</span>
-                    </div>
-                  </div>
-                  );
-                })()}
-              </div>
-
-              <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                <button type="submit" className="btn" style={{ flex: 1 }}>{editingCardId ? 'حفظ التعديلات' : 'إضافة البطاقة'}</button>
-                <button type="button" className="btn" style={{ flex: 1, background: 'var(--surface-2)' }} onClick={() => setShowCardModal(false)}>إلغاء</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <CnssCardModal editing={!!editingCardId} acte={editingActe} acteCount={editingActe ? acteSize(editingActe.id_acte) : 0}
+          form={cardForm} setField={setCardField} errors={fieldErrors}
+          onSubmit={saveCard} onClose={() => setShowCardModal(false)} />
       )}
 
       <style dangerouslySetInnerHTML={{ __html: `
